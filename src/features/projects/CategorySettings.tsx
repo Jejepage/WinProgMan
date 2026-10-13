@@ -1,3 +1,4 @@
+import { ConflictNotice } from "../../ui/dialogs";
 import { useState } from "react";
 import {
   metadata,
@@ -22,8 +23,9 @@ export function CategorySettings({
   const [editing, setEditing] = useState<ProjectCategory | null>(null);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
+  async function save(e?: React.FormEvent, overwrite = false) {
+    e?.preventDefault();
+    if (busy) return;
     const trimmed = name.trim();
     if (!trimmed) {
       setMessage("Enter a topic name.");
@@ -43,6 +45,7 @@ export function CategorySettings({
     if (
       await onChange({
         type: "category.save",
+        overwrite,
         value: {
           ...(editing || metadata()),
           name: trimmed,
@@ -61,7 +64,31 @@ export function CategorySettings({
       <p className="description">
         Assign one topic to each project. Event types are managed separately.
       </p>
-      <form className="editor" onSubmit={save}>
+      <form
+        className="editor"
+        onSubmit={save}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            setEditing(null);
+            setName("");
+            setMessage("");
+          } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.requestSubmit();
+          }
+        }}
+      >
+        <ConflictNotice
+          original={editing || undefined}
+          current={categories.find((item) => item.id === editing?.id)}
+          onReload={() => {
+            const current = categories.find((item) => item.id === editing?.id);
+            setEditing(current || null);
+            setName(current?.name || "");
+          }}
+          onOverwrite={() => void save(undefined, true)}
+        />
         <label className="field">
           Topic name
           <input
@@ -131,6 +158,7 @@ export function CategorySettings({
                         (await onChange({
                           type: "category.delete",
                           id: c.id,
+                          expectedRevision: c.revision,
                         })) &&
                         editing?.id === c.id
                       ) {

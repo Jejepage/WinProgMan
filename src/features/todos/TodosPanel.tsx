@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Dialog, ConflictNotice } from "../../ui/dialogs";
 import { Plus } from "lucide-react";
 import { SearchField } from "../../ui/components";
 import {
@@ -7,6 +8,7 @@ import {
   type DomainChange,
   type Project,
   type Todo,
+  type ProjectEvent,
 } from "../../domain/types";
 import {
   formatDate,
@@ -17,6 +19,11 @@ import {
 } from "../../domain/queries";
 interface Props {
   todos: Todo[];
+  events?: ProjectEvent[];
+  onFocus?: (id: string) => void;
+  onEvent?: (id: string) => void;
+  selectedId?: string;
+  onSelectedHandled?: () => void;
   projects: Project[];
   projectId?: string;
   showHeading?: boolean;
@@ -30,6 +37,11 @@ interface Props {
 }
 export function TodosPanel({
   todos,
+  events = [],
+  onFocus,
+  onEvent,
+  selectedId,
+  onSelectedHandled,
   projects,
   projectId,
   showHeading = true,
@@ -44,6 +56,7 @@ export function TodosPanel({
   const [openOnly, setOpenOnly] = useState(false);
   const visible = todos.filter(
     (todo) =>
+      (!projectId || todo.projectId === projectId) &&
       (!openOnly || !todo.completed) &&
       matchesSearch(
         search,
@@ -57,17 +70,35 @@ export function TodosPanel({
   const [date, setDate] = useState("");
   const [doNext, setDoNext] = useState(false);
   const [owner, setOwner] = useState(projectId || projects[0]?.id || "");
+  const [eventId, setEventId] = useState("");
+  const handledSelection = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!selectedId) {
+      handledSelection.current = undefined;
+      return;
+    }
+    const todo = todos.find((item) => item.id === selectedId);
+    if (todo && handledSelection.current !== selectedId) {
+      handledSelection.current = selectedId;
+      open(todo);
+      onSelectedHandled?.();
+    }
+  }, [selectedId, todos]);
+  const current = editing
+    ? todos.find((todo) => todo.id === editing.id)
+    : undefined;
   function open(todo?: Todo) {
     setEditing(todo || null);
+    setEventId(todo?.eventId || "");
     setTitle(todo?.title || "");
     setDate(todo?.dueDate || "");
     setDoNext(Boolean(todo?.doNext));
     setOwner(todo?.projectId || projectId || projects[0]?.id || "");
     setAdding(true);
   }
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!owner) return;
+  async function save(e?: React.FormEvent, overwrite = false) {
+    e?.preventDefault();
+    if (!owner || busy) return;
     const value: Todo = {
       ...(editing || metadata()),
       projectId: owner,
@@ -77,9 +108,12 @@ export function TodosPanel({
     };
     if (doNext && !value.completed) value.doNext = true;
     else delete value.doNext;
+    if (eventId) value.eventId = eventId;
+    else delete value.eventId;
     if (date) value.dueDate = date;
     else delete value.dueDate;
-    if (await onChange({ type: "todo.save", value })) setAdding(false);
+    if (await onChange({ type: "todo.save", value, overwrite }))
+      setAdding(false);
   }
   const addButton = (
     <button
@@ -145,80 +179,138 @@ export function TodosPanel({
         )}
       </div>
       {adding && (
-        <form className="editor" onSubmit={save}>
-          <div className="form-grid">
-            <label className="field">
-              Title
-              <input
-                autoFocus
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="What is the next step?"
-              />
-            </label>
-            <label className="field">
-              Due date (optional)
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-            {!projectId && (
+        <Dialog
+          title={editing ? "Edit task" : "New task"}
+          onClose={() => setAdding(false)}
+        >
+          <form className="editor" onSubmit={save}>
+            <ConflictNotice
+              original={editing || undefined}
+              current={current}
+              onReload={() => (current ? open(current) : setAdding(false))}
+              onOverwrite={() => void save(undefined, true)}
+            />
+            <div className="form-grid">
               <label className="field">
-                Project
+                Title
+                <input
+                  autoFocus
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="What is the next step?"
+                />
+              </label>
+              <label className="field">
+                Due date (optional)
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </label>
+              {!projectId && (
+                <label className="field">
+                  Project
+                  <select
+                    value={owner}
+                    onChange={(e) => {
+                      setOwner(e.target.value);
+                      setEventId("");
+                    }}
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="field">
+                Origin event
                 <select
-                  value={owner}
-                  onChange={(e) => setOwner(e.target.value)}
+                  value={eventId}
+                  onChange={(e) => setEventId(e.target.value)}
                 >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                  <option value="">No linked event</option>
+                  {events
+                    .filter((event) => event.projectId === owner)
+                    .map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.title}
+                      </option>
+                    ))}
                 </select>
               </label>
-            )}
-            <label className="do-next-control">
-              <input
-                type="checkbox"
-                checked={doNext}
-                disabled={Boolean(editing?.completed)}
-                onChange={(event) => setDoNext(event.target.checked)}
-              />
-              {editing?.completed ? "Do next (reopen task first)" : "Do next"}
-            </label>
-          </div>
-          <div className="actions">
-            <button className="button" disabled={busy}>
-              Save
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setAdding(false)}
-            >
-              Cancel
-            </button>
-            {editing && (
+              {events.some((event) => event.projectId === owner) && (
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setEventId("")}
+                  >
+                    Unlink event
+                  </button>
+                  {onEvent && (
+                    <button
+                      type="button"
+                      className="text-button"
+                      disabled={!eventId}
+                      onClick={() => {
+                        setAdding(false);
+                        onEvent(eventId);
+                      }}
+                    >
+                      Open event
+                    </button>
+                  )}
+                </div>
+              )}
+              <label className="do-next-control">
+                <input
+                  type="checkbox"
+                  checked={doNext}
+                  disabled={Boolean(editing?.completed)}
+                  onChange={(event) => setDoNext(event.target.checked)}
+                />
+                {editing?.completed ? "Do next (reopen task first)" : "Do next"}
+              </label>
+            </div>
+            <div className="actions">
+              <button className="button" disabled={busy}>
+                Save
+              </button>
               <button
                 type="button"
-                className="button secondary danger"
-                disabled={busy}
-                aria-label={`${editing.title} delete`}
-                onClick={async () => {
-                  if (
-                    confirm(`Delete "${editing.title}"?`) &&
-                    (await onChange({ type: "todo.delete", id: editing.id }))
-                  )
-                    setAdding(false);
-                }}
+                className="button secondary"
+                onClick={() => setAdding(false)}
               >
-                Delete task
+                Cancel
               </button>
-            )}
-          </div>
-        </form>
+              {editing && (
+                <button
+                  type="button"
+                  className="button secondary danger"
+                  disabled={busy}
+                  aria-label={`${editing.title} delete`}
+                  onClick={async () => {
+                    if (
+                      confirm(`Delete "${editing.title}"?`) &&
+                      (await onChange({
+                        type: "todo.delete",
+                        id: editing.id,
+                        expectedRevision: editing.revision,
+                      }))
+                    )
+                      setAdding(false);
+                  }}
+                >
+                  Delete task
+                </button>
+              )}
+            </div>
+          </form>
+        </Dialog>
       )}
       {!visible.length && (
         <p className="empty">
@@ -275,6 +367,24 @@ export function TodosPanel({
                   >
                     {todo.title}
                   </button>
+                  {!todo.completed && onFocus && (
+                    <button
+                      className="text-button"
+                      onClick={() => onFocus(todo.id)}
+                    >
+                      Focus
+                    </button>
+                  )}
+                  {todo.eventId && (
+                    <button
+                      className="text-button"
+                      disabled={!onEvent}
+                      onClick={() => onEvent?.(todo.eventId!)}
+                    >
+                      {events.find((event) => event.id === todo.eventId)
+                        ?.title || "Origin event"}
+                    </button>
+                  )}
                   {todo.doNext && !todo.completed && (
                     <span className="do-next-badge">Do next</span>
                   )}

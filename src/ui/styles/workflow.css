@@ -1,0 +1,202 @@
+/* Workflow components use shared theme tokens; 760px is the compact layout. */
+:root {
+  --font-prose: "IBM Plex Sans", sans-serif;
+}
+.description,
+.markdown-note,
+.event-note,
+.search-snippet,
+.focus-context p,
+.focus-related p {
+  font-family: var(--font-prose);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.workspace-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 20px;
+  margin-bottom: 18px;
+}
+kbd {
+  font-size: 10px;
+  opacity: 0.75;
+  margin-left: 8px;
+}
+.workspace-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  overflow: auto;
+  box-shadow: 0 20px 100px #0003;
+}
+.workspace-dialog::backdrop {
+  background: #07142688;
+}
+.workspace-dialog > .section-heading {
+  gap: 16px;
+}
+.workspace-dialog .editor,
+.workspace-dialog .event-editor {
+  margin: 0;
+}
+.workspace-dialog form {
+  min-width: 0;
+}
+.workspace-dialog .field input,
+.workspace-dialog .field select,
+.workspace-dialog .field textarea {
+  width: 100%;
+  min-width: 0;
+}
+.workspace-dialog .actions {
+  flex-wrap: wrap;
+}
+.conflict-notice {
+  display: block;
+}
+.conflict-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.conflict-comparison > div {
+  min-width: 0;
+}
+.conflict-comparison pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.conflict-comparison dl {
+  font-family: var(--font-prose);
+  font-size: 14px;
+}
+.conflict-comparison dt {
+  font-weight: 500;
+  margin-top: 8px;
+}
+.conflict-comparison dd {
+  margin: 2px 0 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.plain-note {
+  white-space: pre-wrap;
+  font-family: var(--font-prose);
+}
+.trash-list,
+.search-results ul,
+.agenda-days,
+.agenda-day ul,
+.focus-related ul {
+  list-style: none;
+  padding: 0;
+}
+.trash-list > li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+  flex-wrap: wrap;
+}
+.trash-list small {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.search-result {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+  padding: 14px 10px;
+  text-align: left;
+  background: var(--surface);
+  color: var(--ink);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.search-result:hover {
+  background: var(--accent-soft);
+}
+.search-result small {
+  color: var(--muted);
+}
+mark {
+  color: var(--ink);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+.agenda-day h3 {
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.agenda-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+.agenda-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.agenda-content button {
+  text-align: left;
+}
+.agenda-content small {
+  color: var(--muted);
+}
+.focus-context,
+.focus-related {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.focus-related li {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.related-tasks {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.related-tasks li {
+  margin: 8px 0;
+}
+.related-tasks .actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .workspace-tools {
+    justify-content: flex-start;
+  }
+  .workspace-tools kbd {
+    display: none;
+  }
+  .workspace-dialog {
+    padding: 16px;
+  }
+  .workspace-dialog .form-grid,
+  .conflict-comparison {
+    grid-template-columns: 1fr;
+  }
+  .trash-list .actions {
+    width: 100%;
+  }
+  .agenda-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

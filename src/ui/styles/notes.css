@@ -1,0 +1,157 @@
+/* Notes share the same Markdown rendering in preview, lists and timeline. */
+.markdown-editor {
+  min-width: 0;
+  margin: 18px 0;
+}
+.markdown-editor > textarea {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  margin: 14px 0 10px;
+  padding: 12px;
+  border: 1px solid #dce4ee;
+  border-radius: 6px;
+  background: #fff;
+  color: #172338;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.markdown-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.markdown-toolbar .button {
+  padding: 7px 9px;
+  font-size: 11px;
+}
+.markdown-paste-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.markdown-editor > .muted {
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+.markdown-preview {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px;
+  margin-top: 14px;
+  min-width: 0;
+}
+.markdown-note {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.7;
+  min-width: 0;
+}
+.markdown-note > :first-child {
+  margin-top: 0;
+}
+.markdown-note > :last-child {
+  margin-bottom: 0;
+}
+.markdown-note p {
+  margin: 0 0 12px;
+}
+.markdown-note h1,
+.markdown-note h2,
+.markdown-note h3,
+.markdown-note h4,
+.markdown-note h5,
+.markdown-note h6 {
+  color: #172338;
+  letter-spacing: 0;
+  line-height: 1.4;
+  margin: 18px 0 10px;
+  font-weight: 700;
+}
+.markdown-note h1 {
+  font-size: 22px;
+}
+.markdown-note h2 {
+  font-size: 19px;
+}
+.markdown-note h3 {
+  font-size: 16px;
+}
+.markdown-note h4,
+.markdown-note h5,
+.markdown-note h6 {
+  font-size: 14px;
+}
+.markdown-note ul,
+.markdown-note ol {
+  padding-left: 24px;
+  margin: 0 0 12px;
+}
+.markdown-note li {
+  margin: 4px 0;
+}
+.markdown-note li > p {
+  margin-bottom: 4px;
+}
+.markdown-note blockquote {
+  border-left: 3px solid #6b9bea;
+  padding-left: 14px;
+  margin: 12px 0;
+  color: #58677d;
+}
+.markdown-note code {
+  font-family: "IBM Plex Mono", monospace;
+  background: #edf2f8;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+.markdown-note pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre;
+  padding: 12px;
+  border-radius: 5px;
+  background: #edf2f8;
+}
+.markdown-note pre code {
+  background: none;
+  padding: 0;
+}
+.markdown-note .markdown-table {
+  overflow-x: auto;
+  max-width: 100%;
+  margin-bottom: 12px;
+}
+.markdown-note table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+}
+.markdown-note th,
+.markdown-note td {
+  border: 1px solid #dce4ee;
+  padding: 7px 9px;
+  text-align: left;
+}
+.markdown-note th {
+  background: #edf2f8;
+}
+.markdown-note hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 18px 0;
+}
+.markdown-note .contains-task-list {
+  list-style: none;
+  padding-left: 4px;
+}
+.markdown-note input[type="checkbox"] {
+  margin-right: 6px;
+}

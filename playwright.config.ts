@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: "./tests",
   testMatch: "**/e2e.spec.ts",
   fullyParallel: false,
+  timeout: 60000,
+  workers: 2,
   use: {
     baseURL: "http://127.0.0.1:5174",
     channel: "msedge",

@@ -4,59 +4,40 @@ import {
   type DomainChange,
   type ExportEnvelope,
 } from "../domain/types";
-import type { ProjectStore } from "./ProjectStore";
+import { ConflictError, type ProjectStore } from "./ProjectStore";
+import { applyChange } from "./changes";
 import { validateData, validateImport } from "./validation";
 
-function applyChange(data: AppData, change: DomainChange): AppData {
-  if (change.type === "project.delete") {
-    return {
-      ...data,
-      projects: data.projects.filter((value) => value.id !== change.id),
-      links: data.links.filter((value) => value.projectId !== change.id),
-      todos: data.todos.filter((value) => value.projectId !== change.id),
-      events: data.events.filter((value) => value.projectId !== change.id),
-    };
-  }
-  if (change.type === "category.delete") {
-    const now = new Date().toISOString();
-    return {
-      ...data,
-      projectCategories: data.projectCategories.filter(
-        (value) => value.id !== change.id,
-      ),
-      projects: data.projects.map((project) => {
-        if (project.categoryId !== change.id) return project;
-        const { categoryId: _category, ...rest } = project;
-        return { ...rest, updatedAt: now };
-      }),
-    };
-  }
-  const collection = change.type.startsWith("category.")
-    ? "projectCategories"
-    : change.type.startsWith("project.")
-      ? "projects"
-      : change.type.startsWith("link.")
-        ? "links"
-        : change.type.startsWith("todo.")
-          ? "todos"
-          : "events";
-  if ("id" in change) {
-    return {
-      ...data,
-      [collection]: data[collection].filter((value) => value.id !== change.id),
-    };
-  }
-  const values = data[collection].filter(
-    (value) => value.id !== change.value.id,
-  );
-  return { ...data, [collection]: [...values, change.value] };
-}
-
-/** One snapshot per transaction keeps cascading deletes/imports and read-modify-write atomic. */
+/** One snapshot per transaction keeps migration, cascading deletes and OCC atomic. */
 export class IndexedDbProjectStore implements ProjectStore {
   private database: Promise<IDBDatabase> | undefined;
+  private channel: BroadcastChannel | undefined;
+  private listeners = new Set<() => void>();
   constructor(private readonly databaseName = "winprogman") {}
-
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    if (!this.channel && typeof BroadcastChannel !== "undefined") {
+      this.channel = new BroadcastChannel(`winprogman:${this.databaseName}`);
+      this.channel.onmessage = () => {
+        for (const callback of this.listeners) callback();
+      };
+    }
+    return () => {
+      this.listeners.delete(listener);
+      if (!this.listeners.size) {
+        this.channel?.close();
+        this.channel = undefined;
+      }
+    };
+  }
+  private notify() {
+    if (this.channel) this.channel.postMessage({ changed: true });
+    else if (typeof BroadcastChannel !== "undefined") {
+      const channel = new BroadcastChannel(`winprogman:${this.databaseName}`);
+      channel.postMessage({ changed: true });
+      channel.close();
+    }
+  }
   private open(): Promise<IDBDatabase> {
     if (!this.database) {
       this.database = new Promise<IDBDatabase>((resolve, reject) => {
@@ -90,33 +71,37 @@ export class IndexedDbProjectStore implements ProjectStore {
     }
     return this.database;
   }
-
   async load(): Promise<AppData> {
     const database = await this.open();
     return new Promise((resolve, reject) => {
-      const transaction = database.transaction("app", "readonly");
-      const request = transaction.objectStore("app").get("data");
+      const transaction = database.transaction("app", "readwrite");
+      const store = transaction.objectStore("app");
+      const request = store.get("data");
       let result = emptyData();
+      let failure: unknown;
       request.onsuccess = () => {
         try {
-          result =
-            request.result === undefined
-              ? emptyData()
-              : validateData(request.result);
+          result = validateData(request.result ?? emptyData());
+          // Migration is persisted before any editor can receive the new identities.
+          if (
+            request.result !== undefined &&
+            JSON.stringify(request.result) !== JSON.stringify(result)
+          )
+            store.put(result, "data");
         } catch (error) {
-          reject(error);
+          failure = error;
+          transaction.abort();
         }
       };
       transaction.oncomplete = () => resolve(result);
       transaction.onabort = () =>
         reject(
-          transaction.error ??
-            new Error("Lesen des lokalen Speichers wurde abgebrochen."),
+          failure ?? transaction.error ?? new Error("Lesen wurde abgebrochen."),
         );
-      transaction.onerror = () => reject(transaction.error ?? request.error);
+      transaction.onerror = () =>
+        reject(failure ?? transaction.error ?? request.error);
     });
   }
-
   private async write(transform: (data: AppData) => AppData): Promise<void> {
     const database = await this.open();
     return new Promise((resolve, reject) => {
@@ -137,7 +122,10 @@ export class IndexedDbProjectStore implements ProjectStore {
           transaction.abort();
         }
       };
-      transaction.oncomplete = () => resolve();
+      transaction.oncomplete = () => {
+        this.notify();
+        resolve();
+      };
       transaction.onabort = () =>
         reject(
           failure ??
@@ -148,23 +136,78 @@ export class IndexedDbProjectStore implements ProjectStore {
         reject(failure ?? transaction.error ?? request.error);
     });
   }
-
   apply(change: DomainChange): Promise<void> {
     return this.write((data) => applyChange(data, change));
   }
   async exportData(): Promise<ExportEnvelope> {
     return {
       ...(await this.load()),
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportedAt: new Date().toISOString(),
     };
   }
-  async importData(data: ExportEnvelope): Promise<void> {
+  async importData(
+    data: ExportEnvelope,
+    expectedRevision?: number,
+  ): Promise<void> {
     const {
       schemaVersion: _version,
       exportedAt: _at,
       ...validated
     } = validateImport(data);
-    return this.write(() => validated);
+    return this.write((current) => {
+      if (
+        expectedRevision !== undefined &&
+        current.revision !== expectedRevision
+      )
+        throw new ConflictError(current);
+      const revision =
+        Math.max(
+          current.revision,
+          validated.revision,
+          ...[
+            ...validated.projects,
+            ...validated.projectCategories,
+            ...validated.todos,
+            ...validated.links,
+            ...validated.events,
+          ].map((item) => item.revision ?? 0),
+        ) + 1;
+      return {
+        ...validated,
+        revision,
+        trash: validated.trash.map((entry) => ({
+          ...entry,
+          ...(entry.detachedTasks
+            ? {
+                detachedTasks: entry.detachedTasks.map((ref) => {
+                  const task = validated.todos.find((t) => t.id === ref.id);
+                  return task &&
+                    !task.eventId &&
+                    (task.revision ?? 0) === ref.revision
+                    ? { ...ref, revision }
+                    : ref;
+                }),
+              }
+            : {}),
+        })),
+        // A full replacement must invalidate editors even when an old backup reuses IDs.
+        ...Object.fromEntries(
+          ["projects", "projectCategories", "todos", "links", "events"].map(
+            (key) => [
+              key,
+              validated[key as "projects"].map((item) => ({
+                ...item,
+                revision,
+              })),
+            ],
+          ),
+        ),
+        nextProjectNumber: Math.max(
+          current.nextProjectNumber,
+          validated.nextProjectNumber,
+        ),
+      };
+    });
   }
 }

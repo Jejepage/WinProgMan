@@ -151,7 +151,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify({ ...backup, schemaVersion: 999 })),
   });
   await expect(page.getByRole("alert")).toContainText(
-    "Only backup formats 1, 2, 3 and 4 are supported.",
+    "Only backup formats 1, 2, 3, 4 and 5 are supported.",
   );
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
@@ -179,7 +179,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     })
     .click();
   await page
-    .getByRole("button", { name: "Delete permanently", exact: true })
+    .getByRole("button", { name: "Move to trash", exact: true })
     .click();
   await expect(page.locator(".event-item")).toHaveCount(1);
   page.once("dialog", (dialog) => dialog.accept());
@@ -343,7 +343,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const backup = JSON.parse(
     await readFile((await (await downloadEvent).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(4);
+  expect(backup.schemaVersion).toBe(5);
   expect(backup.projectCategories[0].name).toBe("Persönlich");
   expect(backup.projects[0].status).toBe("Pausiert");
   expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
@@ -368,11 +368,13 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const completedProject = {
     ...backup.projects[0],
     id: "completed-project",
+    projectNumber: backup.nextProjectNumber,
     name: "Abgeschlossenes Projekt",
     status: "Abgeschlossen",
   };
   const imported = {
     ...backup,
+    nextProjectNumber: backup.nextProjectNumber + 1,
     projects: [...backup.projects, completedProject],
     todos: [
       ...Array.from({ length: 7 }, (_, i) => ({
@@ -627,7 +629,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const backup = JSON.parse(
     await readFile((await (await downloaded).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(4);
+  expect(backup.schemaVersion).toBe(5);
   expect(backup.events[0].note).toBe(markdown);
   expect(backup.events[0].noteFormat).toBe("markdown");
   const legacyNote = "**Klartext bleibt Klartext**\n<script>kein HTML</script>";
@@ -639,6 +641,19 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   };
   delete legacyEvent.noteFormat;
   const legacy = { ...backup, schemaVersion: 2, events: [legacyEvent] };
+  delete legacy.nextProjectNumber;
+  delete legacy.revision;
+  delete legacy.trash;
+  legacy.projects = legacy.projects.map((value: Record<string, unknown>) => {
+    const { projectNumber, revision, ...rest } = value;
+    return rest;
+  });
+  for (const key of ["projectCategories", "links", "todos", "events"]) {
+    legacy[key] = legacy[key].map((value: Record<string, unknown>) => {
+      const { revision, doNext, eventId, ...rest } = value;
+      return rest;
+    });
+  }
   for (const value of [backup, legacy]) {
     await page.locator('input[type="file"]').setInputFiles({
       name: "notes.json",
@@ -853,7 +868,7 @@ test("Do next, event dates, project controls and theme work after reload", async
     .getByRole("button", { name: "Cancel" })
     .click();
   await expect(page.getByRole("button", { name: /^Edit event/ })).toHaveCount(
-    0,
+    6,
   );
 
   await nav.getByRole("button", { name: /Projects/ }).click();
@@ -868,6 +883,7 @@ test("Do next, event dates, project controls and theme work after reload", async
     page.getByRole("button", { name: "Delete project" }),
   ).toBeVisible();
 
+  await page.keyboard.press("Escape");
   await nav.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

@@ -1,3 +1,4 @@
+import { Dialog, ConflictNotice } from "../../ui/dialogs";
 import { useState } from "react";
 import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { projectStatusLabels } from "../../ui/labels";
@@ -12,6 +13,7 @@ import {
 } from "../../domain/types";
 import { normalizeLinkTarget } from "../../domain/links";
 interface Props {
+  deleted?: boolean;
   project: Project;
   links: Link[];
   projectCategories: ProjectCategory[];
@@ -20,6 +22,7 @@ interface Props {
   onDelete: () => Promise<void>;
 }
 export function ProjectHeader({
+  deleted = false,
   project,
   links,
   projectCategories,
@@ -27,6 +30,7 @@ export function ProjectHeader({
   onChange,
   onDelete,
 }: Props) {
+  const [original, setOriginal] = useState(project);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
@@ -37,10 +41,11 @@ export function ProjectHeader({
   const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
+  async function save(e?: React.FormEvent, overwrite = false) {
+    e?.preventDefault();
+    if (busy) return;
     const value: Project = {
-      ...project,
+      ...original,
       name: name.trim() || "New project",
       description,
       status,
@@ -52,6 +57,7 @@ export function ProjectHeader({
       await onChange({
         type: "project.save",
         value,
+        overwrite,
       })
     )
       setEditing(false);
@@ -63,8 +69,9 @@ export function ProjectHeader({
     setMessage("");
     setLinkEditor(true);
   }
-  async function saveLink(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveLink(e?: React.FormEvent, overwrite = false) {
+    e?.preventDefault();
+    if (busy) return;
     if (!target.trim()) {
       setMessage("Enter a link destination.");
       return;
@@ -72,6 +79,7 @@ export function ProjectHeader({
     if (
       await onChange({
         type: "link.save",
+        overwrite,
         value: {
           ...(link || metadata()),
           projectId: project.id,
@@ -87,7 +95,11 @@ export function ProjectHeader({
     <section className="project-header panel">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">PROJECT</p>
+          <p className="eyebrow">
+            {project.projectNumber
+              ? `PRJ-${String(project.projectNumber).padStart(3, "0")}`
+              : "PROJECT"}
+          </p>
           <h1>{project.name}</h1>
           <p className="muted">
             {projectStatusLabels[project.status]} ·{" "}
@@ -103,6 +115,7 @@ export function ProjectHeader({
           className="button secondary"
           disabled={busy}
           onClick={() => {
+            setOriginal(project);
             setName(project.name);
             setDescription(project.description);
             setStatus(project.status);
@@ -114,73 +127,91 @@ export function ProjectHeader({
         </button>
       </div>
       {editing && (
-        <form className="editor" onSubmit={save}>
-          <div className="form-grid">
+        <Dialog title="Edit project" onClose={() => setEditing(false)}>
+          <form className="editor" onSubmit={save}>
+            <ConflictNotice
+              original={original}
+              current={deleted ? undefined : project}
+              onReload={() => {
+                if (deleted) {
+                  setEditing(false);
+                  return;
+                }
+                setOriginal(project);
+                setName(project.name);
+                setDescription(project.description);
+                setStatus(project.status);
+                setCategoryId(project.categoryId || "");
+              }}
+              onOverwrite={() => void save(undefined, true)}
+            />
+            <div className="form-grid">
+              <label className="field">
+                Status
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+                >
+                  {projectStatuses.map((value) => (
+                    <option key={value} value={value}>
+                      {projectStatusLabels[value]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Topic
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                >
+                  <option value="">No topic</option>
+                  {projectCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <label className="field">
-              Status
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-              >
-                {projectStatuses.map((value) => (
-                  <option key={value} value={value}>
-                    {projectStatusLabels[value]}
-                  </option>
-                ))}
-              </select>
+              Name
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+              />
             </label>
             <label className="field">
-              Topic
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="">No topic</option>
-                {projectCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+              Description
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+              />
             </label>
-          </div>
-          <label className="field">
-            Name
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </label>
-          <label className="field">
-            Description
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </label>
-          <div className="actions">
-            <button className="button" disabled={busy}>
-              Save
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setEditing(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="button danger project-delete"
-              disabled={busy}
-              onClick={() => void onDelete()}
-            >
-              Delete project
-            </button>
-          </div>
-        </form>
+            <div className="actions">
+              <button className="button" disabled={busy}>
+                Save
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="button danger project-delete"
+                disabled={busy}
+                onClick={() => void onDelete()}
+              >
+                Delete project
+              </button>
+            </div>
+          </form>
+        </Dialog>
       )}
       <div className="links-heading">
         <h2>Links & resources</h2>
@@ -238,7 +269,11 @@ export function ProjectHeader({
                 disabled={busy}
                 onClick={() => {
                   if (confirm(`Delete link "${l.label}"?`))
-                    void onChange({ type: "link.delete", id: l.id });
+                    void onChange({
+                      type: "link.delete",
+                      id: l.id,
+                      expectedRevision: l.revision,
+                    });
                 }}
               >
                 <Trash2 size={14} aria-hidden="true" /> Delete
@@ -254,40 +289,58 @@ export function ProjectHeader({
         </p>
       )}
       {linkEditor && (
-        <form className="editor" onSubmit={saveLink}>
-          <div className="form-grid">
-            <label className="field">
-              Label
-              <input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                autoFocus
-              />
-            </label>
-            <label className="field">
-              URL or path
-              <input
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="https://… or folder path"
-              />
-            </label>
-          </div>
-          <div className="actions">
-            <button className="button" disabled={busy}>
-              Save link
-            </button>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setLinkEditor(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <Dialog
+          title={link ? "Edit link" : "Add link"}
+          onClose={() => setLinkEditor(false)}
+        >
+          <form className="editor" onSubmit={saveLink}>
+            <ConflictNotice
+              original={link || undefined}
+              current={
+                link ? links.find((item) => item.id === link.id) : undefined
+              }
+              onReload={() => {
+                const current = links.find((item) => item.id === link?.id);
+                if (current) editLink(current);
+                else setLinkEditor(false);
+              }}
+              onOverwrite={() => void saveLink(undefined, true)}
+            />
+            <div className="form-grid">
+              <label className="field">
+                Label
+                <input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  autoFocus
+                />
+              </label>
+              <label className="field">
+                URL or path
+                <input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="https://… or folder path"
+                />
+              </label>
+            </div>
+            {message && <p role="status">{message}</p>}
+            <div className="actions">
+              <button className="button" disabled={busy}>
+                Save link
+              </button>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setLinkEditor(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Dialog>
       )}
-      {message && (
+      {message && !linkEditor && (
         <p role="status" className="muted">
           {message}
         </p>

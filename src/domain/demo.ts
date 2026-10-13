@@ -1,4 +1,4 @@
-import { metadata, type AppData } from "./types";
+import { emptyData, metadata, type AppData } from "./types";
 import { localToday } from "./queries";
 
 export function demoData(): AppData {
@@ -22,8 +22,13 @@ export function demoData(): AppData {
       "Abgeschlossenes Beispielprojekt – bleibt in der Projektliste erreichbar.",
   };
   return {
+    ...emptyData(),
+    nextProjectNumber: 3,
     projectCategories: [],
-    projects: [active, resting],
+    projects: [
+      { ...active, projectNumber: 1 },
+      { ...resting, projectNumber: 2 },
+    ],
     links: [
       {
         ...metadata(),

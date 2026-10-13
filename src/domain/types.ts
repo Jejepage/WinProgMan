@@ -7,6 +7,7 @@ export const categories = [
 ] as const;
 export type Category = (typeof categories)[number];
 export interface Base {
+  revision?: number;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +23,7 @@ export interface ProjectCategory extends Base {
   name: string;
 }
 export interface Project extends Base {
+  projectNumber?: number;
   status: ProjectStatus;
   categoryId?: string;
   name: string;
@@ -33,6 +35,7 @@ export interface Link extends Base {
   target: string;
 }
 export interface Todo extends Base {
+  eventId?: string;
   projectId: string;
   title: string;
   completed: boolean;
@@ -49,6 +52,9 @@ export interface ProjectEvent extends Base {
   noteFormat?: "markdown";
 }
 export interface AppData {
+  nextProjectNumber: number;
+  revision: number;
+  trash: TrashEntry[];
   projectCategories: ProjectCategory[];
   projects: Project[];
   links: Link[];
@@ -56,10 +62,20 @@ export interface AppData {
   events: ProjectEvent[];
 }
 export interface ExportEnvelope extends AppData {
-  schemaVersion: 4;
+  schemaVersion: 5;
   exportedAt: string;
 }
-export type DomainChange =
+export interface TrashEntry {
+  id: string;
+  type: "project" | "todo" | "event" | "link";
+  name: string;
+  projectId: string;
+  projectName: string;
+  deletedAt: string;
+  data: Pick<AppData, "projects" | "todos" | "events" | "links">;
+  detachedTasks?: { id: string; revision: number }[];
+}
+export type DomainChange = (
   | { type: "project.save"; value: Project }
   | { type: "category.save"; value: ProjectCategory }
   | { type: "category.delete"; id: string }
@@ -69,8 +85,14 @@ export type DomainChange =
   | {
       type: "project.delete" | "link.delete" | "todo.delete" | "event.delete";
       id: string;
-    };
+    }
+  | { type: "trash.restore" | "trash.delete"; id: string }
+  | { type: "trash.empty" }
+) & { expectedRevision?: number; overwrite?: boolean };
 export const emptyData = (): AppData => ({
+  nextProjectNumber: 1,
+  revision: 0,
+  trash: [],
   projectCategories: [],
   projects: [],
   links: [],

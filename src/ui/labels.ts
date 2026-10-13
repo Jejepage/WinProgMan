@@ -21,6 +21,20 @@ export const categoryLabel = (category: Category): string =>
   eventCategoryLabels[category];
 
 const errorTranslations: Record<string, string> = {
+  "Nur Sicherungsformat 1 bis 5 werden unterstützt.":
+    "Only backup formats 1, 2, 3, 4 and 5 are supported.",
+  "Gültige ganze Zahl erwartet.": "Expected a valid integer.",
+  "Doppelte Projektnummer.": "Duplicate project number.",
+  "Ereignis existiert nicht im selben Projekt.":
+    "The event does not exist in the same project.",
+  "Ungültiger Papierkorbinhalt.": "Invalid trash contents.",
+  "Ungültiger Projektverweis.": "Invalid project reference.",
+  "Unbekannter Papierkorbtyp.": "Unknown trash type.",
+  "Ungültige Aufgabenverknüpfungen.": "Invalid task relationships.",
+  "Doppelte Aufgabenverknüpfung.": "Duplicate task relationship.",
+  "Zähler muss über allen vergebenen Projektnummern liegen.":
+    "Counter must exceed all assigned project numbers.",
+  "Lesen wurde abgebrochen.": "Reading local storage was cancelled.",
   "Objekt erwartet.": "Expected an object.",
   "Unbekanntes Feld.": "Unknown field.",
   "Gültiger Text erwartet.": "Expected valid text.",
