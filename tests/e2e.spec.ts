@@ -1,13 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir } from "node:fs/promises";
 
 async function createProject(page: Page, name = "Browserprojekt") {
   await page
-    .getByRole("button", { name: "+ Neues Projekt", exact: true })
+    .getByRole("button", { name: "+ New project", exact: true })
     .click();
-  await page.getByLabel("Projektname", { exact: true }).fill(name);
+  await page.getByLabel("Project name", { exact: true }).fill(name);
   await page
-    .getByRole("button", { name: "Projekt anlegen", exact: true })
+    .getByRole("button", { name: "Create project", exact: true })
     .click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 }
@@ -17,119 +17,115 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("button", { name: "Beispieldaten laden" }),
+    page.getByRole("button", { name: "Load sample data" }),
   ).toBeVisible();
   await createProject(page);
 
-  await page
-    .getByRole("button", { name: "Projekt bearbeiten", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("Geprüftes Projekt");
-  await page.getByLabel("Kurzbeschreibung").fill("Browserabnahme");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await page.getByLabel("Description").fill("Browserabnahme");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
   ).toBeVisible();
 
-  await page
-    .getByRole("button", { name: "+ Link hinzufügen", exact: true })
-    .click();
-  await page.getByLabel("Anzeigename").fill("Dokumentation");
-  await page.getByLabel("URL oder Pfad").fill("https://example.com/docs");
-  await page
-    .getByRole("button", { name: "Link speichern", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Add link", exact: true }).click();
+  await page.getByLabel("Label").fill("Dokumentation");
+  await page.getByLabel("URL or path").fill("example.com/docs");
+  await page.getByRole("button", { name: "Save link", exact: true }).click();
   const linkRow = page.locator(".links-list li");
   await expect(linkRow.getByRole("link")).toHaveAttribute(
     "href",
     "https://example.com/docs",
   );
-  await linkRow
-    .getByRole("button", { name: "Bearbeiten", exact: true })
-    .click();
-  await page.getByLabel("URL oder Pfad").fill("C:\\Projekte\\Dokumentation");
-  await page
-    .getByRole("button", { name: "Link speichern", exact: true })
-    .click();
+  await linkRow.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByLabel("URL or path").fill("C:\\Projekte\\Dokumentation");
+  await page.getByRole("button", { name: "Save link", exact: true }).click();
   await expect(linkRow).toContainText("C:\\Projekte\\Dokumentation");
 
-  await page.getByRole("button", { name: "+ To-Do", exact: true }).click();
-  await page.getByLabel("Titel", { exact: true }).fill("Aufgabe prüfen");
-  await page.getByLabel("Datum (optional)", { exact: true }).fill("2020-01-01");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator(".todo-item")).toContainText("Überfällig");
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Aufgabe prüfen");
   await page
-    .getByRole("checkbox", { name: "Aufgabe prüfen erledigt", exact: true })
+    .getByLabel("Due date (optional)", { exact: true })
+    .fill("2020-01-01");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".todo-item")).toContainText("Overdue");
+  await page
+    .getByRole("checkbox", { name: "Aufgabe prüfen completed", exact: true })
     .click();
   await expect(
     page.getByRole("checkbox", {
-      name: "Aufgabe prüfen erledigt",
+      name: "Aufgabe prüfen completed",
       exact: true,
     }),
   ).toBeChecked();
   await page
-    .getByRole("checkbox", { name: "Aufgabe prüfen erledigt", exact: true })
+    .getByRole("checkbox", { name: "Aufgabe prüfen completed", exact: true })
     .click();
   await expect(
     page.getByRole("checkbox", {
-      name: "Aufgabe prüfen erledigt",
+      name: "Aufgabe prüfen completed",
       exact: true,
     }),
   ).not.toBeChecked();
   await page
-    .getByRole("button", { name: "Aufgabe prüfen bearbeiten", exact: true })
+    .getByRole("button", { name: "Aufgabe prüfen edit", exact: true })
     .click();
-  await page.getByLabel("Titel", { exact: true }).fill("Aufgabe fertig prüfen");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Aufgabe fertig prüfen");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 
-  await page
-    .getByRole("button", { name: "Ereignis hinzufügen", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
   const editor = page.locator(".event-editor");
-  await editor.getByLabel("Titel", { exact: true }).fill("Meeting prüfen");
-  await editor.getByLabel("Datum", { exact: true }).fill("2099-01-01");
-  await editor.getByLabel("Uhrzeit (optional)").fill("09:30");
-  await editor.getByRole("button", { name: "Speichern", exact: true }).click();
+  await editor.getByLabel("Title", { exact: true }).fill("Meeting prüfen");
+  await editor.getByLabel("Date", { exact: true }).fill("2099-01-01");
+  await editor.getByLabel("Time (optional)").fill("09:30");
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Ereignis Meeting prüfen bearbeiten",
+      name: "Edit event Meeting prüfen",
       exact: true,
     })
     .click();
   await editor
-    .getByLabel("Notiztext (optional)")
+    .getByLabel("Note text (optional)")
     .fill("Zeile eins\n<script>kein HTML</script>\nZeile drei");
-  await editor.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator(".event-note")).toHaveText(
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".markdown-note")).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Meeting prüfen", exact: true })
+    .click();
+  await expect(page.locator(".markdown-note")).toBeVisible();
+  await expect(page.locator(".markdown-note")).toHaveText(
     "Zeile eins\n<script>kein HTML</script>\nZeile drei",
   );
-  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  await page
+    .locator('section[aria-label="Events"]')
+    .getByRole("button", { name: "Timeline", exact: true })
+    .click();
   await expect(page.locator(".today-marker")).toBeVisible();
   await expect(page.locator(".timeline .event-item")).toHaveCount(1);
   await page
-    .locator('section[aria-label="Ereignisse"]')
-    .getByLabel("Kategorie", { exact: true })
+    .locator('section[aria-label="Events"]')
+    .getByLabel("Category", { exact: true })
     .selectOption("Notiz");
   await expect(page.locator(".timeline .event-item")).toHaveCount(0);
   await page
-    .locator('section[aria-label="Ereignisse"]')
-    .getByLabel("Kategorie", { exact: true })
+    .locator('section[aria-label="Events"]')
+    .getByLabel("Category", { exact: true })
     .selectOption("");
-  await page
-    .getByRole("button", { name: "Ereignis hinzufügen", exact: true })
-    .click();
-  await editor.getByLabel("Kategorie", { exact: true }).selectOption("Notiz");
-  await expect(editor.getByLabel("Datum", { exact: true })).toBeDisabled();
-  await editor.getByRole("button", { name: "Speichern", exact: true }).click();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await editor.getByLabel("Category", { exact: true }).selectOption("Notiz");
+  await expect(editor.getByLabel("Date", { exact: true })).toBeDisabled();
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".event-item")).toHaveCount(2);
 
   await page.reload();
   await page
-    .getByRole("button", { name: /Projekte/, exact: false })
+    .getByRole("button", { name: /Projects/, exact: false })
     .first()
     .click();
   await page
-    .getByRole("button", { name: "Projekt öffnen", exact: true })
+    .getByRole("button", { name: "Geprüftes Projekt", exact: true })
     .click();
   await expect(page.locator(".todo-item")).toContainText(
     "Aufgabe fertig prüfen",
@@ -139,7 +135,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
 
   const downloadEvent = page.waitForEvent("download");
   await page
-    .getByRole("button", { name: "JSON exportieren ↓", exact: true })
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
     .click();
   const download = await downloadEvent;
   const filePath = await download.path();
@@ -154,7 +150,9 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ ...backup, schemaVersion: 999 })),
   });
-  await expect(page.getByRole("alert")).toContainText("schemaVersion");
+  await expect(page.getByRole("alert")).toContainText(
+    "Only backup formats 1, 2 and 3 are supported.",
+  );
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
   ).toBeVisible();
@@ -164,33 +162,33 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify(backup)),
   });
   await expect(
-    page.getByRole("region", { name: "Importvorschau" }),
-  ).toContainText("1 Projekte");
+    page.getByRole("region", { name: "Import preview" }),
+  ).toContainText("1 Projects");
   await page
-    .getByRole("region", { name: "Importvorschau" })
-    .getByRole("button", { name: "Abbrechen", exact: true })
+    .getByRole("region", { name: "Import preview" })
+    .getByRole("button", { name: "Cancel", exact: true })
     .click();
   await expect(
-    page.getByRole("region", { name: "Importvorschau" }),
+    page.getByRole("region", { name: "Import preview" }),
   ).toHaveCount(0);
 
   await page
     .getByRole("button", {
-      name: "Ereignis Meeting prüfen löschen",
+      name: "Delete event Meeting prüfen",
       exact: true,
     })
     .click();
   await page
-    .getByRole("button", { name: "Endgültig löschen", exact: true })
+    .getByRole("button", { name: "Delete permanently", exact: true })
     .click();
   await expect(page.locator(".event-item")).toHaveCount(1);
   page.once("dialog", (dialog) => dialog.accept());
   await page
-    .getByRole("button", { name: "Aufgabe fertig prüfen löschen", exact: true })
+    .getByRole("button", { name: "Aufgabe fertig prüfen delete", exact: true })
     .click();
   await expect(page.locator(".todo-item")).toHaveCount(0);
   page.once("dialog", (dialog) => dialog.accept());
-  await linkRow.getByRole("button", { name: "Löschen", exact: true }).click();
+  await linkRow.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(linkRow).toHaveCount(0);
 
   await page.locator('input[type="file"]').setInputFiles({
@@ -199,34 +197,28 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify(backup)),
   });
   page.once("dialog", (dialog) => dialog.accept());
-  await page
-    .getByRole("button", { name: "Bestand ersetzen", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Sicherung importiert");
-  await page
-    .getByRole("button", { name: "Projekt öffnen", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Replace data", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Backup imported");
+  await page.locator(".project-title").click();
   await expect(page.locator(".todo-item")).toHaveCount(1);
   await expect(page.locator(".event-item")).toHaveCount(2);
   await expect(linkRow).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "← Alle Projekte", exact: true })
-    .click();
+  await page.locator(".breadcrumb").click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page
-    .locator(".project-card")
-    .getByRole("button", { name: "Löschen", exact: true })
+    .locator(".table-wrap tbody tr")
+    .getByRole("button", { name: "Delete", exact: true })
     .click();
-  await expect(page.locator(".project-card")).toHaveCount(1);
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
   page.once("dialog", (dialog) => dialog.accept());
   await page
-    .locator(".project-card")
-    .getByRole("button", { name: "Löschen", exact: true })
+    .locator(".table-wrap tbody tr")
+    .getByRole("button", { name: "Delete", exact: true })
     .click();
-  await expect(page.locator(".project-card")).toHaveCount(0);
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Beispieldaten laden" }),
+    page.getByRole("button", { name: "Load sample data" }),
   ).toBeVisible();
 });
 
@@ -234,7 +226,7 @@ test("schmales Fenster und explizite Beispieldaten", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Beispieldaten laden", exact: true })
+    .getByRole("button", { name: "Load sample data", exact: true })
     .click();
   await expect(page.locator(".overview-card")).not.toHaveCount(0);
   const assertNoOverflow = async () =>
@@ -245,17 +237,504 @@ test("schmales Fenster und explizite Beispieldaten", async ({ page }) => {
     ).toBe(true);
   await assertNoOverflow();
   await page
-    .getByRole("button", { name: /Projekte/, exact: false })
+    .getByRole("button", { name: /Projects/, exact: false })
     .first()
+    .click();
+  await page.locator(".project-title").first().click();
+  await page
+    .locator('section[aria-label="Events"]')
+    .getByRole("button", { name: "Timeline", exact: true })
+    .click();
+  await assertNoOverflow();
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await assertNoOverflow();
+});
+
+test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offenen Aufgaben", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings" }).click();
+  const settings = page.getByRole("region", { name: "Project topics" });
+  await settings.getByLabel("Topic name").fill("Privat");
+  await settings.getByRole("button", { name: "Add topic" }).click();
+  await expect(settings.locator("li")).toHaveCount(1);
+  await mkdir("test-results/visual", { recursive: true });
+  await page.screenshot({
+    path: "test-results/visual/settings-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/visual/settings-mobile.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Projects/ })
     .click();
   await page
-    .getByRole("button", { name: "Projekt öffnen", exact: true })
-    .first()
+    .getByRole("button", { name: "+ New project", exact: true })
     .click();
+  await page
+    .getByLabel("Project name", { exact: true })
+    .fill("Kategorienprojekt");
+  await page
+    .getByRole("combobox", { name: "Project status", exact: true })
+    .selectOption("Geplant");
+  await page
+    .getByRole("combobox", { name: "Project topic", exact: true })
+    .selectOption({ label: "Privat" });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/visual/project-create-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
+  await expect(page.locator(".project-header")).toContainText(
+    "Planned · Privat",
+  );
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Status", exact: true })
+    .selectOption("Pausiert");
+  await page
+    .locator(".project-header")
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await settings.getByRole("button", { name: "Rename" }).click();
+  await settings.getByLabel("Topic name").fill("Persönlich");
+  await settings.getByRole("button", { name: "Save topic" }).click();
+  await expect(settings.locator("li")).toContainText("Persönlich");
+  await page.reload();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Projects/ })
+    .click();
+  await page.getByLabel("Filter status").selectOption("Aktiv");
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
+  await page.getByLabel("Filter status").selectOption("Pausiert");
+  await page.getByLabel("Filter topic").selectOption({ label: "Persönlich" });
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
+
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
+    .click();
+  const backup = JSON.parse(
+    await readFile((await (await downloadEvent).path())!, "utf8"),
+  );
+  expect(backup.schemaVersion).toBe(3);
+  expect(backup.projectCategories[0].name).toBe("Persönlich");
+  expect(backup.projects[0].status).toBe("Pausiert");
+  expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await settings.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(settings.locator("li")).toHaveCount(1);
+  page.once("dialog", (dialog) => dialog.accept());
+  await settings.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(settings.locator("li")).toHaveCount(0);
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Projects/ })
+    .click();
+  await expect(page.locator(".table-wrap tbody tr")).toContainText("No topic");
+  await page.getByLabel("Filter status").selectOption("");
+  await page.getByLabel("Filter topic").selectOption("");
+
+  const timestamp = backup.exportedAt;
+  const completedProject = {
+    ...backup.projects[0],
+    id: "completed-project",
+    name: "Abgeschlossenes Projekt",
+    status: "Abgeschlossen",
+  };
+  const imported = {
+    ...backup,
+    projects: [...backup.projects, completedProject],
+    todos: [
+      ...Array.from({ length: 7 }, (_, i) => ({
+        id: `open-${i}`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        projectId: backup.projects[0].id,
+        title: `Offene Aufgabe ${i + 1}`,
+        completed: false,
+        ...(i === 0 ? { dueDate: "2020-01-01" } : {}),
+      })),
+      {
+        id: "completed-open",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        projectId: completedProject.id,
+        title: "Offen trotz Abschluss",
+        completed: false,
+      },
+      {
+        id: "done",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        projectId: completedProject.id,
+        title: "Bereits erledigt",
+        completed: true,
+      },
+    ],
+  };
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "categories.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(imported)),
+  });
+  await expect(
+    page.getByRole("region", { name: "Import preview" }),
+  ).toContainText("1 project topics");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Replace data", exact: true }).click();
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(2);
+  await expect(page.locator(".table-wrap tbody tr").first()).toContainText(
+    "Persönlich",
+  );
+  await page.reload();
+  await expect(page.locator(".overview-todo")).toHaveCount(8);
+  await expect(
+    page.locator(".overview-todo").filter({ hasText: "Offene Aufgabe 7" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".overview-todo").filter({ hasText: "Offen trotz Abschluss" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".overview-todo").filter({ hasText: "Bereits erledigt" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator(".overview-todo").filter({ hasText: "Offene Aufgabe 1" }),
+  ).toContainText("Overdue");
+});
+
+test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await createProject(page, "Markdownprojekt");
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  const editor = page.locator(".event-editor");
+  const source = editor.getByLabel("Note text (optional)");
+  await editor.getByLabel("Title", { exact: true }).fill("Markdownabnahme");
+  await source.fill("Auswahl");
+  await source.evaluate((node: HTMLTextAreaElement) => {
+    node.focus();
+    node.setSelectionRange(0, 7);
+  });
+  await editor.getByRole("button", { name: "Bold", exact: true }).click();
+  await expect(source).toHaveValue("**Auswahl**");
+
+  await source.fill("Vorher ersetzen danach");
+  await source.evaluate((node: HTMLTextAreaElement) => {
+    node.focus();
+    node.setSelectionRange(7, 15);
+    const data = new DataTransfer();
+    data.setData(
+      "text/html",
+      "<h2>Chatbot-Antwort</h2><p><strong>Wichtig</strong> und <em>klar</em></p><ul><li>Erster Punkt</li><li>Zweiter Punkt</li></ul>",
+    );
+    data.setData(
+      "text/plain",
+      "Chatbot-Antwort\nWichtig und klar\nErster Punkt\nZweiter Punkt",
+    );
+    node.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(source).toHaveValue(
+    /Vorher[\s\S]*## Chatbot-Antwort[\s\S]*\*\*Wichtig\*\*[\s\S]*Erster Punkt[\s\S]*danach/,
+  );
+  await expect(source).not.toHaveValue(/ersetzen/);
+  await source.fill("Links ersetzen rechts");
+  await source.evaluate((node: HTMLTextAreaElement) => {
+    node.focus();
+    node.setSelectionRange(6, 14);
+    const data = new DataTransfer();
+    data.setData("text/plain", "**Original**\n\n- Punkt");
+    node.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(source).toHaveValue("Links **Original**\n\n- Punkt rechts");
+  async function paste(html: string, plain: string) {
+    await source.fill("");
+    await source.evaluate(
+      (node: HTMLTextAreaElement, data: { html: string; plain: string }) => {
+        node.focus();
+        const clipboard = new DataTransfer();
+        clipboard.setData("text/html", data.html);
+        clipboard.setData("text/plain", data.plain);
+        node.dispatchEvent(
+          new ClipboardEvent("paste", {
+            clipboardData: clipboard,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      },
+      { html, plain },
+    );
+  }
+  await paste("<pre><code>const wert = 1;</code></pre>", "const wert = 1;");
+  await expect(source).toHaveValue(/```[\s\S]*const wert = 1;[\s\S]*```/);
+  await paste(
+    "<table><tr><td>Thema</td><td>Stand</td></tr><tr><td>Browser</td><td>fertig</td></tr></table>",
+    "Thema Stand Browser fertig",
+  );
+  await expect(source).toHaveValue(/\|[\s\S]*Thema[\s\S]*Stand[\s\S]*\|/);
+  await paste(
+    "<div>**Original**<br><br>- Punkt</div>",
+    "**Original**\n\n- Punkt",
+  );
+  await expect(source).toHaveValue("**Original**\n\n- Punkt");
+  await paste(
+    '<p>Sicher</p><script>window.__markdownUnsafe = true</script><img src=x onerror="window.__markdownUnsafe = true"><a href="javascript:alert(1)">Linktext</a>',
+    "Sicher Linktext",
+  );
+  await expect(source).not.toHaveValue(/<script>|onerror|javascript:/);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __markdownUnsafe?: boolean }).__markdownUnsafe,
+    ),
+  ).toBeUndefined();
+  await editor.getByLabel("Paste as plain text").check();
+  await paste("<strong>Literal</strong>", "**Literal**");
+  await editor.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(editor.getByRole("region", { name: "Note preview" })).toHaveText(
+    "**Literal**",
+  );
+  await expect(editor.locator("strong")).toHaveCount(0);
+  await editor.getByRole("button", { name: "Markdown", exact: true }).click();
+  await editor.getByLabel("Paste as plain text").uncheck();
+
+  const markdown =
+    "## Bericht\n\n**Fett** und *kursiv*.\n\n- Erstens\n- Zweitens\n\n> Ein Zitat\n\n| Thema | Stand |\n| --- | --- |\n| Browser | geprüft |\n| SehrLangesTabellenfeldOhneLeerzeichenZurLayoutprüfungAufKleinenBildschirmen | Ein weiteres ausführliches Ergebnis |\n\n```ts\nconst wert = '<script>';\n```\n\n[Sicher](https://example.com) [Gefährlich](javascript:alert(1))\n\n<script>window.__markdownUnsafe = true</script>\n<img src=x onerror=\"window.__markdownUnsafe = true\">";
+  await source.fill(markdown);
+  await mkdir("test-results/visual", { recursive: true });
+  await page.screenshot({
+    path: "test-results/visual/markdown-editor-desktop.png",
+    fullPage: true,
+  });
+  await editor.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(
+    editor.getByRole("heading", { name: "Bericht", exact: true }),
+  ).toBeVisible();
+  await expect(
+    editor.locator("strong").filter({ hasText: "Fett" }),
+  ).toBeVisible();
+  await expect(editor.locator("table")).toContainText("geprüft");
+  await expect(editor.locator("blockquote")).toContainText("Ein Zitat");
+  await expect(editor.locator("pre code")).toContainText("const wert");
+  await expect(
+    editor.getByRole("link", { name: "Sicher", exact: true }),
+  ).toHaveAttribute("href", "https://example.com");
+  await expect(
+    editor.locator('a[href^="javascript:"], script, img'),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: "test-results/visual/markdown-preview-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/visual/markdown-preview-mobile.png",
+    fullPage: true,
+  });
+  await editor.getByRole("button", { name: "Markdown", exact: true }).click();
+  await expect(source).toHaveValue(markdown);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/visual/markdown-editor-mobile.png",
+    fullPage: true,
+  });
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".event-details")).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Markdownabnahme", exact: true })
+    .click();
+  await expect(
+    page
+      .locator(".event-item")
+      .getByRole("heading", { name: "Bericht", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __markdownUnsafe?: boolean }).__markdownUnsafe,
+    ),
+  ).toBeUndefined();
+  await page.reload();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Projects/ })
+    .click();
+  await page.locator(".project-title").click();
+  await page
+    .getByRole("button", {
+      name: "Edit event Markdownabnahme",
+      exact: true,
+    })
+    .click();
+  await expect(source).toHaveValue(markdown);
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  const downloaded = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
+    .click();
+  const backup = JSON.parse(
+    await readFile((await (await downloaded).path())!, "utf8"),
+  );
+  expect(backup.schemaVersion).toBe(3);
+  expect(backup.events[0].note).toBe(markdown);
+  expect(backup.events[0].noteFormat).toBe("markdown");
+  const legacyNote = "**Klartext bleibt Klartext**\n<script>kein HTML</script>";
+  const legacyEvent = {
+    ...backup.events[0],
+    id: "legacy-note",
+    title: "Alte Klartextnotiz",
+    note: legacyNote,
+  };
+  delete legacyEvent.noteFormat;
+  const legacy = { ...backup, schemaVersion: 2, events: [legacyEvent] };
+  for (const value of [backup, legacy]) {
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "notes.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(value)),
+    });
+    page.once("dialog", (dialog) => dialog.accept());
+    await page
+      .getByRole("button", { name: "Replace data", exact: true })
+      .click();
+    await page.locator(".project-title").click();
+    await page.locator(".event-title[aria-expanded]").click();
+    if (value === backup) {
+      await expect(
+        page
+          .locator(".event-item")
+          .getByRole("heading", { name: "Bericht", exact: true }),
+      ).toBeVisible();
+    }
+  }
+  await expect(page.locator(".event-note")).toHaveText(legacyNote);
+  await expect(
+    page.locator(".event-note strong, .event-note script"),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Edit event Alte Klartextnotiz",
+      exact: true,
+    })
+    .click();
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".event-note")).toHaveText(legacyNote);
+  await expect(
+    page.locator(".event-note strong, .event-note script"),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Edit event Alte Klartextnotiz",
+      exact: true,
+    })
+    .click();
+  const escapedLegacy = await source.inputValue();
+  await source.fill(`${escapedLegacy}\nZusatz`);
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".markdown-note")).toHaveText(
+    `${legacyNote}\nZusatz`,
+  );
+  await expect(
+    page.locator(".markdown-note strong, .markdown-note script"),
+  ).toHaveCount(0);
+});
+
+test("header actions, task filters and integrated event timeline", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load sample data", exact: true })
+    .click();
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(
+    nav.getByRole("button", { name: "Timeline", exact: true }),
+  ).toHaveCount(0);
+  await nav.getByRole("button", { name: "Tasks", exact: true }).click();
+  await expect(
+    page.locator(".page-heading").getByRole("button", { name: "Add task" }),
+  ).toBeVisible();
+  const rows = page.locator(".tasks-table tbody tr");
+  const initial = await rows.count();
+  const openCount = await page
+    .locator(".tasks-table input:not(:checked)")
+    .count();
+  const taskLabel = await rows
+    .first()
+    .getByRole("checkbox")
+    .getAttribute("aria-label");
+  const checkbox = page.getByRole("checkbox", {
+    name: taskLabel!,
+    exact: true,
+  });
+  await checkbox.click();
+  await expect(checkbox).toBeChecked();
+  await page.getByRole("button", { name: "Open tasks", exact: true }).click();
+  await expect(rows).toHaveCount(openCount - 1);
+  await page.getByRole("button", { name: "All tasks", exact: true }).click();
+  await expect(rows).toHaveCount(initial);
+  await nav.getByRole("button", { name: "Events", exact: true }).click();
+  await expect(
+    page
+      .locator(".page-heading")
+      .getByRole("button", { name: "Add event", exact: true }),
+  ).toBeVisible();
+  const selector = await page
+    .getByLabel("Category", { exact: true })
+    .boundingBox();
+  const toggle = await page
+    .getByRole("button", { name: "List", exact: true })
+    .boundingBox();
+  expect(selector).not.toBeNull();
+  expect(toggle).not.toBeNull();
+  expect(
+    Math.abs(selector!.y + selector!.height - toggle!.y - toggle!.height),
+  ).toBeLessThan(2);
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
-  await assertNoOverflow();
-  await page
-    .getByRole("button", { name: "Ereignis hinzufügen", exact: true })
-    .click();
-  await assertNoOverflow();
+  await expect(page.locator(".today-marker")).toBeVisible();
 });

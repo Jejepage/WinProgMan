@@ -1,4 +1,9 @@
-import { categories, type AppData, type ExportEnvelope } from "../domain/types";
+import {
+  categories,
+  projectStatuses,
+  type AppData,
+  type ExportEnvelope,
+} from "../domain/types";
 
 const fail = (path: string, message: string): never => {
   throw new Error(`${path}: ${message}`);
@@ -46,30 +51,68 @@ function date(value: unknown, path: string) {
 }
 export function validateImport(value: unknown): ExportEnvelope {
   const root = record(value, "Sicherung");
+  const legacy = root.schemaVersion === 1;
   fields(
     root,
-    ["schemaVersion", "exportedAt", "projects", "links", "todos", "events"],
+    [
+      "schemaVersion",
+      "exportedAt",
+      "projects",
+      "links",
+      "todos",
+      "events",
+      ...(legacy ? [] : ["projectCategories"]),
+    ],
     "Sicherung",
   );
-  if (root.schemaVersion !== 1)
-    fail("schemaVersion", "Nur Sicherungsformat 1 wird unterstützt.");
+  if (
+    root.schemaVersion !== 1 &&
+    root.schemaVersion !== 2 &&
+    root.schemaVersion !== 3
+  )
+    fail(
+      "schemaVersion",
+      "Nur Sicherungsformat 1, 2 und 3 werden unterstützt.",
+    );
   timestamp(root.exportedAt, "exportedAt");
   const ids = new Set<string>();
   const projects = new Set<string>();
-  for (const collection of ["projects", "links", "todos", "events"] as const) {
+  const categoryIds = new Set<string>();
+  const categoryNames = new Set<string>();
+  for (const collection of [
+    ...(legacy ? [] : ["projectCategories" as const]),
+    "projects",
+    "links",
+    "todos",
+    "events",
+  ] as const) {
     const list = root[collection];
     if (!Array.isArray(list)) return fail(collection, "Liste erwartet.");
     list.forEach((item: unknown, index: number) => {
       const path = `${collection}[${index}]`;
       const entry = record(item, path);
       const extras =
-        collection === "projects"
-          ? ["name", "description"]
-          : collection === "links"
-            ? ["projectId", "label", "target"]
-            : collection === "todos"
-              ? ["projectId", "title", "completed", "dueDate"]
-              : ["projectId", "category", "title", "date", "time", "note"];
+        collection === "projectCategories"
+          ? ["name"]
+          : collection === "projects"
+            ? [
+                "name",
+                "description",
+                ...(legacy ? [] : ["status", "categoryId"]),
+              ]
+            : collection === "links"
+              ? ["projectId", "label", "target"]
+              : collection === "todos"
+                ? ["projectId", "title", "completed", "dueDate"]
+                : [
+                    "projectId",
+                    "category",
+                    "title",
+                    "date",
+                    "time",
+                    "note",
+                    ...(root.schemaVersion === 3 ? ["noteFormat"] : []),
+                  ];
       fields(entry, ["id", "createdAt", "updatedAt", ...extras], path);
       string(entry.id, `${path}.id`, true);
       if (ids.has(entry.id)) fail(`${path}.id`, "Doppelte ID.");
@@ -81,7 +124,27 @@ export function validateImport(value: unknown): ExportEnvelope {
         Date.parse(entry.createdAt as string)
       )
         fail(`${path}.updatedAt`, "Liegt vor dem Erstellungszeitpunkt.");
-      if (collection === "projects") {
+      if (collection === "projectCategories") {
+        string(entry.name, `${path}.name`, true);
+        const name = entry.name.trim().toLocaleLowerCase("de");
+        if (categoryNames.has(name))
+          fail(`${path}.name`, "Doppelter Kategoriename.");
+        categoryNames.add(name);
+        categoryIds.add(entry.id);
+      } else if (collection === "projects") {
+        if (!legacy) {
+          if (
+            !projectStatuses.includes(
+              entry.status as (typeof projectStatuses)[number],
+            )
+          )
+            fail(`${path}.status`, "Unbekannter Projektstatus.");
+          if (entry.categoryId !== undefined) {
+            string(entry.categoryId, `${path}.categoryId`, true);
+            if (!categoryIds.has(entry.categoryId))
+              fail(`${path}.categoryId`, "Kategorie existiert nicht.");
+          }
+        }
         projects.add(entry.id);
         string(entry.name, `${path}.name`, true);
         string(entry.description, `${path}.description`);
@@ -127,22 +190,36 @@ export function validateImport(value: unknown): ExportEnvelope {
             )
               fail(`${path}.time`, "Uhrzeit HH:mm erwartet.");
             if (entry.note !== undefined) string(entry.note, `${path}.note`);
+            if (
+              entry.noteFormat !== undefined &&
+              entry.noteFormat !== "markdown"
+            )
+              fail(`${path}.noteFormat`, "Unbekanntes Notizformat.");
           }
         }
       }
     });
   }
-  return structuredClone(value) as ExportEnvelope;
+  const result = structuredClone(root);
+  result.schemaVersion = 3;
+  if (legacy) {
+    result.projectCategories = [];
+    result.projects = (result.projects as Record<string, unknown>[]).map(
+      (project) => ({ ...project, status: "Aktiv" }),
+    );
+  }
+  return result as unknown as ExportEnvelope;
 }
 
-export function validateData(data: AppData): AppData {
+export function validateData(data: unknown): AppData {
+  const source = record(data, "Daten");
   const {
     schemaVersion: _version,
     exportedAt: _at,
     ...result
   } = validateImport({
-    ...data,
-    schemaVersion: 1,
+    ...source,
+    schemaVersion: source.projectCategories === undefined ? 1 : 3,
     exportedAt: new Date().toISOString(),
   });
   return result;

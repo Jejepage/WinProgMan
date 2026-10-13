@@ -28,7 +28,7 @@ export const activeProjects = (data: AppData, today = localToday()) =>
       data.events.some((e) => e.projectId === p.id && upcoming(e, today)),
   );
 export const formatDate = (date: string) =>
-  new Intl.DateTimeFormat("de-DE", {
+  new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",

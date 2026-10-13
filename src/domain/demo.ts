@@ -9,17 +9,20 @@ export function demoData(): AppData {
   };
   const active = {
     ...metadata(),
+    status: "Aktiv" as const,
     name: "Website überarbeiten",
     description:
       "Konzept, Inhalte und Veröffentlichung der persönlichen Website.",
   };
   const resting = {
     ...metadata(),
+    status: "Abgeschlossen" as const,
     name: "Arbeitsplatz erneuern",
     description:
       "Abgeschlossenes Beispielprojekt – bleibt in der Projektliste erreichbar.",
   };
   return {
+    projectCategories: [],
     projects: [active, resting],
     links: [
       {

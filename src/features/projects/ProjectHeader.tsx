@@ -1,20 +1,35 @@
 import { useState } from "react";
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { projectStatusLabels } from "../../ui/labels";
 import {
   metadata,
+  projectStatuses,
   type DomainChange,
   type Link,
   type Project,
+  type ProjectCategory,
+  type ProjectStatus,
 } from "../../domain/types";
+import { normalizeLinkTarget } from "../../domain/links";
 interface Props {
   project: Project;
   links: Link[];
+  projectCategories: ProjectCategory[];
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
 }
-export function ProjectHeader({ project, links, busy, onChange }: Props) {
+export function ProjectHeader({
+  project,
+  links,
+  projectCategories,
+  busy,
+  onChange,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
+  const [status, setStatus] = useState<ProjectStatus>(project.status);
+  const [categoryId, setCategoryId] = useState(project.categoryId || "");
   const [linkEditor, setLinkEditor] = useState(false);
   const [link, setLink] = useState<Link | null>(null);
   const [label, setLabel] = useState("");
@@ -22,15 +37,19 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
   const [message, setMessage] = useState("");
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const value: Project = {
+      ...project,
+      name: name.trim() || "New project",
+      description,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    if (categoryId) value.categoryId = categoryId;
+    else delete value.categoryId;
     if (
       await onChange({
         type: "project.save",
-        value: {
-          ...project,
-          name: name.trim() || "Neues Projekt",
-          description,
-          updatedAt: new Date().toISOString(),
-        },
+        value,
       })
     )
       setEditing(false);
@@ -45,7 +64,7 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
   async function saveLink(e: React.FormEvent) {
     e.preventDefault();
     if (!target.trim()) {
-      setMessage("Bitte ein Ziel eintragen.");
+      setMessage("Enter a link destination.");
       return;
     }
     if (
@@ -55,7 +74,7 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
           ...(link || metadata()),
           projectId: project.id,
           label: label.trim() || target.trim(),
-          target: target.trim(),
+          target: normalizeLinkTarget(target),
           updatedAt: new Date().toISOString(),
         },
       })
@@ -66,10 +85,16 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
     <section className="project-header panel">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">PROJEKT</p>
+          <p className="eyebrow">PROJECT</p>
           <h1>{project.name}</h1>
+          <p className="muted">
+            {projectStatusLabels[project.status]} ·{" "}
+            {projectCategories.find(
+              (category) => category.id === project.categoryId,
+            )?.name || "No topic"}
+          </p>
           <p className="description">
-            {project.description || "Platz für eine kurze Projektbeschreibung."}
+            {project.description || "Add a short project description."}
           </p>
         </div>
         <button
@@ -78,14 +103,45 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
           onClick={() => {
             setName(project.name);
             setDescription(project.description);
+            setStatus(project.status);
+            setCategoryId(project.categoryId || "");
             setEditing(!editing);
           }}
         >
-          Projekt bearbeiten
+          <Pencil size={14} aria-hidden="true" /> Edit project
         </button>
       </div>
       {editing && (
         <form className="editor" onSubmit={save}>
+          <div className="form-grid">
+            <label className="field">
+              Status
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+              >
+                {projectStatuses.map((value) => (
+                  <option key={value} value={value}>
+                    {projectStatusLabels[value]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Topic
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">No topic</option>
+                {projectCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <label className="field">
             Name
             <input
@@ -95,7 +151,7 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
             />
           </label>
           <label className="field">
-            Kurzbeschreibung
+            Description
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -104,34 +160,40 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
           </label>
           <div className="actions">
             <button className="button" disabled={busy}>
-              Speichern
+              Save
             </button>
             <button
               type="button"
               className="button secondary"
               onClick={() => setEditing(false)}
             >
-              Abbrechen
+              Cancel
             </button>
           </div>
         </form>
       )}
       <div className="links-heading">
-        <h2>Links & Ablagen</h2>
+        <h2>Links & resources</h2>
         <button
           className="text-button"
           disabled={busy}
           onClick={() => editLink()}
         >
-          + Link hinzufügen
+          <Plus size={14} aria-hidden="true" /> Add link
         </button>
       </div>
       <ul className="links-list">
         {links.map((l) => (
           <li key={l.id}>
             <div>
-              {/^(https?:\/\/|mailto:|tel:)/i.test(l.target) ? (
-                <a href={l.target} target="_blank" rel="noreferrer">
+              {/^(https?:\/\/|mailto:|tel:)/i.test(
+                normalizeLinkTarget(l.target),
+              ) ? (
+                <a
+                  href={normalizeLinkTarget(l.target)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {l.label} ↗
                 </a>
               ) : (
@@ -144,32 +206,32 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
                 className="icon-button"
                 onClick={() =>
                   void navigator.clipboard.writeText(l.target).then(
-                    () => setMessage("Ziel kopiert."),
+                    () => setMessage("Destination copied."),
                     () =>
                       setMessage(
-                        "Kopieren nicht möglich. Bitte den angezeigten Pfad markieren.",
+                        "Unable to copy. Select the displayed path to copy it manually.",
                       ),
                   )
                 }
               >
-                Kopieren
+                <Copy size={14} aria-hidden="true" /> Copy
               </button>
               <button
                 className="icon-button"
                 disabled={busy}
                 onClick={() => editLink(l)}
               >
-                Bearbeiten
+                <Pencil size={14} aria-hidden="true" /> Edit
               </button>
               <button
                 className="icon-button danger"
                 disabled={busy}
                 onClick={() => {
-                  if (confirm(`Link „${l.label}“ löschen?`))
+                  if (confirm(`Delete link "${l.label}"?`))
                     void onChange({ type: "link.delete", id: l.id });
                 }}
               >
-                Löschen
+                <Trash2 size={14} aria-hidden="true" /> Delete
               </button>
             </div>
           </li>
@@ -177,14 +239,15 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
       </ul>
       {!links.length && (
         <p className="muted">
-          Ordner, Dokumente oder Teams direkt am Projekt ablegen.
+          <Plus size={14} aria-hidden="true" /> Add links to folders, documents
+          or websites.
         </p>
       )}
       {linkEditor && (
         <form className="editor" onSubmit={saveLink}>
           <div className="form-grid">
             <label className="field">
-              Anzeigename
+              Label
               <input
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
@@ -192,24 +255,24 @@ export function ProjectHeader({ project, links, busy, onChange }: Props) {
               />
             </label>
             <label className="field">
-              URL oder Pfad
+              URL or path
               <input
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="https://… oder Laufwerkspfad"
+                placeholder="https://… or folder path"
               />
             </label>
           </div>
           <div className="actions">
             <button className="button" disabled={busy}>
-              Link speichern
+              Save link
             </button>
             <button
               type="button"
               className="button secondary"
               onClick={() => setLinkEditor(false)}
             >
-              Abbrechen
+              Cancel
             </button>
           </div>
         </form>

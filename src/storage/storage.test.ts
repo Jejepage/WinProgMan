@@ -3,16 +3,100 @@ import { describe, expect, it, vi } from "vitest";
 import { demoData } from "../domain/demo";
 import { emptyData, metadata, type ExportEnvelope } from "../domain/types";
 import { IndexedDbProjectStore } from "./IndexedDbProjectStore";
-import { validateImport } from "./validation";
+import { validateData, validateImport } from "./validation";
+
+const legacyData = () => {
+  const { projectCategories: _categories, ...data } = demoData();
+  return {
+    ...data,
+    projects: data.projects.map(
+      ({ status: _status, categoryId: _category, ...project }) => project,
+    ),
+  };
+};
 
 const envelope = (): ExportEnvelope => ({
   ...demoData(),
-  schemaVersion: 1,
+  schemaVersion: 3,
   exportedAt: new Date().toISOString(),
 });
 const store = () => new IndexedDbProjectStore(`test-${crypto.randomUUID()}`);
 
 describe("Sicherungsvalidierung", () => {
+  it("erhält alte Klartextnotizen beim Import von Format 2 unverändert", () => {
+    const old = { ...envelope(), schemaVersion: 2 };
+    old.events[0].note = "**kein Markdown**\n# Klartext";
+    const imported = validateImport(old);
+    expect(imported.schemaVersion).toBe(3);
+    expect(imported.events).toEqual(old.events);
+    expect(imported.events[0]).not.toHaveProperty("noteFormat");
+    expect(validateData(old).events).toEqual(old.events);
+  });
+  it("erhält Markdown und Klartext getrennt im JSON-Roundtrip", () => {
+    const data = envelope();
+    data.events[0].note = "# Überschrift\n\n**Wichtig**";
+    data.events[0].noteFormat = "markdown";
+    expect(validateImport(JSON.parse(JSON.stringify(data)))).toEqual(data);
+    expect(validateData(data).events).toEqual(data.events);
+  });
+  it("weist unbekannte Notizformate und Markdown-Felder in alten Versionen ab", () => {
+    const data = envelope();
+    (data.events[0] as unknown as { noteFormat: string }).noteFormat = "html";
+    expect(() => validateImport(data)).toThrow("Unbekanntes Notizformat");
+    data.events[0].noteFormat = "markdown";
+    expect(() => validateImport({ ...data, schemaVersion: 2 })).toThrow(
+      "Unbekanntes Feld",
+    );
+    const legacy = legacyData();
+    expect(() =>
+      validateImport({
+        ...legacy,
+        schemaVersion: 1,
+        exportedAt: data.exportedAt,
+        events: data.events,
+      }),
+    ).toThrow("Unbekanntes Feld");
+  });
+  it("migriert alte Sicherungen und lokale Daten ohne IDs oder Inhalte zu ändern", () => {
+    const legacy = legacyData();
+    const migrated = validateImport({
+      ...legacy,
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+    });
+    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.projectCategories).toEqual([]);
+    expect(migrated.projects).toEqual(
+      legacy.projects.map((project) => ({ ...project, status: "Aktiv" })),
+    );
+    expect(validateData(legacy)).toEqual({
+      ...legacy,
+      projectCategories: [],
+      projects: migrated.projects,
+    });
+    expect(legacy.projects[0]).not.toHaveProperty("status");
+  });
+  it("weist neue Felder in Format 1, fehlenden Status und ungültige Kategoriebeziehungen ab", () => {
+    expect(() => validateImport({ ...envelope(), schemaVersion: 1 })).toThrow();
+    const data = envelope();
+    delete (data.projects[0] as Partial<(typeof data.projects)[0]>).status;
+    expect(() => validateImport(data)).toThrow();
+    const orphan = envelope();
+    orphan.projects[0].categoryId = "fehlt";
+    expect(() => validateImport(orphan)).toThrow();
+  });
+  it("weist doppelte Kategorienamen und übergreifend doppelte IDs ab", () => {
+    const data = envelope();
+    data.projectCategories = [
+      { ...metadata(), name: "Arbeit" },
+      { ...metadata(), name: " arbeit " },
+    ];
+    expect(() => validateImport(data)).toThrow("Doppelter Kategoriename");
+    data.projectCategories = [
+      { ...metadata(), id: data.projects[0].id, name: "Arbeit" },
+    ];
+    expect(() => validateImport(data)).toThrow("Doppelte ID");
+  });
   it("erhält IDs, Beziehungen und mehrzeilige Notizen im JSON-Roundtrip", () => {
     const data = envelope();
     expect(validateImport(JSON.parse(JSON.stringify(data)))).toEqual(data);
@@ -21,7 +105,7 @@ describe("Sicherungsvalidierung", () => {
     [
       "unbekannte Version",
       (data: ExportEnvelope) => {
-        (data as unknown as { schemaVersion: number }).schemaVersion = 2;
+        (data as unknown as { schemaVersion: number }).schemaVersion = 4;
       },
     ],
     [
@@ -83,7 +167,7 @@ describe("Sicherungsvalidierung", () => {
     expect(
       validateImport({
         ...emptyData(),
-        schemaVersion: 1,
+        schemaVersion: 3,
         exportedAt: new Date().toISOString(),
       }).projects,
     ).toEqual([]);
@@ -91,11 +175,113 @@ describe("Sicherungsvalidierung", () => {
 });
 
 describe("IndexedDB", () => {
+  it("speichert Markdown mit Formatkennzeichnung und erhält Klartext beim Reload und Export", async () => {
+    const name = `notes-${crypto.randomUUID()}`;
+    const adapter = new IndexedDbProjectStore(name);
+    const data = envelope();
+    data.events[0].note = "**Formatierter Text**";
+    data.events[0].noteFormat = "markdown";
+    data.events[1].note = "**Alter Klartext**";
+    await adapter.importData(data);
+    expect((await new IndexedDbProjectStore(name).load()).events).toEqual(
+      data.events,
+    );
+    expect((await adapter.exportData()).events).toEqual(data.events);
+  });
+  it("lädt persistierte Altdaten und migriert vor der ersten Kategorieänderung", async () => {
+    const name = `legacy-${crypto.randomUUID()}`;
+    const legacy = legacyData();
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(name, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("app");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction("app", "readwrite");
+        transaction.objectStore("app").put(legacy, "data");
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+        transaction.onabort = () => reject(transaction.error);
+      };
+    });
+    const adapter = new IndexedDbProjectStore(name);
+    const migrated = await adapter.load();
+    expect(
+      migrated.projects.every((project) => project.status === "Aktiv"),
+    ).toBe(true);
+    const category = { ...metadata(), name: "Arbeit" };
+    await adapter.apply({ type: "category.save", value: category });
+    const reloaded = await new IndexedDbProjectStore(name).load();
+    expect(reloaded).toEqual({ ...migrated, projectCategories: [category] });
+    expect((await adapter.exportData()).schemaVersion).toBe(3);
+  });
+  it("löscht Kategorien atomar, erhält Projekte und aktualisiert deren Zeitstempel", async () => {
+    const adapter = store();
+    const data = envelope();
+    const category = { ...metadata(), name: "Arbeit" };
+    data.projectCategories = [category];
+    data.projects[0].categoryId = category.id;
+    await adapter.importData(data);
+    const failure = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(() => {
+        throw new Error("Schreibfehler");
+      });
+    try {
+      await expect(
+        adapter.apply({ type: "category.delete", id: category.id }),
+      ).rejects.toThrow("Schreibfehler");
+    } finally {
+      failure.mockRestore();
+    }
+    expect(await adapter.load()).toEqual({
+      projectCategories: data.projectCategories,
+      projects: data.projects,
+      links: data.links,
+      todos: data.todos,
+      events: data.events,
+    });
+    await adapter.apply({ type: "category.delete", id: category.id });
+    const loaded = await adapter.load();
+    expect(loaded.projectCategories).toEqual([]);
+    expect(loaded.projects[0].categoryId).toBeUndefined();
+    expect(Date.parse(loaded.projects[0].updatedAt)).toBeGreaterThanOrEqual(
+      Date.parse(data.projects[0].updatedAt),
+    );
+    expect(loaded.projects[1]).toEqual(data.projects[1]);
+    expect(loaded.todos).toEqual(data.todos);
+  });
+  it("erhält Kategorien bei Projektlöschung und weist ungültige Kategorieänderungen atomar ab", async () => {
+    const adapter = store();
+    const data = envelope();
+    data.projectCategories = [{ ...metadata(), name: "Privat" }];
+    await adapter.importData(data);
+    await expect(
+      adapter.apply({
+        type: "category.save",
+        value: { ...metadata(), name: " privat " },
+      }),
+    ).rejects.toThrow();
+    expect((await adapter.load()).projectCategories).toEqual(
+      data.projectCategories,
+    );
+    await adapter.apply({ type: "project.delete", id: data.projects[0].id });
+    expect((await adapter.load()).projectCategories).toEqual(
+      data.projectCategories,
+    );
+  });
   it("startet leer, speichert CRUD und lädt aus einer neuen Adapterinstanz", async () => {
     const name = `test-${crypto.randomUUID()}`;
     const first = new IndexedDbProjectStore(name);
     expect(await first.load()).toEqual(emptyData());
-    const project = { ...metadata(), name: "Projekt", description: "" };
+    const project = {
+      ...metadata(),
+      name: "Projekt",
+      description: "",
+      status: "Aktiv" as const,
+    };
     await first.apply({ type: "project.save", value: project });
     const todo = {
       ...metadata(),
@@ -137,7 +323,7 @@ describe("IndexedDB", () => {
     expect(await adapter.load()).toEqual(before);
     await adapter.importData({
       ...emptyData(),
-      schemaVersion: 1,
+      schemaVersion: 3,
       exportedAt: new Date().toISOString(),
     });
     expect(await adapter.load()).toEqual(emptyData());
@@ -194,6 +380,6 @@ describe("IndexedDB", () => {
     );
     const loaded = await adapter.load();
     expect(loaded.todos).toHaveLength(data.todos.length + todos.length);
-    expect((await adapter.exportData()).schemaVersion).toBe(1);
+    expect((await adapter.exportData()).schemaVersion).toBe(3);
   });
 });

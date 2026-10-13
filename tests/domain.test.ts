@@ -60,6 +60,7 @@ describe("fachliche Kalendergrenzen", () => {
       id,
       name: id,
       description: "",
+      status: "Abgeschlossen",
     }));
     data.todos = [
       todo("no-date"),

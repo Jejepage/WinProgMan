@@ -1,6 +1,6 @@
 # WinProgMan
 
-Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Deutsche Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
+Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
 ## Start
 
@@ -24,19 +24,22 @@ Bei Windows-Sandboxfehlern wie `EPERM realpath` brauchen Vite und Vitest Zugriff
 
 ## Funktionen
 
-- Überblick mit offenen Aufgaben, kommenden Ereignissen und überfälligen Aufgaben.
+- Überblick mit allen offenen Aufgaben je Projekt, kommenden Ereignissen und überfälligen Aufgaben; auch bei pausierten oder abgeschlossenen Projekten.
 - Vollständige Projektliste und Projektseite mit Kurzbeschreibung und Linkliste.
+- Projektstatus: Geplant, Aktiv, Pausiert, Abgeschlossen; Status- und Kategoriefilter in der Projektliste.
+- Eine optionale Kategorie pro Projekt; Kategorien in Einstellungen anlegen, umbenennen und löschen. Projekte und Inhalte bleiben beim Löschen einer Kategorie erhalten.
 - Aufgaben anlegen, ändern, abhaken, wieder öffnen und löschen; Datum optional.
-- Ereignisse aller fünf Kategorien, freie Textnotizen, Kategorieauswahl, Liste und grafische Timeline.
+- Ereignisse aller fünf Kategorien, Markdown-Notizen mit Formatierungsleiste und Vorschau, Kategorieauswahl, Liste und grafische Timeline.
+- Formatierte Inhalte aus Chatbots einfügen: HTML wird in Markdown umgewandelt; alternativ als Klartext einfügen. Überschriften, Listen, Zitate, Links, Tabellen und Codeblöcke werden unterstützt.
 - Globale Aufgaben-/Ereignislisten mit Sprung zum Projekt.
 - JSON exportieren; Import vollständig prüfen, Vorschau anzeigen und nach Bestätigung atomar ersetzen.
 - Responsive Oberfläche für breite und schmale Fenster.
 
 ## Daten und Sicherung
 
-IndexedDB speichert die Daten lokal pro Browserprofil und Webadresse. Browserdatenlöschung oder ein Wechsel der Adresse kann einen anderen/leeren Bestand ergeben. Deshalb regelmäßig „JSON exportieren“ verwenden. Ein Import ersetzt den gesamten Bestand; vorher wird eine Sicherung angeboten. Beispieldaten werden nicht automatisch erneut geladen.
+IndexedDB speichert die Daten lokal pro Browserprofil und Webadresse. Browserdatenlöschung oder ein Wechsel der Adresse kann einen anderen/leeren Bestand ergeben. Deshalb regelmäßig „JSON exportieren“ verwenden. Sicherungsformat 3 enthält Projektstatus, Kategorien und die Markdown-Formatmarkierung. Alte Sicherungen im Format 1 und 2 bleiben importierbar; Projekte aus dem Format 1 erhalten bei der Übernahme den Status Aktiv und zunächst keine Kategorie. „Ruhend“ beschreibt weiterhin automatisch Projekte ohne offene Aufgaben oder kommende Ereignisse, unabhängig vom gewählten Status. Ein Import ersetzt den gesamten Bestand; vorher wird eine Sicherung angeboten. Beispieldaten werden nicht automatisch erneut geladen.
 
-HTTP(S)-Links öffnen direkt. Lokale Ordner-/Netzwerkpfade werden angezeigt und können kopiert werden; zuverlässiges Öffnen folgt mit der Windows-Verpackung. Notizen sind Klartext, einschließlich eingefügter Zeilenumbrüche.
+HTTP(S)-Links öffnen direkt. Eindeutige Webadressen wie `www.example.com` erhalten automatisch `https://`; auch bereits gespeicherte Webadressen ohne Protokoll sind anklickbar. Lokale Ordner-/Netzwerkpfade werden angezeigt und können kopiert werden; zuverlässiges Öffnen folgt mit der Windows-Verpackung. Neue und inhaltlich bearbeitete Notizen werden als Markdown-Quelltext gespeichert. Bestehende Notizen ohne Formatmarkierung bleiben als Klartext sichtbar, einschließlich Zeilenumbrüchen und wörtlicher Markdown-/HTML-Zeichen. Beim Bearbeiten werden diese Zeichen zunächst maskiert, um die bisherige Darstellung zu erhalten. Markdown ist im Editor direkt bearbeitbar; Vorschau und gespeicherte Anzeige nutzen denselben Renderer. Rohes HTML wird als Text angezeigt. Bilder werden als Alternativtext dargestellt; komplexe HTML-Layouts, eingebettete Inhalte und exakte Chatbot-Schriftgestaltung werden nicht übernommen.
 
 ## Architektur
 
@@ -46,7 +49,7 @@ React/TypeScript/Vite; reine Domänenabfragen in `src/domain`, asynchrone `Proje
 
 Zuerst [AGENTS.md](AGENTS.md), [Spec](Projekt-App%20%E2%80%93%20Spezifikation.md) und [Umsetzungsplan](UMSETZUNGSPLAN.md) lesen. Dort stehen Umfang, Defaults, Architektur und die Aufteilung auf Subagenten.
 
-Arbeitsstand 13. Oktober 2026: Phase-1-Oberfläche, CRUD, IndexedDB, Sicherung, Beispieldaten und CI implementiert. Typprüfung, Produktionsbuild und 22 Domänen-/Speichertests erfolgreich. Zwei integrierte Edge-Browsertests prüfen CRUD, Reload, Filter/Timeline, Sicherung/Import und schmales Layout. Desktop- und mobile Screenshots wurden visuell geprüft. npm-Audit nach Aktualisierung des Testwerkzeugs: keine bekannten Sicherheitslücken.
+Arbeitsstand 13. Oktober 2026: Phase-1-Oberfläche, CRUD, IndexedDB, Sicherung, Beispieldaten und CI implementiert. Erweiterung nach Benutzerfeedback: Projektstatus, Kategorienverwaltung, Filter, vollständige offene Aufgaben im Überblick, Webadressen ohne Protokoll und Markdown-Notizen umgesetzt. Typprüfung, Produktionsbuild und 43 Domänen-/Speicher-/Link-/Markdown-Tests erfolgreich. Vier integrierte Edge-Browsertests prüfen CRUD, Reload, Filter/Timeline, Sicherung/Import und schmales Layout. Die Erweiterungsprüfung umfasst Kategorien anlegen/umbenennen/löschen, Status und Filter, Speicherung nach Reload, Sicherungen sowie mehr als fünf Aufgaben und offene Aufgaben abgeschlossener Projekte. Markdown-Abnahme: Formatierungsbuttons, Vorschau, formatierte HTML-Zwischenablage (Tabellen/Code), unveränderte Markdown-Quellen, Klartextmodus, ungefährliche HTML-/Linkdarstellung, Reload und Sicherungen sowie alte Klartextnotizen vor/nach Bearbeitung. Desktop- und mobile Screenshots wurden visuell geprüft. npm-Audit nach Aktualisierung des Testwerkzeugs: keine bekannten Sicherheitslücken.
 
 ## Browserprüfungen
 
@@ -55,3 +58,18 @@ Arbeitsstand 13. Oktober 2026: Phase-1-Oberfläche, CRUD, IndexedDB, Sicherung, 
 `npm run format` formatiert den Quellcode; `npm run format:check` prüft ihn.
 
 Die GitHub-CI prüft Typen, Unit-/Speichertests und Produktionsbuild. Die lokale Browserprüfung benötigt Edge; eine spätere Linux-CI-Erweiterung kann Playwright Chromium verwenden.
+
+
+## Technical Light UI – 13. Oktober 2026
+
+Die Oberfläche folgt der bereitgestellten hellen Designvorlage: lokal gebündelte IBM Plex Mono, Lucide-Icons, helle Sidebar, blaue Akzente, kompakte Projekt-/Aufgabentabellen und gemeinsame Formular-/Kartenstile. Navigation: Dashboard, Projects, Tasks, Events, Settings. Notizen sind über den Kategorie-Filter in Events erreichbar; Timeline nutzt dieselben Ereignisse und Datumsregeln. Ereignistext ist zunächst verborgen und wird über den Titel mit Maus oder Tastatur aufgeklappt. Bestandsinhalte werden nicht übersetzt; englische Anzeigenamen für Status/Kategorien erhalten die gespeicherten Werte. Datenmodell, IndexedDB und Sicherungsformat bleiben unverändert.
+
+Die Projektnummer ist eine Anzeige anhand der aktuellen Projektreihenfolge, kein neues persistiertes Feld. Die Timeline bleibt ein chronologischer Ereigniszeitstrahl: Aufgaben haben keine Start-/Enddaten für ein Gantt-Diagramm. Suchfeld, Nutzerkonto und Benachrichtigungen der Vorlage wurden nicht ergänzt. Safari und echte iOS-Geräte bleiben ungeprüft.
+
+Abnahme des neuen Designs: Typprüfung, 43 Fach-/Speichertests, Produktionsbuild, Formatprüfung und vier Edge-Browserabläufe erfolgreich. Desktop und schmales Layout visuell geprüft; Details standardmäßig verborgen und per Titel aufklappbar. Gemeinsame UI-Primitiven stehen in `src/ui/components.tsx`, Tokens und Zustände in `src/ui/styles.css`.
+
+UI-Nachbesserung: Tasks und Events zeigen den Seitentitel nur im Header, ohne New-project-Button. Die Listen behalten Anzahl und jeweilige Anlegeaktion; Projektliste und Projekt-Detailabschnitte bleiben unverändert.
+
+UI-Nachbesserung: Add task/Add event stehen im Seitenheader. Aufgaben bieten All tasks/Open tasks im Tabellenkopfbereich. Kategorieauswahl und List/Timeline sind unten bündig und gleich hoch. Der separate Timeline-Navigationstab entfällt; die Timeline bleibt in Events erreichbar.
+
+Aktueller Abnahmestand: 43 Unit-/Speichertests und fünf Edge-Browserabläufe (einschließlich Headeraktionen, Aufgabenfilter und integrierter Timeline). Zähler stehen rechts in der Filterzeile.

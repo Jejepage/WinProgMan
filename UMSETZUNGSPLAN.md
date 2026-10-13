@@ -150,3 +150,31 @@ Dieser Plan erstellt noch keine Remote-Issues, Commits oder Anwendung. Die Planu
 | Optional – Outlook | Explizite Übertragung eines Meetings und Zuordnung zur Kalender-ID; Schutz vor Duplikaten. Separat von der lokalen Ereignisverwaltung. |
 
 Tenant-Genehmigung kann früh parallel zur Web-Umsetzung geklärt werden. Konfliktstrategie, Archivierung und private Microsoft-Anbindung bleiben offene Produktentscheidungen, blockieren Phase 1 aber nicht. Für den Sync reicht „letzte Änderung gewinnt“ anhand der Geräteuhr allein nicht; die Strategie muss zusammen mit dem Sync-Protokoll festgelegt werden.
+
+## 10. Geplante Erweiterung nach Benutzerfeedback
+
+Abgestimmt am 13. Oktober 2026. Die Erweiterung ist implementiert; Prüfstand und verbleibende Einschränkungen stehen in README.md.
+
+### Festgelegtes Verhalten
+
+- Projekte erhalten einen manuellen Status: Geplant, Aktiv, Pausiert oder Abgeschlossen. Vorschlag für neue und bestehende Projekte: Aktiv. „Ruhend“ bleibt eine abgeleitete Kennzeichnung anhand offener Aufgaben und kommender Ereignisse, unabhängig vom manuellen Status.
+- Jedes Projekt kann genau einer frei verwaltbaren Projektkategorie zugeordnet werden; ohne Zuordnung ist erlaubt. Projektkategorien sind unabhängig von den festen Ereigniskategorien.
+- Eine neue Einstellungsansicht ermöglicht Anlegen, Umbenennen und Löschen von Projektkategorien. Vorschlag: Beim Löschen nach Bestätigung die Zuordnung betroffener Projekte aufheben; Projekte und Inhalte bleiben erhalten. Doppelte Kategorienamen nach Trimmen und ohne Beachtung der Groß-/Kleinschreibung vermeiden.
+- Status und Kategorie werden beim Anlegen und im Projektkopf auswählbar sowie in der Projektliste angezeigt. Die Projektliste erhält Status- und Kategoriefilter. Einstellungen über einen zusätzlichen Zugang öffnen; die vier fachlichen Navigationsbuttons bleiben bestehen.
+- Der Überblick zeigt alle offenen To-Dos je Projekt, ohne die bisherige Grenze von fünf. Das gilt auch für pausierte und abgeschlossene Projekte sowie Aufgaben ohne Datum. Die bestehende Sortierung und Hervorhebung überfälliger Aufgaben bleiben erhalten. Die Begrenzung kommender Ereignisse wird durch diesen Auftrag nicht geändert.
+- Das Linkproblem entstand durch eine Webadresse ohne https://. Vollständige HTTP(S)-Adressen funktionieren bereits. Geplante Verbesserung: eindeutig erkennbare Webadressen ohne Protokoll beim Speichern mit https:// ergänzen. Lokale und Netzwerkpfade dabei unverändert erhalten; keine pauschale Umwandlung aller Ziele in Webadressen.
+
+### Umsetzung in überprüfbaren Schritten
+
+1. Gemeinsame Typen und Domänenregeln um Projektstatus, Projektkategorien mit stabilen IDs und optionale Kategoriezuordnung erweitern. Bestehende Projekte beim Laden auf den vorgeschlagenen Status Aktiv migrieren.
+2. IndexedDB und versioniertes Sicherungsformat erweitern. Alte Sicherungen weiter importieren können; neue Sicherungen enthalten Status und Kategorien. Kategorieverweise vollständig vor einem atomaren Import prüfen. Migration erhält IDs, Inhalte und Beziehungen.
+3. Kategorienverwaltung in Einstellungen und Auswahl in Projektformularen integrieren; Anzeige und Filter in der Projektliste ergänzen.
+4. To-Do-Begrenzung im Überblick entfernen und Webadressennormalisierung ergänzen.
+5. Typprüfung, Domänen-/Speichertests, Build und Browserabläufe prüfen. Schwerpunkt: Bestandsmigration, alte/neue Sicherungen, ungültige Kategorieverweise, Kategorieumbenennung/-löschung, mehr als fünf offene Aufgaben, alle vier Status sowie Webadressen und unveränderte Pfade. README und Arbeitsstand anschließend aktualisieren.
+
+Die Benutzerentscheidungen zu Statusliste, einer Kategorie je Projekt und allen offenen Aufgaben unabhängig vom Status sind verbindlich. Die übrigen als Vorschlag gekennzeichneten Details sind sinnvolle Umsetzungsdefaults.
+
+
+## 11. Markdown-Notizen
+
+Am 13. Oktober 2026 zur Umsetzung beauftragt: Markdown-Editor für alle Ereignisnotizen mit Formatierungsleiste, Bearbeiten/Vorschau, Überschriften, Listen, Zitaten, Links, Tabellen und Codeblöcken. Formatierte Zwischenablageinhalte werden in Markdown umgewandelt; Klartext-Einfügen bleibt wählbar. Vorhandene Klartextnotizen werden durch eine optionale Formatmarkierung unterschieden und behalten ihre bisherige Darstellung. Sicherungsformat 3 ergänzt die Markierung; Versionen 1 und 2 bleiben importierbar. Anzeige ohne aktives HTML und ohne automatisch geladene Bilder. Prüfstand siehe README.md.

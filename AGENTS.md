@@ -14,7 +14,7 @@
 - `src/storage`: Datenbank und Sicherungsformat. Keine IndexedDB-Aufrufe in UI-Komponenten.
 - `src/features`: wiederverwendbare Aufgaben- und Ereignisoberflächen; `src/app`: Navigation und Integration.
 - Vier Navigationsbuttons: Überblick, Projekte, To-Dos, Ereignisse. Projektseite als fünfte Detailansicht.
-- IDs stabil; `createdAt`/`updatedAt` UTC. Fachliche Daten `YYYY-MM-DD`, Uhrzeit `HH:mm`; lokales Heute. Notizen Klartext.
+- IDs stabil; `createdAt`/`updatedAt` UTC. Fachliche Daten `YYYY-MM-DD`, Uhrzeit `HH:mm`; lokales Heute. Notizen als Markdown-Quelltext mit optionaler noteFormat-Markierung; alte unmarkierte Notizen bleiben Klartext.
 - Gemeinsame Verträge in `src/domain/types.ts` und `src/storage/ProjectStore.ts` vor paralleler Arbeit lesen.
 
 ## Verbindliche Defaults
@@ -38,6 +38,7 @@
 
 ## Arbeitsstand
 - 2026-10-13: Phase 1 implementiert: fünf Ansichten, CRUD, IndexedDB, JSON-Sicherung, Beispiele und CI. `README.md` enthält Startanleitung, aktuelle Prüfergebnisse und Einschränkungen.
-- Typprüfung/Build, 22 Domänen-/Speichertests und zwei Edge-Browserabläufe erfolgreich. Desktop/Timeline/schmales Layout visuell geprüft. Safari und echte iOS-Geräte ungeprüft.
+- Typprüfung/Build, 43 Domänen-/Speicher-/Link-/Markdown-Tests und vier Edge-Browserabläufe erfolgreich. Desktop/Timeline/schmales Layout visuell geprüft. Safari und echte iOS-Geräte ungeprüft.
 - Playwright benutzt Edge und Port 5174; `npm run test:e2e`. Bei Sandbox-EPERM Prüfung außerhalb der Sandbox anfordern. `npm run format:check` für Formatierung.
+- Erweiterungen am 2026-10-13: Projektstatus, eine Projektkategorie mit Einstellungen/Filtern, alle offenen To-Dos im Überblick, Webadressen ohne Protokoll und Markdown-Notizen mit Vorschau/Toolbar/HTML-Einfügen umgesetzt. Sicherungsformat 3, v1/v2 weiterhin importierbar.
 - Als Nächstes Benutzerfeedback zur Phase-1-Oberfläche aufnehmen; erst danach Phase 2 angehen. Tenant-Freigabe kann parallel geklärt werden.

@@ -11,7 +11,19 @@ export interface Base {
   createdAt: string;
   updatedAt: string;
 }
+export const projectStatuses = [
+  "Geplant",
+  "Aktiv",
+  "Pausiert",
+  "Abgeschlossen",
+] as const;
+export type ProjectStatus = (typeof projectStatuses)[number];
+export interface ProjectCategory extends Base {
+  name: string;
+}
 export interface Project extends Base {
+  status: ProjectStatus;
+  categoryId?: string;
   name: string;
   description: string;
 }
@@ -33,19 +45,23 @@ export interface ProjectEvent extends Base {
   date: string;
   time?: string;
   note?: string;
+  noteFormat?: "markdown";
 }
 export interface AppData {
+  projectCategories: ProjectCategory[];
   projects: Project[];
   links: Link[];
   todos: Todo[];
   events: ProjectEvent[];
 }
 export interface ExportEnvelope extends AppData {
-  schemaVersion: 1;
+  schemaVersion: 3;
   exportedAt: string;
 }
 export type DomainChange =
   | { type: "project.save"; value: Project }
+  | { type: "category.save"; value: ProjectCategory }
+  | { type: "category.delete"; id: string }
   | { type: "link.save"; value: Link }
   | { type: "todo.save"; value: Todo }
   | { type: "event.save"; value: ProjectEvent }
@@ -54,6 +70,7 @@ export type DomainChange =
       id: string;
     };
 export const emptyData = (): AppData => ({
+  projectCategories: [],
   projects: [],
   links: [],
   todos: [],

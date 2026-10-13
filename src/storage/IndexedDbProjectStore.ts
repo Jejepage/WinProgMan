@@ -10,19 +10,36 @@ import { validateData, validateImport } from "./validation";
 function applyChange(data: AppData, change: DomainChange): AppData {
   if (change.type === "project.delete") {
     return {
+      ...data,
       projects: data.projects.filter((value) => value.id !== change.id),
       links: data.links.filter((value) => value.projectId !== change.id),
       todos: data.todos.filter((value) => value.projectId !== change.id),
       events: data.events.filter((value) => value.projectId !== change.id),
     };
   }
-  const collection = change.type.startsWith("project.")
-    ? "projects"
-    : change.type.startsWith("link.")
-      ? "links"
-      : change.type.startsWith("todo.")
-        ? "todos"
-        : "events";
+  if (change.type === "category.delete") {
+    const now = new Date().toISOString();
+    return {
+      ...data,
+      projectCategories: data.projectCategories.filter(
+        (value) => value.id !== change.id,
+      ),
+      projects: data.projects.map((project) => {
+        if (project.categoryId !== change.id) return project;
+        const { categoryId: _category, ...rest } = project;
+        return { ...rest, updatedAt: now };
+      }),
+    };
+  }
+  const collection = change.type.startsWith("category.")
+    ? "projectCategories"
+    : change.type.startsWith("project.")
+      ? "projects"
+      : change.type.startsWith("link.")
+        ? "links"
+        : change.type.startsWith("todo.")
+          ? "todos"
+          : "events";
   if ("id" in change) {
     return {
       ...data,
@@ -110,7 +127,9 @@ export class IndexedDbProjectStore implements ProjectStore {
       request.onsuccess = () => {
         try {
           store.put(
-            validateData(transform(request.result ?? emptyData())),
+            validateData(
+              transform(validateData(request.result ?? emptyData())),
+            ),
             "data",
           );
         } catch (error) {
@@ -136,7 +155,7 @@ export class IndexedDbProjectStore implements ProjectStore {
   async exportData(): Promise<ExportEnvelope> {
     return {
       ...(await this.load()),
-      schemaVersion: 1,
+      schemaVersion: 3,
       exportedAt: new Date().toISOString(),
     };
   }
