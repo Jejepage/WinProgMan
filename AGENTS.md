@@ -1,5 +1,11 @@
 # WinProgMan – Hinweise für Agenten
 
+## Aktueller Auftrag: Version 2
+- `SPEC_V2.md` hat Vorrang vor den historischen Vorgaben unten, insbesondere englische Oberfläche und Papierkorb statt endgültiger Löschung.
+- Feature-Branch `feat/winprogman-v2` von main. Nicht automatisch mergen. README beschreibt die neuen Funktionen und den Speichervertrag.
+- Schema 5 mit Migration v1–v4, festen Nummern, Revisionsprüfung und atomarem Restore. Datenzugriff ausschließlich über ProjectStore.
+- Vor Abschluss check, test, build, format:check und test:e2e ausführen. Echte Safari/iOS-Geräte sind ungeprüft.
+
 ## Auftrag und Quellen
 - Persönliche Projektmanagement-App für eine Person; deutsche Oberfläche. Keine Teamfunktionen.
 - Zuerst `Projekt-App – Spezifikation.md`, danach `UMSETZUNGSPLAN.md` und `README.md` lesen.

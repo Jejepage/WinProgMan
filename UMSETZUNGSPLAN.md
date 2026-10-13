@@ -1,5 +1,9 @@
 # WinProgMan – Umsetzungsplan
 
+## Fortschreibung: Version 2.0
+
+Maßgeblich ist `SPEC_V2.md`. Die Umsetzung auf `feat/winprogman-v2` beginnt direkt von main, ohne Übernahme der früheren Teilimplementierung. Datenintegrität (Schema 5, Nummern, Papierkorb, Revisionen) hat Vorrang; danach folgen Suche/Capture, Wochenübersicht/Beziehungen/Focus und Konsolidierung. Speicher, bestehende Editoren und neue Workflow-Funktionen wurden auf abgestimmten Verträgen bearbeitet. Hauptagent verantwortet Integration, Regressionen, abschließende Tests und PR. Aktueller Funktionsstand und manuelle Geräteprüfungen stehen in README. Der folgende Plan beschreibt die historische Ausgangsversion.
+
 Stand: 13. Oktober 2026. Grundlage: `Projekt-App – Spezifikation.md`.
 
 ## 1. Ausgangslage und Ziel

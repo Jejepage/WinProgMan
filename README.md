@@ -1,4 +1,32 @@
-# WinProgMan
+# WinProgMan 2.0
+
+## Aktueller Stand: Version 2
+
+Die maßgebliche Spezifikation ist [SPEC_V2.md](SPEC_V2.md). Umsetzung auf `feat/winprogman-v2`, direkt von unverändertem main (`24ceaee`). Die unvollständigen Vorarbeiten von `feat/project-workflow-improvements` wurden nicht übernommen. Die englische Oberfläche und der vollständig lokale Betrieb bleiben erhalten.
+
+- Dauerhafte Projektnummern mit gespeichertem Zähler und automatischer Migration bestehender Projekte in ihrer bisherigen Reihenfolge.
+- Settings → Trash für Projekte einschließlich Inhalt sowie einzelne Aufgaben, Ereignisse und Links. Undo, Restore, Delete permanently und Empty trash; keine automatische endgültige Löschung.
+- BroadcastChannel aktualisiert andere Tabs. Editoren behalten Entwürfe und erkennen veraltete Revisionen beim Speichern innerhalb einer IndexedDB-Transaktion. Reload latest version, Review changes und explizites Overwrite stehen zur Verfügung.
+- Search all durchsucht Nummern, Projektnamen/-beschreibungen, Aufgaben, vollständige Notizen und Linkziele; gruppierte Ergebnisse mit hervorgehobenen Fundstellen.
+- Quick Capture für Aufgaben, Ereignisse und Notizen. Projektkontext oder zuletzt verwendetes Projekt; today, tomorrow und ISO-Datum sind im Datumsfeld möglich.
+- Next 7 Days umfasst heute und die nächsten sechs Kalendertage, mit Today/Later/Overdue-Filtern, direktem Abhaken und vergrößerter Ansicht.
+- Aufgaben können genau einem Ereignis desselben Projekts zugeordnet werden. Ereignisdetails erlauben Anlegen, Verknüpfen, Abhaken und Entfernen von Beziehungen.
+- Focus Mode mit Aufgabe, Projektbeschreibung, Ursprungsereignis, aktuellen Ereignissen und Links. Ereignisliste und Timeline nutzen dieselbe aufklappbare Detailkomponente mit sichtbarer Edit-Aktion.
+- Native modale Dialoge mit Fokusführung; lokal gebündelte IBM Plex Sans für längere Texte, Mono für Navigation und Metadaten. Styles sind nach Basis, Komponenten, Notizen, Themen und Workflow getrennt.
+
+Tastenkürzel: **Ctrl/Cmd+K** für Quick Capture, **Ctrl/Cmd+Shift+F** für Suche, **Ctrl/Cmd+Enter** zum Speichern und **Escape** zum Schließen eines Dialogs ohne Übernahme des Entwurfs.
+
+**Sicherungsformat 5** enthält Papierkorb, Zähler, Beziehungen und Revisionen; Formate 1–4 bleiben importierbar. Migration, Restore und Import sind atomar. Eine neu ausgewählte ungültige Datei verwirft eine vorherige Vorschau. Der vollständige Import erfordert Bestätigung, behält importierte Projektnummern bei, senkt den lokalen Zähler nicht und macht alte Bearbeitungsstände ungültig. Darstellungspräferenz und zuletzt verwendetes Capture-Projekt liegen außerhalb der Sicherung.
+
+Beim Löschen eines Ereignisses bleiben Aufgaben bestehen. Restore stellt Beziehungen wieder her, soweit keine widersprechende Änderung erfolgte. Einzelne Inhalte erfordern zunächst die Wiederherstellung ihres Projekts. Restore überschreibt keine existierenden Datensätze. Gelöschte Projektthemen werden nicht neu angelegt.
+
+Architektur: `ProjectStore` bleibt die Speichergrenze. `storage/changes.ts` plant atomare Änderungen, `storage/validation.ts` validiert aktive und gelöschte Daten. Der Snapshot-Adapter prüft Revisionen in derselben Transaktion wie den Commit; BroadcastChannel meldet nur erfolgreiche Änderungen. Separate Feature-Komponenten enthalten Dashboard, Projektliste, Suche, Capture, Focus und Trash. Ein späteres Sync-Modul benötigt zusätzlich ein geräteübergreifendes Konfliktprotokoll.
+
+Abnahme am 13. Oktober 2026: Typprüfung, **76 Fach-/Speichertests**, Produktionsbuild, Formatprüfung und **12 Edge-Browserabläufe** erfolgreich. Geprüft sind unter anderem v1–v4-Migration, feste Nummern, atomare Fehlerfälle, Restore-Reihenfolgen, veraltete Editorstände, zwei Browser-Tabs, Löschung des Elternprojekts bei offenem Entwurf, wiederholte Suchsprünge, Quick Capture, Focus, Wochenübersicht, Tastatur sowie bestehende CRUD-/Markdown-/Importabläufe. Befehle: `npm run check`, `npm test`, `npm run build`, `npm run format:check`, `npm run test:e2e`.
+
+Edge-Browserprüfungen verwenden isolierte Testdaten auf Port 5174. `node scripts/visual-review.mjs` erstellt Desktop-, Focus-, Such- und Capture-Screenshots einschließlich schmaler Dark-Mode-Ansicht; der lokale Server muss dafür laufen. Safari und echte iOS-Geräte bleiben manuell zu prüfen. Microsoft-Anmeldung, OneDrive, Outlook, Tauri, Teamfunktionen, KI und Cloud-Backups sind nicht Bestandteil von V2.
+
+Die folgenden Abschnitte dokumentieren die Ausgangsversion; bei Widersprüchen gelten der aktuelle Stand oben und SPEC_V2.
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
