@@ -51,6 +51,7 @@ export function demoData(): AppData {
         projectId: active.id,
         title: "Entwurf besprechen",
         completed: false,
+        doNext: true,
         dueDate: date(2),
       },
       {

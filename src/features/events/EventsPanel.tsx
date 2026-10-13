@@ -12,6 +12,8 @@ import { formatDate, sortEvents } from "../../domain/queries";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { MarkdownNote } from "./MarkdownNote";
 import { legacyNoteToMarkdown } from "./markdown";
+import { SearchField } from "../../ui/components";
+import { matchesSearch } from "../../domain/queries";
 
 import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
@@ -21,6 +23,8 @@ interface Props {
   projectId?: string;
   showHeading?: boolean;
   headerTarget?: HTMLElement | null;
+  search?: string;
+  onSearchChange?: (value: string) => void;
   initialMode?: "list" | "timeline";
   notesOnly?: boolean;
   today: string;
@@ -44,6 +48,8 @@ export function EventsPanel({
   projectId,
   showHeading = true,
   headerTarget,
+  search = "",
+  onSearchChange,
   initialMode = "list",
   notesOnly = false,
   today,
@@ -67,7 +73,13 @@ export function EventsPanel({
       (event) =>
         (!projectId || event.projectId === projectId) &&
         (!category || event.category === category) &&
-        (!notesOnly || event.category === "Notiz"),
+        (!notesOnly || event.category === "Notiz") &&
+        matchesSearch(
+          search,
+          event.title,
+          projects.find((project) => project.id === event.projectId)?.name ||
+            "",
+        ),
     ),
   );
   const patch = (change: Partial<Draft>) =>
@@ -134,19 +146,29 @@ export function EventsPanel({
     const project = projects.find((item) => item.id === event.projectId);
     const isExpanded = expanded.has(event.id);
     const noteId = `${prefix}-note-${event.id}`;
+    const phase =
+      event.date < today ? "Past" : event.date === today ? "Today" : "Upcoming";
     return (
       <li
         key={event.id}
-        className={`event-item ${isExpanded ? "is-expanded" : ""}`}
+        className={`event-item ${isExpanded ? "is-expanded" : ""} ${event.date < today ? "is-past" : "is-upcoming"}`}
       >
         <div className="event-row">
-          <time
-            className="event-date"
-            dateTime={event.time ? `${event.date}T${event.time}` : event.date}
+          <button
+            type="button"
+            className="event-date event-date-button"
+            disabled={busy}
+            aria-label={`Open event ${event.title}`}
+            onClick={() => begin(event)}
           >
-            {formatDate(event.date)}
-            {event.time ? ` · ${event.time}` : ""}
-          </time>
+            <time
+              dateTime={event.time ? `${event.date}T${event.time}` : event.date}
+            >
+              {formatDate(event.date)}
+              {event.time ? ` · ${event.time}` : ""}
+            </time>
+          </button>
+          <span className="event-phase">{phase}</span>
           <span className="category">{categoryLabels[event.category]}</span>
           {event.note ? (
             <button
@@ -179,14 +201,6 @@ export function EventsPanel({
             </button>
           )}
           <div className="actions event-actions">
-            <button
-              className="button secondary"
-              disabled={busy}
-              onClick={() => begin(event)}
-              aria-label={`Edit event ${event.title}`}
-            >
-              Edit
-            </button>
             <button
               className="button danger"
               disabled={busy}
@@ -296,6 +310,13 @@ export function EventsPanel({
         }
         {!showHeading && (
           <span className="muted filter-count">{visible.length} entries</span>
+        )}
+        {onSearchChange && (
+          <SearchField
+            label="Search events"
+            value={search}
+            onChange={onSearchChange}
+          />
         )}
       </div>
       {projects.length === 0 && (
@@ -436,9 +457,11 @@ export function EventsPanel({
       )}
       {visible.length === 0 && (
         <p className="empty">
-          {category
-            ? `No events in ${categoryLabels[category]}.`
-            : "No events yet."}
+          {search.trim()
+            ? "No events match this search and filter."
+            : category
+              ? `No events in ${categoryLabels[category]}.`
+              : "No events yet."}
         </p>
       )}
       <ul className={timeline ? "item-list timeline" : "item-list"}>

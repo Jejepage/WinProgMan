@@ -36,6 +36,7 @@ export interface Todo extends Base {
   projectId: string;
   title: string;
   completed: boolean;
+  doNext?: boolean;
   dueDate?: string;
 }
 export interface ProjectEvent extends Base {
@@ -55,7 +56,7 @@ export interface AppData {
   events: ProjectEvent[];
 }
 export interface ExportEnvelope extends AppData {
-  schemaVersion: 3;
+  schemaVersion: 4;
   exportedAt: string;
 }
 export type DomainChange =

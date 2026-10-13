@@ -17,6 +17,7 @@ interface Props {
   projectCategories: ProjectCategory[];
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
+  onDelete: () => Promise<void>;
 }
 export function ProjectHeader({
   project,
@@ -24,6 +25,7 @@ export function ProjectHeader({
   projectCategories,
   busy,
   onChange,
+  onDelete,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
@@ -168,6 +170,14 @@ export function ProjectHeader({
               onClick={() => setEditing(false)}
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              className="button danger project-delete"
+              disabled={busy}
+              onClick={() => void onDelete()}
+            >
+              Delete project
             </button>
           </div>
         </form>

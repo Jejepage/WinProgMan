@@ -82,7 +82,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Edit event Meeting prüfen",
+      name: "Open event Meeting prüfen",
       exact: true,
     })
     .click();
@@ -151,7 +151,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify({ ...backup, schemaVersion: 999 })),
   });
   await expect(page.getByRole("alert")).toContainText(
-    "Only backup formats 1, 2 and 3 are supported.",
+    "Only backup formats 1, 2, 3 and 4 are supported.",
   );
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
@@ -184,6 +184,9 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await expect(page.locator(".event-item")).toHaveCount(1);
   page.once("dialog", (dialog) => dialog.accept());
   await page
+    .getByRole("button", { name: "Aufgabe fertig prüfen edit", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Aufgabe fertig prüfen delete", exact: true })
     .click();
   await expect(page.locator(".todo-item")).toHaveCount(0);
@@ -204,16 +207,16 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await expect(page.locator(".event-item")).toHaveCount(2);
   await expect(linkRow).toHaveCount(1);
   await page.locator(".breadcrumb").click();
+  await page.locator(".table-wrap tbody tr .project-title").click();
+  await page.getByRole("button", { name: "Edit project" }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page
-    .locator(".table-wrap tbody tr")
-    .getByRole("button", { name: "Delete", exact: true })
+    .getByRole("button", { name: "Delete project", exact: true })
     .click();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
+  await expect(page.locator(".project-header")).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());
   await page
-    .locator(".table-wrap tbody tr")
-    .getByRole("button", { name: "Delete", exact: true })
+    .getByRole("button", { name: "Delete project", exact: true })
     .click();
   await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
   await page.reload();
@@ -228,7 +231,7 @@ test("schmales Fenster und explizite Beispieldaten", async ({ page }) => {
   await page
     .getByRole("button", { name: "Load sample data", exact: true })
     .click();
-  await expect(page.locator(".overview-card")).not.toHaveCount(0);
+  await expect(page.locator(".dashboard-project-row")).not.toHaveCount(0);
   const assertNoOverflow = async () =>
     expect(
       await page.evaluate(
@@ -324,9 +327,12 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .getByRole("navigation")
     .getByRole("button", { name: /Projects/ })
     .click();
-  await page.getByLabel("Filter status").selectOption("Aktiv");
+  await page.getByRole("checkbox", { name: "Planned" }).uncheck();
+  await page.getByRole("checkbox", { name: "Paused" }).uncheck();
+  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
   await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
-  await page.getByLabel("Filter status").selectOption("Pausiert");
+  await page.getByRole("checkbox", { name: "Paused" }).check();
+  await page.getByRole("checkbox", { name: "In progress" }).uncheck();
   await page.getByLabel("Filter topic").selectOption({ label: "Persönlich" });
   await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
 
@@ -337,7 +343,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const backup = JSON.parse(
     await readFile((await (await downloadEvent).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(3);
+  expect(backup.schemaVersion).toBe(4);
   expect(backup.projectCategories[0].name).toBe("Persönlich");
   expect(backup.projects[0].status).toBe("Pausiert");
   expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
@@ -354,7 +360,8 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .getByRole("button", { name: /Projects/ })
     .click();
   await expect(page.locator(".table-wrap tbody tr")).toContainText("No topic");
-  await page.getByLabel("Filter status").selectOption("");
+  for (const name of ["Planned", "In progress", "Completed"])
+    await page.getByRole("checkbox", { name }).check();
   await page.getByLabel("Filter topic").selectOption("");
 
   const timestamp = backup.exportedAt;
@@ -607,7 +614,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   await page.locator(".project-title").click();
   await page
     .getByRole("button", {
-      name: "Edit event Markdownabnahme",
+      name: "Open event Markdownabnahme",
       exact: true,
     })
     .click();
@@ -620,7 +627,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const backup = JSON.parse(
     await readFile((await (await downloaded).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(3);
+  expect(backup.schemaVersion).toBe(4);
   expect(backup.events[0].note).toBe(markdown);
   expect(backup.events[0].noteFormat).toBe("markdown");
   const legacyNote = "**Klartext bleibt Klartext**\n<script>kein HTML</script>";
@@ -658,7 +665,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   ).toHaveCount(0);
   await page
     .getByRole("button", {
-      name: "Edit event Alte Klartextnotiz",
+      name: "Open event Alte Klartextnotiz",
       exact: true,
     })
     .click();
@@ -669,7 +676,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   ).toHaveCount(0);
   await page
     .getByRole("button", {
-      name: "Edit event Alte Klartextnotiz",
+      name: "Open event Alte Klartextnotiz",
       exact: true,
     })
     .click();
@@ -737,4 +744,147 @@ test("header actions, task filters and integrated event timeline", async ({
   ).toBeLessThan(2);
   await page.getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.locator(".today-marker")).toBeVisible();
+});
+
+test("text search combines with existing list filters and can be cleared", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Load sample data" }).click();
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+
+  await nav.getByRole("button", { name: /Projects/ }).click();
+  await page
+    .getByRole("searchbox", { name: "Search projects" })
+    .fill("arbeitsplatz");
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
+  await expect(page.locator(".table-wrap tbody tr")).toContainText(
+    "Arbeitsplatz erneuern",
+  );
+  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
+  await expect(
+    page.getByText("No projects match the current search or filters."),
+  ).toBeVisible();
+  await page.getByRole("checkbox", { name: "Completed" }).check();
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(2);
+
+  await nav.getByRole("button", { name: "Tasks" }).click();
+  await page
+    .getByRole("searchbox", { name: "Search tasks" })
+    .fill("arbeitsplatz erneuern");
+  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(1);
+  await page.getByRole("button", { name: "Open tasks" }).click();
+  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(0);
+  await expect(
+    page.getByText("No tasks match this search and filter."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "All tasks" }).click();
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(4);
+
+  await nav.getByRole("button", { name: "Events" }).click();
+  await page
+    .getByRole("searchbox", { name: "Search events" })
+    .fill("ENTWURF ABSTIMMEN");
+  await expect(page.locator(".event-item")).toHaveCount(1);
+  await page.getByLabel("Category", { exact: true }).selectOption("Notiz");
+  await expect(page.locator(".event-item")).toHaveCount(0);
+  await expect(
+    page.getByText("No events match this search and filter."),
+  ).toBeVisible();
+  await page.getByLabel("Category", { exact: true }).selectOption("");
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await expect(page.locator(".timeline .event-item")).toHaveCount(1);
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(page.locator(".timeline .event-item")).toHaveCount(6);
+});
+
+test("Do next, event dates, project controls and theme work after reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Load sample data" }).click();
+  await expect(page.locator(".dashboard-next-row")).toHaveCount(1);
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+
+  await nav.getByRole("button", { name: "Tasks" }).click();
+  await expect(page.locator(".tasks-table th")).toContainText([
+    "Completed",
+    "Task",
+    "Project",
+    "Due date",
+    "Created",
+  ]);
+  await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
+    "Entwurf besprechen",
+  );
+  await expect(page.locator(".tasks-table tbody tr").first()).toHaveClass(
+    /is-do-next/,
+  );
+  await page.getByRole("button", { name: "Entwurf besprechen edit" }).click();
+  await page.getByLabel("Do next").uncheck();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
+    "Bestehende Inhalte sichten",
+  );
+  await page
+    .getByRole("button", { name: "Bestehende Inhalte sichten edit" })
+    .click();
+  await page.getByLabel("Do next").check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.reload();
+  await nav.getByRole("button", { name: "Tasks" }).click();
+  await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
+    "Bestehende Inhalte sichten",
+  );
+  await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
+    "Do next",
+  );
+
+  await nav.getByRole("button", { name: "Events" }).click();
+  await expect(page.locator(".event-item.is-past")).not.toHaveCount(0);
+  await expect(page.locator(".event-item.is-upcoming")).not.toHaveCount(0);
+  await page.locator(".event-item.is-past .event-date-button").first().click();
+  await expect(page.getByRole("heading", { name: "Edit event" })).toBeVisible();
+  await page
+    .locator(".event-editor")
+    .getByRole("button", { name: "Cancel" })
+    .click();
+  await expect(page.getByRole("button", { name: /^Edit event/ })).toHaveCount(
+    0,
+  );
+
+  await nav.getByRole("button", { name: /Projects/ }).click();
+  await expect(
+    page.locator(".table-wrap").getByRole("button", { name: "Delete" }),
+  ).toHaveCount(0);
+  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
+  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
+  await page.locator(".table-wrap tbody tr .project-title").click();
+  await page.getByRole("button", { name: "Edit project" }).click();
+  await expect(
+    page.getByRole("button", { name: "Delete project" }),
+  ).toBeVisible();
+
+  await nav.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await nav.getByRole("button", { name: "Settings" }).click();
+  await expect(
+    page.getByRole("button", { name: "Dark", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.getByRole("button", { name: "System", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await nav.getByRole("button", { name: "Dashboard" }).click();
+  await expect(page.locator(".dashboard-next-row")).toHaveCount(1);
+  await page.locator(".dashboard-next-row input[type='checkbox']").click();
+  await expect(page.locator(".dashboard-next-row")).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".dashboard-next-row")).toHaveCount(0);
 });

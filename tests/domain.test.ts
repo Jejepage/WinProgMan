@@ -104,4 +104,18 @@ describe("fachliche Kalendergrenzen", () => {
     ]);
     expect(events[0].id).toBe("late");
   });
+  it("sortiert offene Do-next-Aufgaben zuerst und erledigte weiterhin ans Ende", () => {
+    const todos = [
+      todo("early", "2026-10-12"),
+      { ...todo("next-later", "2026-10-15"), doNext: true },
+      { ...todo("next-earlier", "2026-10-14"), doNext: true },
+      { ...todo("done-next", "2026-10-01", true), doNext: true },
+    ];
+    expect(sortTodos(todos).map((value) => value.id)).toEqual([
+      "next-earlier",
+      "next-later",
+      "early",
+      "done-next",
+    ]);
+  });
 });

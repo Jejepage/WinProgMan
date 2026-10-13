@@ -68,11 +68,12 @@ export function validateImport(value: unknown): ExportEnvelope {
   if (
     root.schemaVersion !== 1 &&
     root.schemaVersion !== 2 &&
-    root.schemaVersion !== 3
+    root.schemaVersion !== 3 &&
+    root.schemaVersion !== 4
   )
     fail(
       "schemaVersion",
-      "Nur Sicherungsformat 1, 2 und 3 werden unterstützt.",
+      "Nur Sicherungsformat 1, 2, 3 und 4 werden unterstützt.",
     );
   timestamp(root.exportedAt, "exportedAt");
   const ids = new Set<string>();
@@ -103,7 +104,13 @@ export function validateImport(value: unknown): ExportEnvelope {
             : collection === "links"
               ? ["projectId", "label", "target"]
               : collection === "todos"
-                ? ["projectId", "title", "completed", "dueDate"]
+                ? [
+                    "projectId",
+                    "title",
+                    "completed",
+                    "dueDate",
+                    ...(root.schemaVersion === 4 ? ["doNext"] : []),
+                  ]
                 : [
                     "projectId",
                     "category",
@@ -111,7 +118,7 @@ export function validateImport(value: unknown): ExportEnvelope {
                     "date",
                     "time",
                     "note",
-                    ...(root.schemaVersion === 3 ? ["noteFormat"] : []),
+                    ...(Number(root.schemaVersion) >= 3 ? ["noteFormat"] : []),
                   ];
       fields(entry, ["id", "createdAt", "updatedAt", ...extras], path);
       string(entry.id, `${path}.id`, true);
@@ -173,6 +180,8 @@ export function validateImport(value: unknown): ExportEnvelope {
           if (collection === "todos") {
             if (typeof entry.completed !== "boolean")
               fail(`${path}.completed`, "Wahrheitswert erwartet.");
+            if (entry.doNext !== undefined && typeof entry.doNext !== "boolean")
+              fail(`${path}.doNext`, "Wahrheitswert erwartet.");
             if (entry.dueDate !== undefined)
               date(entry.dueDate, `${path}.dueDate`);
           } else {
@@ -201,7 +210,7 @@ export function validateImport(value: unknown): ExportEnvelope {
     });
   }
   const result = structuredClone(root);
-  result.schemaVersion = 3;
+  result.schemaVersion = 4;
   if (legacy) {
     result.projectCategories = [];
     result.projects = (result.projects as Record<string, unknown>[]).map(
@@ -219,7 +228,7 @@ export function validateData(data: unknown): AppData {
     ...result
   } = validateImport({
     ...source,
-    schemaVersion: source.projectCategories === undefined ? 1 : 3,
+    schemaVersion: source.projectCategories === undefined ? 1 : 4,
     exportedAt: new Date().toISOString(),
   });
   return result;

@@ -155,7 +155,7 @@ export class IndexedDbProjectStore implements ProjectStore {
   async exportData(): Promise<ExportEnvelope> {
     return {
       ...(await this.load()),
-      schemaVersion: 3,
+      schemaVersion: 4,
       exportedAt: new Date().toISOString(),
     };
   }

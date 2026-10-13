@@ -1376,3 +1376,451 @@ button.event-title:hover {
   align-items: center;
   min-height: 34px;
 }
+
+/* Compact page headers without decorative workspace labels. */
+.sidebar nav {
+  margin-top: 24px;
+}
+.page-heading {
+  margin: 20px 0 16px;
+  min-height: 34px;
+}
+.page-heading h1 {
+  margin-bottom: 0;
+}
+
+.task-title-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.task-title-button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.completed .task-title-button {
+  text-decoration: line-through;
+}
+
+.project-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+.project-filters .field {
+  margin-bottom: 0;
+}
+.list-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.list-search input {
+  min-width: 0;
+  width: 100%;
+  height: 34px;
+  border: 1px solid #dce4ee;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 8px 10px;
+}
+.list-search .text-button {
+  flex: none;
+  white-space: nowrap;
+}
+.task-filters .list-search,
+.event-filters .list-search {
+  width: min(300px, 100%);
+}
+.list-search input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .project-filters {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .task-filters .list-search,
+  .event-filters .list-search {
+    width: 100%;
+  }
+}
+
+/* Work overview, task priority and compact desktop lists. */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(290px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.dashboard-columns > .panel {
+  min-width: 0;
+}
+.dashboard-project-row,
+.dashboard-next-row {
+  border-top: 1px solid var(--line);
+  padding: 14px 0;
+}
+.dashboard-project-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.dashboard-project-head .project-title {
+  font-size: 14px;
+}
+.dashboard-project-head .muted {
+  margin: 5px 0;
+}
+.dashboard-project-head small,
+.dashboard-next-row small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.dashboard-project-row .overview-columns {
+  gap: 16px;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.dashboard-project-row .overview-columns > div + div {
+  padding-left: 16px;
+}
+.dashboard-next-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+}
+.dashboard-next-row > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.dashboard-next-row strong {
+  font-size: 12px;
+}
+.dashboard-next-row .text-button {
+  justify-self: start;
+  text-align: left;
+}
+.dashboard-next-row small {
+  display: block;
+}
+.overview-todo .do-next-badge {
+  margin-right: 6px;
+}
+.do-next-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin: 8px 0 16px;
+}
+.do-next-badge {
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tasks-table {
+  table-layout: fixed;
+}
+.tasks-table.global-tasks {
+  min-width: 660px;
+}
+.tasks-table.project-tasks {
+  min-width: 0;
+}
+.project-tasks .task-check-col {
+  width: 40px;
+}
+.project-tasks .task-date-col {
+  width: 120px;
+}
+.project-tasks .task-created-col {
+  width: 100px;
+}
+.task-check-col {
+  width: 44px;
+}
+.task-project-col {
+  width: 175px;
+}
+.task-date-col,
+.task-created-col {
+  width: 125px;
+}
+.tasks-table .task-title {
+  overflow-wrap: anywhere;
+}
+.tasks-table .do-next-badge {
+  margin-left: 8px;
+}
+.tasks-table .is-do-next td {
+  background: #eef5ff;
+}
+.tasks-table .is-do-next:hover td {
+  background: #e4efff;
+}
+.project-filters {
+  grid-template-columns: minmax(300px, 1.4fr) minmax(170px, 1fr) minmax(
+      170px,
+      1fr
+    );
+}
+.status-filter {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.status-filter legend {
+  margin-bottom: 6px;
+  color: #46546a;
+  font-size: 11px;
+}
+.status-filter > div {
+  display: flex;
+  gap: 6px 12px;
+  flex-wrap: wrap;
+  min-height: 34px;
+  align-items: center;
+}
+.status-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.project-delete {
+  margin-left: auto;
+}
+.event-date-button {
+  border: 0;
+  background: none;
+  padding: 5px 0;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+}
+.event-date-button:hover {
+  text-decoration: underline;
+}
+.event-item.is-past .event-date-button {
+  color: var(--muted);
+}
+.event-phase {
+  display: inline-block;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.event-item.is-past .event-phase {
+  background: #edf2f8;
+  color: #58677d;
+}
+.event-item.is-upcoming {
+  border-left: 3px solid var(--accent);
+  padding-left: 8px;
+}
+@media (max-width: 1100px) {
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .project-filters {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-project-row .overview-columns {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-project-row .overview-columns > div + div {
+    padding-left: 0;
+  }
+  .tasks-table.project-tasks {
+    min-width: 530px;
+  }
+}
+
+/* Theme overrides cover every view, editor, list and backup state. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e8f0fb;
+  background: #101824;
+  --green: #82b4ff;
+  --muted: #aebbd0;
+  --line: #344459;
+  --surface: #1a2738;
+  --canvas: #101824;
+  --ink: #e8f0fb;
+  --accent: #82b4ff;
+  --accent-soft: #263d5d;
+  --danger: #ff98a2;
+}
+:root[data-theme="dark"] .sidebar {
+  background: #152132;
+  color: var(--ink);
+}
+:root[data-theme="dark"] .brand-mark,
+:root[data-theme="dark"] .nav-button.active {
+  background: #263d5d;
+  color: var(--accent);
+}
+:root[data-theme="dark"] .brand small,
+:root[data-theme="dark"] .sidebar-bottom,
+:root[data-theme="dark"] .sidebar-bottom > small,
+:root[data-theme="dark"] .sidebar-bottom .text-button,
+:root[data-theme="dark"] .nav-button,
+:root[data-theme="dark"] footer {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .nav-button:hover:not(.active) {
+  background: #213249;
+}
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .stats > div,
+:root[data-theme="dark"] .markdown-preview {
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .editor,
+:root[data-theme="dark"] .event-editor,
+:root[data-theme="dark"] .event-note,
+:root[data-theme="dark"] .event-details:not([hidden]) {
+  background: #202f43;
+  color: var(--ink);
+}
+:root[data-theme="dark"] .field,
+:root[data-theme="dark"] .status-filter legend,
+:root[data-theme="dark"] .event-note,
+:root[data-theme="dark"] .markdown-note blockquote {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .list-search input,
+:root[data-theme="dark"] .markdown-editor > textarea {
+  background: #111d2d;
+  border-color: var(--line);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .field input::placeholder,
+:root[data-theme="dark"] .list-search input::placeholder {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .button.secondary,
+:root[data-theme="dark"] .event-actions .button.danger {
+  background: #24364d;
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .button.danger {
+  background: #9e3545;
+  border-color: #9e3545;
+  color: #fff;
+}
+:root[data-theme="dark"] .text-button,
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .project-link,
+:root[data-theme="dark"] .project-title:hover,
+:root[data-theme="dark"] a {
+  color: var(--accent);
+}
+:root[data-theme="dark"] .project-title,
+:root[data-theme="dark"] .event-title,
+:root[data-theme="dark"] .markdown-note h1,
+:root[data-theme="dark"] .markdown-note h2,
+:root[data-theme="dark"] .markdown-note h3,
+:root[data-theme="dark"] .markdown-note h4,
+:root[data-theme="dark"] .markdown-note h5,
+:root[data-theme="dark"] .markdown-note h6 {
+  color: var(--ink);
+}
+:root[data-theme="dark"] .data-table th,
+:root[data-theme="dark"] .markdown-note th {
+  background: #233349;
+  color: var(--muted);
+}
+:root[data-theme="dark"] .data-table tr:hover td,
+:root[data-theme="dark"] .tasks-table .is-do-next:hover td {
+  background: #304969;
+}
+:root[data-theme="dark"] .tasks-table .is-do-next td,
+:root[data-theme="dark"] .event-item.is-upcoming {
+  background: #213550;
+}
+:root[data-theme="dark"] .status-pill,
+:root[data-theme="dark"] .category,
+:root[data-theme="dark"] .status-label,
+:root[data-theme="dark"] .do-next-badge,
+:root[data-theme="dark"] .event-phase,
+:root[data-theme="dark"] .today-marker {
+  background: var(--accent-soft);
+  border-color: #3a5e8b;
+  color: var(--accent);
+}
+:root[data-theme="dark"] .status-done {
+  background: #204d3c;
+  color: #a4e8bd;
+}
+:root[data-theme="dark"] .event-item.is-past .event-phase {
+  background: #293649;
+  color: var(--muted);
+}
+:root[data-theme="dark"] .message {
+  background: #204238;
+  border-color: #3a6857;
+  color: var(--ink);
+}
+:root[data-theme="dark"] .message.error,
+:root[data-theme="dark"] .delete-confirm {
+  background: #4b2932;
+  border-color: #87505b;
+  color: #ffd6da;
+}
+:root[data-theme="dark"] .markdown-note code,
+:root[data-theme="dark"] .markdown-note pre {
+  background: #111d2d;
+}
+:root[data-theme="dark"] .markdown-note th,
+:root[data-theme="dark"] .markdown-note td {
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .data-table th,
+:root[data-theme="dark"] .data-table td,
+:root[data-theme="dark"] .links-list li,
+:root[data-theme="dark"] .event-item,
+:root[data-theme="dark"] .todo-item,
+:root[data-theme="dark"] .overview-columns,
+:root[data-theme="dark"] .overview-columns > div + div {
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .event-item.is-upcoming {
+  border-left-color: var(--accent);
+}
+:root[data-theme="dark"] .timeline .event-item::before {
+  border-color: var(--surface);
+}
+:root[data-theme="dark"] .overdue,
+:root[data-theme="dark"] .danger,
+:root[data-theme="dark"] .icon-button.danger {
+  color: #ff9da7 !important;
+}

@@ -1,4 +1,11 @@
-import { Button, Field, StatusLabel, Card, Table } from "../ui/components";
+import {
+  Button,
+  Field,
+  StatusLabel,
+  Card,
+  Table,
+  SearchField,
+} from "../ui/components";
 import { useEffect, useRef, useState } from "react";
 import {
   emptyData,
@@ -8,11 +15,13 @@ import {
   type AppData,
   type DomainChange,
   type ExportEnvelope,
+  type Todo,
 } from "../domain/types";
 import {
   activeProjects,
   formatDate,
   localToday,
+  matchesSearch,
   overdue,
   sortEvents,
   sortTodos,
@@ -36,6 +45,7 @@ import {
 import { statusLabel, categoryLabel, errorLabel } from "../ui/labels";
 type View =
   "Dashboard" | "Projects" | "Tasks" | "Events" | "Project" | "Settings";
+type ThemeChoice = "system" | "light" | "dark";
 export function App() {
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
   const [data, setData] = useState<AppData>(emptyData);
@@ -49,10 +59,24 @@ export function App() {
   const [name, setName] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("Aktiv");
   const [categoryId, setCategoryId] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<ProjectStatus>>(
+    () => new Set(projectStatuses),
+  );
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
+  const [taskSearch, setTaskSearch] = useState("");
+  const [eventSearch, setEventSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
+  const [theme, setTheme] = useState<ThemeChoice>(() => {
+    try {
+      const saved = localStorage.getItem("winprogman-theme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {
+      // Storage may be unavailable in private browser contexts.
+    }
+    return "system";
+  });
   const file = useRef<HTMLInputElement>(null);
   const lock = useRef(false);
   useEffect(() => {
@@ -64,6 +88,21 @@ export function App() {
     const timer = setInterval(() => setToday(localToday()), 30000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    const system = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      document.documentElement.dataset.theme =
+        theme === "system" ? (system.matches ? "dark" : "light") : theme;
+    };
+    apply();
+    system.addEventListener("change", apply);
+    try {
+      localStorage.setItem("winprogman-theme", theme);
+    } catch {
+      // The choice still works for this session.
+    }
+    return () => system.removeEventListener("change", apply);
+  }, [theme]);
   async function transact(action: () => Promise<void>) {
     if (lock.current) return false;
     lock.current = true;
@@ -82,6 +121,17 @@ export function App() {
     }
   }
   const change = (value: DomainChange) => transact(() => store.apply(value));
+  const completeTodo = (todo: Todo) => {
+    const { doNext: _marker, ...rest } = todo;
+    return change({
+      type: "todo.save",
+      value: {
+        ...rest,
+        completed: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  };
   const goProject = (id: string) => {
     setProjectId(id);
     setView("Project");
@@ -105,6 +155,30 @@ export function App() {
       setCategoryId("");
       goProject(value.id);
     }
+  }
+  async function deleteProject() {
+    if (!project) return;
+    const count =
+      data.todos.filter((todo) => todo.projectId === project.id).length +
+      data.events.filter((event) => event.projectId === project.id).length +
+      data.links.filter((link) => link.projectId === project.id).length;
+    if (
+      confirm(
+        `Delete project "${project.name}" and ${count} related items permanently?`,
+      ) &&
+      (await change({ type: "project.delete", id: project.id }))
+    ) {
+      setProjectId("");
+      setView("Projects");
+    }
+  }
+  function toggleStatus(value: ProjectStatus) {
+    setSelectedStatuses((current) => {
+      const next = new Set(current);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
   }
   async function download() {
     try {
@@ -144,6 +218,7 @@ export function App() {
   const active = activeProjects(data, today);
   const open = data.todos.filter((t) => !t.completed);
   const coming = data.events.filter((e) => upcoming(e, today));
+  const doNextTodos = sortTodos(open.filter((todo) => todo.doNext));
   const effectiveCategoryFilter =
     categoryFilter === "none" ||
     data.projectCategories.some((c) => c.id === categoryFilter)
@@ -151,11 +226,12 @@ export function App() {
       : "";
   const filteredProjects = data.projects.filter(
     (p) =>
-      (!statusFilter || p.status === statusFilter) &&
+      selectedStatuses.has(p.status) &&
       (!effectiveCategoryFilter ||
         (effectiveCategoryFilter === "none"
           ? !p.categoryId
-          : p.categoryId === effectiveCategoryFilter)),
+          : p.categoryId === effectiveCategoryFilter)) &&
+      matchesSearch(projectSearch, p.name),
   );
   return (
     <div className="app-shell">
@@ -173,7 +249,6 @@ export function App() {
             WinProgMan<small>Personal workspace</small>
           </span>
         </a>
-        <p className="nav-label">WORKSPACE</p>
         <nav aria-label="Main navigation">
           {(
             ["Dashboard", "Projects", "Tasks", "Events", "Settings"] as View[]
@@ -226,10 +301,6 @@ export function App() {
         </div>
       </aside>
       <main>
-        <header className="topbar">
-          <span>PERSONAL WORKSPACE</span>
-          <time dateTime={today}>{formatDate(today)}</time>
-        </header>
         {error && (
           <div className="message error" role="alert">
             {error}
@@ -272,8 +343,11 @@ export function App() {
                         if (ok) {
                           setPending(null);
                           setView("Projects");
-                          setStatusFilter("");
+                          setSelectedStatuses(new Set(projectStatuses));
                           setCategoryFilter("");
+                          setProjectSearch("");
+                          setTaskSearch("");
+                          setEventSearch("");
                           setNotice("Backup imported.");
                         }
                       },
@@ -300,21 +374,7 @@ export function App() {
             {view !== "Project" && (
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">
-                    {view === "Dashboard" ? "YOUR NEXT STEPS" : "WORKSPACE"}
-                  </p>
                   <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
-                  <p className="description">
-                    {view === "Dashboard"
-                      ? "Open tasks and upcoming events across your projects."
-                      : view === "Projects"
-                        ? "All your projects, including those currently dormant."
-                        : view === "Tasks"
-                          ? "Your next steps across all projects."
-                          : view === "Settings"
-                            ? "Manage your project topics."
-                            : "Meetings, decisions and notes in chronological order."}
-                  </p>
                 </div>
                 <div className="page-actions" ref={setHeaderTarget}>
                   {!["Settings", "Tasks", "Events"].includes(view) && (
@@ -399,7 +459,7 @@ export function App() {
                     void transact(() =>
                       store.importData({
                         ...demoData(),
-                        schemaVersion: 3,
+                        schemaVersion: 4,
                         exportedAt: new Date().toISOString(),
                       }),
                     )
@@ -414,7 +474,7 @@ export function App() {
                 <div className="stats">
                   <div>
                     <strong>{active.length}</strong>
-                    <span>Active projects</span>
+                    <span>Projects with work</span>
                   </div>
                   <div>
                     <strong>{open.length}</strong>
@@ -425,132 +485,210 @@ export function App() {
                     <span>Upcoming events</span>
                   </div>
                 </div>
-                <div className="section-heading">
-                  <h2>Next up</h2>
-                  <span className="muted">By project</span>
-                </div>
-                {!active.length && !!data.projects.length && (
-                  <section className="panel empty">
-                    All clear. No tasks or upcoming events.
-                  </section>
-                )}
-                {active.map((p) => {
-                  const todos = sortTodos(
-                    open.filter((t) => t.projectId === p.id),
-                  );
-                  const events = sortEvents(
-                    coming.filter((e) => e.projectId === p.id),
-                  );
-                  return (
-                    <section key={p.id} className="panel overview-card">
-                      <div className="section-heading">
-                        <div>
-                          <button
-                            className="project-title"
-                            onClick={() => goProject(p.id)}
-                          >
-                            {p.name} <span>↗</span>
-                          </button>
-                          <p className="muted">{p.description}</p>
-                        </div>
-                        <StatusLabel>{statusLabel(p.status)}</StatusLabel>
-                      </div>
-                      <div className="overview-columns">
-                        <div>
-                          <h3>OPEN TASKS</h3>
-                          {!todos.length && (
-                            <p className="muted">No open tasks.</p>
-                          )}
-                          {todos.map((t) => (
-                            <label key={t.id} className="overview-todo">
-                              <input
-                                type="checkbox"
-                                checked={false}
-                                disabled={busy}
-                                onChange={() =>
-                                  void change({
-                                    type: "todo.save",
-                                    value: {
-                                      ...t,
-                                      completed: true,
-                                      updatedAt: new Date().toISOString(),
-                                    },
-                                  })
-                                }
-                              />
-                              <span>
-                                {t.title}
-                                {t.dueDate && (
-                                  <small
-                                    className={
-                                      overdue(t, today) ? "overdue" : ""
-                                    }
-                                  >
-                                    {overdue(t, today) ? "Overdue · " : ""}
-                                    {formatDate(t.dueDate)}
-                                  </small>
-                                )}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                        <div>
-                          <h3>UPCOMING EVENTS</h3>
-                          {!events.length && (
-                            <p className="muted">No upcoming events.</p>
-                          )}
-                          {events.slice(0, 5).map((e) => (
-                            <div className="overview-event" key={e.id}>
-                              <span className="category">
-                                {categoryLabel(e.category)}
-                              </span>
-                              <strong>{e.title}</strong>
+                <div className="dashboard-columns">
+                  <section className="panel dashboard-projects">
+                    <div className="section-heading">
+                      <h2>Projects with open work</h2>
+                      <span className="muted">{active.length}</span>
+                    </div>
+                    {!active.length && (
+                      <p className="muted">No open tasks or upcoming events.</p>
+                    )}
+                    {active.map((p) => {
+                      const taskCount = open.filter(
+                        (task) => task.projectId === p.id,
+                      ).length;
+                      const eventCount = coming.filter(
+                        (event) => event.projectId === p.id,
+                      ).length;
+                      const projectTodos = sortTodos(
+                        open.filter((todo) => todo.projectId === p.id),
+                      );
+                      const projectEvents = sortEvents(
+                        coming.filter((event) => event.projectId === p.id),
+                      );
+                      return (
+                        <div className="dashboard-project-row" key={p.id}>
+                          <div className="dashboard-project-head">
+                            <div>
+                              <button
+                                className="project-title"
+                                onClick={() => goProject(p.id)}
+                              >
+                                {p.name} <span>↗</span>
+                              </button>
+                              <p className="muted">{p.description}</p>
                               <small>
-                                {formatDate(e.date)}
-                                {e.time && ` · ${e.time}`}
+                                {taskCount} open tasks · {eventCount} upcoming
+                                events
                               </small>
                             </div>
-                          ))}
-                          {events.length > 5 && (
-                            <button
-                              className="text-button"
-                              onClick={() => goProject(p.id)}
+                            <StatusLabel>{statusLabel(p.status)}</StatusLabel>
+                          </div>
+                          <div className="overview-columns">
+                            <div>
+                              <h3>OPEN TASKS</h3>
+                              {!projectTodos.length && (
+                                <p className="muted">No open tasks.</p>
+                              )}
+                              {projectTodos.map((todo) => (
+                                <label key={todo.id} className="overview-todo">
+                                  <input
+                                    type="checkbox"
+                                    checked={false}
+                                    disabled={busy}
+                                    onChange={() => void completeTodo(todo)}
+                                  />
+                                  <span>
+                                    {todo.doNext && (
+                                      <span className="do-next-badge">
+                                        Do next
+                                      </span>
+                                    )}
+                                    {todo.title}
+                                    {todo.dueDate && (
+                                      <small
+                                        className={
+                                          overdue(todo, today) ? "overdue" : ""
+                                        }
+                                      >
+                                        {overdue(todo, today)
+                                          ? "Overdue · "
+                                          : ""}
+                                        {formatDate(todo.dueDate)}
+                                      </small>
+                                    )}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                            <div>
+                              <h3>UPCOMING EVENTS</h3>
+                              {!projectEvents.length && (
+                                <p className="muted">No upcoming events.</p>
+                              )}
+                              {projectEvents.slice(0, 5).map((event) => (
+                                <div className="overview-event" key={event.id}>
+                                  <span className="category">
+                                    {categoryLabel(event.category)}
+                                  </span>
+                                  <strong>{event.title}</strong>
+                                  <small>
+                                    {formatDate(event.date)}
+                                    {event.time && ` · ${event.time}`}
+                                  </small>
+                                </div>
+                              ))}
+                              {projectEvents.length > 5 && (
+                                <button
+                                  className="text-button"
+                                  onClick={() => goProject(p.id)}
+                                >
+                                  + {projectEvents.length - 5} more events
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                  <section className="panel dashboard-next">
+                    <div className="section-heading">
+                      <h2>Do next</h2>
+                      <span className="muted">{doNextTodos.length}</span>
+                    </div>
+                    {!doNextTodos.length && (
+                      <p className="muted">
+                        Mark an open task as Do next to see it here.
+                      </p>
+                    )}
+                    {doNextTodos.map((todo) => (
+                      <div className="dashboard-next-row" key={todo.id}>
+                        <input
+                          type="checkbox"
+                          aria-label={`${todo.title} completed`}
+                          checked={false}
+                          disabled={busy}
+                          onChange={() => void completeTodo(todo)}
+                        />
+                        <div>
+                          <strong>{todo.title}</strong>
+                          <button
+                            className="text-button"
+                            onClick={() => goProject(todo.projectId)}
+                          >
+                            {data.projects.find((p) => p.id === todo.projectId)
+                              ?.name || "Project"}
+                          </button>
+                          {todo.dueDate && (
+                            <small
+                              className={overdue(todo, today) ? "overdue" : ""}
                             >
-                              + {events.length - 5} more events
-                            </button>
+                              {overdue(todo, today) ? "Overdue · " : ""}
+                              {formatDate(todo.dueDate)}
+                            </small>
                           )}
                         </div>
                       </div>
-                    </section>
-                  );
-                })}
+                    ))}
+                  </section>
+                </div>
               </>
             )}
             {view === "Settings" && (
-              <CategorySettings
-                categories={data.projectCategories}
-                projects={data.projects}
-                busy={busy}
-                onChange={change}
-              />
+              <>
+                <section className="panel appearance-settings">
+                  <h2>Appearance</h2>
+                  <p className="description">
+                    Choose a theme or follow your system setting.
+                  </p>
+                  <div
+                    className="actions"
+                    role="group"
+                    aria-label="Color theme"
+                  >
+                    {(["system", "light", "dark"] as ThemeChoice[]).map(
+                      (choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`button ${theme === choice ? "" : "secondary"}`}
+                          aria-pressed={theme === choice}
+                          onClick={() => setTheme(choice)}
+                        >
+                          {choice[0].toUpperCase() + choice.slice(1)}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </section>
+                <CategorySettings
+                  categories={data.projectCategories}
+                  projects={data.projects}
+                  busy={busy}
+                  onChange={change}
+                />
+              </>
             )}
             {view === "Projects" && (
               <>
                 <div className="panel form-grid project-filters">
-                  <label className="field">
-                    Filter status
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="">All statuses</option>
-                      {projectStatuses.map((s) => (
-                        <option key={s} value={s}>
-                          {statusLabel(s)}
-                        </option>
+                  <fieldset className="status-filter">
+                    <legend>Show statuses</legend>
+                    <div>
+                      {projectStatuses.map((value) => (
+                        <label key={value}>
+                          <input
+                            type="checkbox"
+                            checked={selectedStatuses.has(value)}
+                            onChange={() => toggleStatus(value)}
+                          />
+                          {statusLabel(value)}
+                        </label>
                       ))}
-                    </select>
-                  </label>
+                    </div>
+                  </fieldset>
                   <label className="field">
                     Filter topic
                     <select
@@ -566,10 +704,15 @@ export function App() {
                       ))}
                     </select>
                   </label>
+                  <SearchField
+                    label="Search projects"
+                    value={projectSearch}
+                    onChange={setProjectSearch}
+                  />
                 </div>
                 {!filteredProjects.length && !!data.projects.length && (
                   <p className="panel empty">
-                    No projects match these filters.
+                    No projects match the current search or filters.
                   </p>
                 )}
                 <Card className="table-wrap">
@@ -581,7 +724,6 @@ export function App() {
                         <th>Topic</th>
                         <th>Status</th>
                         <th>Open tasks</th>
-                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -617,33 +759,6 @@ export function App() {
                               ).length
                             }
                           </td>
-                          <td>
-                            <button
-                              className="icon-button danger"
-                              disabled={busy}
-                              onClick={() => {
-                                const count =
-                                  data.todos.filter((t) => t.projectId === p.id)
-                                    .length +
-                                  data.events.filter(
-                                    (e) => e.projectId === p.id,
-                                  ).length +
-                                  data.links.filter((l) => l.projectId === p.id)
-                                    .length;
-                                if (
-                                  confirm(
-                                    `Delete project "${p.name}" and ${count} related items permanently?`,
-                                  )
-                                )
-                                  void change({
-                                    type: "project.delete",
-                                    id: p.id,
-                                  });
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -657,6 +772,8 @@ export function App() {
                 todos={data.todos}
                 showHeading={false}
                 headerTarget={headerTarget}
+                search={taskSearch}
+                onSearchChange={setTaskSearch}
               />
             )}
             {view === "Events" && (
@@ -666,6 +783,8 @@ export function App() {
                 headerTarget={headerTarget}
                 {...common}
                 events={data.events}
+                search={eventSearch}
+                onSearchChange={setEventSearch}
               />
             )}
             {view === "Project" &&
@@ -684,6 +803,7 @@ export function App() {
                     links={data.links.filter((l) => l.projectId === project.id)}
                     busy={busy}
                     onChange={change}
+                    onDelete={deleteProject}
                   />
                   <div className="project-metadata">
                     <span>

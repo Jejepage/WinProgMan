@@ -1,4 +1,11 @@
 import type { Todo, ProjectEvent, AppData } from "./types";
+export const matchesSearch = (query: string, ...values: string[]) => {
+  const needle = query.trim().toLocaleLowerCase("en");
+  return (
+    !needle ||
+    values.some((value) => value.toLocaleLowerCase("en").includes(needle))
+  );
+};
 export function localToday(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -10,6 +17,7 @@ export const sortTodos = (todos: Todo[]) =>
   [...todos].sort(
     (a, b) =>
       Number(a.completed) - Number(b.completed) ||
+      Number(!a.doNext) - Number(!b.doNext) ||
       (a.dueDate || "9999").localeCompare(b.dueDate || "9999") ||
       a.createdAt.localeCompare(b.createdAt) ||
       a.id.localeCompare(b.id),
@@ -33,3 +41,9 @@ export const formatDate = (date: string) =>
     month: "short",
     year: "numeric",
   }).format(new Date(`${date}T12:00:00`));
+export const formatTimestampDate = (timestamp: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(timestamp));

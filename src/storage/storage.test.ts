@@ -9,6 +9,7 @@ const legacyData = () => {
   const { projectCategories: _categories, ...data } = demoData();
   return {
     ...data,
+    todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
     projects: data.projects.map(
       ({ status: _status, categoryId: _category, ...project }) => project,
     ),
@@ -17,17 +18,22 @@ const legacyData = () => {
 
 const envelope = (): ExportEnvelope => ({
   ...demoData(),
-  schemaVersion: 3,
+  schemaVersion: 4,
   exportedAt: new Date().toISOString(),
 });
 const store = () => new IndexedDbProjectStore(`test-${crypto.randomUUID()}`);
 
 describe("Sicherungsvalidierung", () => {
   it("erhält alte Klartextnotizen beim Import von Format 2 unverändert", () => {
-    const old = { ...envelope(), schemaVersion: 2 };
+    const data = envelope();
+    const old = {
+      ...data,
+      schemaVersion: 2,
+      todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
+    };
     old.events[0].note = "**kein Markdown**\n# Klartext";
     const imported = validateImport(old);
-    expect(imported.schemaVersion).toBe(3);
+    expect(imported.schemaVersion).toBe(4);
     expect(imported.events).toEqual(old.events);
     expect(imported.events[0]).not.toHaveProperty("noteFormat");
     expect(validateData(old).events).toEqual(old.events);
@@ -44,9 +50,13 @@ describe("Sicherungsvalidierung", () => {
     (data.events[0] as unknown as { noteFormat: string }).noteFormat = "html";
     expect(() => validateImport(data)).toThrow("Unbekanntes Notizformat");
     data.events[0].noteFormat = "markdown";
-    expect(() => validateImport({ ...data, schemaVersion: 2 })).toThrow(
-      "Unbekanntes Feld",
-    );
+    expect(() =>
+      validateImport({
+        ...data,
+        schemaVersion: 2,
+        todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
+      }),
+    ).toThrow("Unbekanntes Feld");
     const legacy = legacyData();
     expect(() =>
       validateImport({
@@ -64,7 +74,7 @@ describe("Sicherungsvalidierung", () => {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
     });
-    expect(migrated.schemaVersion).toBe(3);
+    expect(migrated.schemaVersion).toBe(4);
     expect(migrated.projectCategories).toEqual([]);
     expect(migrated.projects).toEqual(
       legacy.projects.map((project) => ({ ...project, status: "Aktiv" })),
@@ -101,11 +111,32 @@ describe("Sicherungsvalidierung", () => {
     const data = envelope();
     expect(validateImport(JSON.parse(JSON.stringify(data)))).toEqual(data);
   });
+  it("erhält Do-next-Markierungen in Format 4 und migriert Format 3 ohne sie", () => {
+    const data = envelope();
+    expect(data.todos.some((todo) => todo.doNext)).toBe(true);
+    expect(validateImport(JSON.parse(JSON.stringify(data))).todos).toEqual(
+      data.todos,
+    );
+    const old = {
+      ...data,
+      schemaVersion: 3,
+      todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
+    };
+    const migrated = validateImport(old);
+    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.todos).toEqual(old.todos);
+    expect(validateData(old).todos).toEqual(old.todos);
+    expect(() => validateImport({ ...data, schemaVersion: 3 })).toThrow(
+      "Unbekanntes Feld",
+    );
+    (data.todos[0] as unknown as { doNext: string }).doNext = "yes";
+    expect(() => validateImport(data)).toThrow("Wahrheitswert erwartet");
+  });
   it.each([
     [
       "unbekannte Version",
       (data: ExportEnvelope) => {
-        (data as unknown as { schemaVersion: number }).schemaVersion = 4;
+        (data as unknown as { schemaVersion: number }).schemaVersion = 5;
       },
     ],
     [
@@ -167,7 +198,7 @@ describe("Sicherungsvalidierung", () => {
     expect(
       validateImport({
         ...emptyData(),
-        schemaVersion: 3,
+        schemaVersion: 4,
         exportedAt: new Date().toISOString(),
       }).projects,
     ).toEqual([]);
@@ -215,7 +246,7 @@ describe("IndexedDB", () => {
     await adapter.apply({ type: "category.save", value: category });
     const reloaded = await new IndexedDbProjectStore(name).load();
     expect(reloaded).toEqual({ ...migrated, projectCategories: [category] });
-    expect((await adapter.exportData()).schemaVersion).toBe(3);
+    expect((await adapter.exportData()).schemaVersion).toBe(4);
   });
   it("löscht Kategorien atomar, erhält Projekte und aktualisiert deren Zeitstempel", async () => {
     const adapter = store();
@@ -323,7 +354,7 @@ describe("IndexedDB", () => {
     expect(await adapter.load()).toEqual(before);
     await adapter.importData({
       ...emptyData(),
-      schemaVersion: 3,
+      schemaVersion: 4,
       exportedAt: new Date().toISOString(),
     });
     expect(await adapter.load()).toEqual(emptyData());
@@ -380,6 +411,6 @@ describe("IndexedDB", () => {
     );
     const loaded = await adapter.load();
     expect(loaded.todos).toHaveLength(data.todos.length + todos.length);
-    expect((await adapter.exportData()).schemaVersion).toBe(3);
+    expect((await adapter.exportData()).schemaVersion).toBe(4);
   });
 });
