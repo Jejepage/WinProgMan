@@ -91,4 +91,4 @@ Aufgaben- und Ereignistitel öffnen eine Detailansicht innerhalb der App; bei Er
 
 Ereignisse werden ausschließlich im geöffneten Editor gelöscht; die Ereignisliste hat keinen Delete-Button mehr. Die Löschbestätigung kann abgebrochen werden und führt dann zum unveränderten Entwurf zurück. Erfolgreiches Löschen führt zurück zur Liste.
 
-Ereignisliste: Reihenfolge Datum, Titel, Past/Today/Upcoming, Kategorie, Notizpfeil und Projekt. Alle Felder sind linksbündig; Past/Today/Upcoming behalten eine feste Breite. Einheitlicher linker Einzug und eine Mindestbreite für das Datum halten die Felder bei unterschiedlichen Monatsnamen ausgerichtet. Im dunklen Browserlayout visuell geprüft.
+Ereignisliste: Reihenfolge Datum, Titel mit direkt danebenstehendem Notizpfeil, Past/Today/Upcoming, Kategorie und Projekt. Alle Felder sind linksbündig; Past/Today/Upcoming behalten eine feste Breite. Einheitlicher linker Einzug und eine Mindestbreite für das Datum halten die Felder bei unterschiedlichen Monatsnamen ausgerichtet.

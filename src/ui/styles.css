@@ -1267,6 +1267,20 @@ h3 {
 button.event-title:hover {
   color: var(--accent);
 }
+.event-title-group {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+}
+.event-title-group .event-title {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.event-title-group .event-note-toggle {
+  flex-shrink: 0;
+}
 .project-link {
   border: 0;
   background: none;
@@ -1307,7 +1321,8 @@ button.event-title:hover {
   .event-row {
     flex-wrap: wrap;
   }
-  .event-title {
+  .event-title,
+  .event-title-group {
     flex-basis: 35%;
   }
 }
@@ -1315,7 +1330,8 @@ button.event-title:hover {
   .event-row {
     gap: 6px;
   }
-  .event-title {
+  .event-title,
+  .event-title-group {
     flex-basis: 50%;
   }
   .event-actions {
