@@ -1237,6 +1237,11 @@ h3 {
   white-space: nowrap;
   border: 0;
 }
+.detail-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
 .event-row {
   display: flex;
   align-items: center;
@@ -1609,6 +1614,8 @@ button.event-title:hover {
   margin-left: auto;
 }
 .event-date-button {
+  min-width: 12ch;
+  flex-shrink: 0;
   border: 0;
   background: none;
   padding: 5px 0;
@@ -1624,6 +1631,9 @@ button.event-title:hover {
 }
 .event-phase {
   display: inline-block;
+  flex: 0 0 calc(8ch + 12px);
+  width: calc(8ch + 12px);
+  text-align: left;
   padding: 3px 6px;
   border-radius: 4px;
   background: var(--accent-soft);
@@ -1637,6 +1647,10 @@ button.event-title:hover {
 }
 .event-item.is-upcoming {
   border-left: 3px solid var(--accent);
+  padding-left: 8px;
+}
+.event-item.is-past {
+  border-left: 3px solid transparent;
   padding-left: 8px;
 }
 @media (max-width: 1100px) {

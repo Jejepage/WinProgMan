@@ -34,6 +34,7 @@ import { TodosPanel } from "../features/todos/TodosPanel";
 import { EventsPanel } from "../features/events/EventsPanel";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { CategorySettings } from "../features/projects/CategorySettings";
+import { openItem } from "../ui/itemNavigation";
 const store = new IndexedDbProjectStore();
 import {
   LayoutDashboard,
@@ -49,7 +50,16 @@ type ThemeChoice = "system" | "light" | "dark";
 export function App() {
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
   const [data, setData] = useState<AppData>(emptyData);
-  const [view, setView] = useState<View>("Dashboard");
+  const [view, setView] = useState<View>(() => {
+    const kind = new URLSearchParams(window.location.hash.slice(1)).get(
+      "detail",
+    );
+    return kind === "task"
+      ? "Tasks"
+      : kind === "event"
+        ? "Events"
+        : "Dashboard";
+  });
   const [projectId, setProjectId] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -79,6 +89,46 @@ export function App() {
   });
   const file = useRef<HTMLInputElement>(null);
   const lock = useRef(false);
+  const updates = useRef<BroadcastChannel | null>(null);
+  const readDetail = () => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const kind = params.get("detail");
+    return kind === "task" || kind === "event"
+      ? { kind, id: params.get("id") || "" }
+      : null;
+  };
+  const [detail, setDetail] = useState(readDetail);
+  const closeDetail = () => {
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+    setDetail(null);
+  };
+  useEffect(() => {
+    const update = () => setDetail(readDetail());
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  useEffect(() => {
+    const refresh = () => {
+      if (!lock.current)
+        void store
+          .load()
+          .then(setData)
+          .catch((e) => setError(errorLabel(e)));
+    };
+    const channel = new BroadcastChannel("winprogman-data");
+    updates.current = channel;
+    channel.onmessage = refresh;
+    window.addEventListener("focus", refresh);
+    return () => {
+      channel.close();
+      updates.current = null;
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
   useEffect(() => {
     store
       .load()
@@ -111,6 +161,7 @@ export function App() {
     try {
       await action();
       setData(await store.load());
+      updates.current?.postMessage("changed");
       return true;
     } catch (e) {
       setError(errorLabel(e));
@@ -233,6 +284,53 @@ export function App() {
           : p.categoryId === effectiveCategoryFilter)) &&
       matchesSearch(projectSearch, p.name),
   );
+  const detailContent = detail
+    ? (() => {
+        const todo = data.todos.find((item) => item.id === detail.id);
+        const event = data.events.find((item) => item.id === detail.id);
+        const item = detail.kind === "task" ? todo : event;
+        return (
+          <section className="detail-page">
+            <div className="page-heading">
+              <h1>{detail.kind === "task" ? "Edit task" : "Edit event"}</h1>
+            </div>
+            {error && (
+              <p role="alert" className="panel">
+                {error}
+              </p>
+            )}
+            {loading ? (
+              <p>Loading …</p>
+            ) : !item ? (
+              <section className="panel">
+                <p>This item no longer exists.</p>
+                <button className="button secondary" onClick={closeDetail}>
+                  Back to list
+                </button>
+              </section>
+            ) : detail.kind === "task" && todo ? (
+              <TodosPanel
+                key={todo.id}
+                {...common}
+                todos={[todo]}
+                initialTodo={todo}
+                detailOnly
+                onClose={closeDetail}
+              />
+            ) : event ? (
+              <EventsPanel
+                key={event.id}
+                {...common}
+                events={[event]}
+                initialEvent={event}
+                detailOnly
+                onClose={closeDetail}
+              />
+            ) : null}
+          </section>
+        );
+      })()
+    : null;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -242,6 +340,7 @@ export function App() {
           onClick={(e) => {
             e.preventDefault();
             setView("Dashboard");
+            closeDetail();
           }}
         >
           <span className="brand-mark">W</span>
@@ -257,7 +356,10 @@ export function App() {
               key={v}
               aria-current={view === v ? "page" : undefined}
               className={`nav-button ${view === v ? "active" : ""}`}
-              onClick={() => setView(v)}
+              onClick={() => {
+                closeDetail();
+                setView(v);
+              }}
             >
               {(() => {
                 const Icon = [
@@ -365,506 +467,546 @@ export function App() {
             </div>
           </section>
         )}
-        {loading ? (
-          <section className="panel">
-            <p>Loading projects …</p>
-          </section>
-        ) : (
-          <>
-            {view !== "Project" && (
-              <div className="page-heading">
-                <div>
-                  <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
-                </div>
-                <div className="page-actions" ref={setHeaderTarget}>
-                  {!["Settings", "Tasks", "Events"].includes(view) && (
-                    <button
-                      className="button"
-                      disabled={busy}
-                      onClick={() => setNewProject(!newProject)}
-                    >
-                      + New project
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {newProject && (
-              <form className="panel project-create" onSubmit={addProject}>
-                <label className="field">
-                  Project name
-                  <Field
-                    autoFocus
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Name your project"
-                  />
-                </label>
-                <div className="form-grid">
-                  <label className="field">
-                    Project status
-                    <select
-                      value={status}
-                      onChange={(e) =>
-                        setStatus(e.target.value as ProjectStatus)
-                      }
-                    >
-                      {projectStatuses.map((s) => (
-                        <option key={s} value={s}>
-                          {statusLabel(s)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    Project topic
-                    <select
-                      value={
-                        data.projectCategories.some((c) => c.id === categoryId)
-                          ? categoryId
-                          : ""
-                      }
-                      onChange={(e) => setCategoryId(e.target.value)}
-                    >
-                      <option value="">No topic</option>
-                      {data.projectCategories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="actions">
-                  <Button disabled={busy}>Create project</Button>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => setNewProject(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-            {!data.projects.length && view !== "Settings" && (
-              <section className="panel welcome">
-                <p className="eyebrow">GET STARTED</p>
-                <h2>Your next project starts here.</h2>
-                <p>Create a project or explore the app with sample data.</p>
-                <button
-                  className="button secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void transact(() =>
-                      store.importData({
-                        ...demoData(),
-                        schemaVersion: 4,
-                        exportedAt: new Date().toISOString(),
-                      }),
-                    )
-                  }
-                >
-                  Load sample data
-                </button>
-              </section>
-            )}
-            {view === "Dashboard" && (
-              <>
-                <div className="stats">
+        {detailContent}
+        <div hidden={Boolean(detail)}>
+          {loading ? (
+            <section className="panel">
+              <p>Loading projects …</p>
+            </section>
+          ) : (
+            <>
+              {view !== "Project" && (
+                <div className="page-heading">
                   <div>
-                    <strong>{active.length}</strong>
-                    <span>Projects with work</span>
+                    <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
                   </div>
-                  <div>
-                    <strong>{open.length}</strong>
-                    <span>Open tasks</span>
-                  </div>
-                  <div>
-                    <strong>{coming.length}</strong>
-                    <span>Upcoming events</span>
-                  </div>
-                </div>
-                <div className="dashboard-columns">
-                  <section className="panel dashboard-projects">
-                    <div className="section-heading">
-                      <h2>Projects with open work</h2>
-                      <span className="muted">{active.length}</span>
-                    </div>
-                    {!active.length && (
-                      <p className="muted">No open tasks or upcoming events.</p>
+                  <div className="page-actions" ref={setHeaderTarget}>
+                    {!["Settings", "Tasks", "Events"].includes(view) && (
+                      <button
+                        className="button"
+                        disabled={busy}
+                        onClick={() => setNewProject(!newProject)}
+                      >
+                        + New project
+                      </button>
                     )}
-                    {active.map((p) => {
-                      const taskCount = open.filter(
-                        (task) => task.projectId === p.id,
-                      ).length;
-                      const eventCount = coming.filter(
-                        (event) => event.projectId === p.id,
-                      ).length;
-                      const projectTodos = sortTodos(
-                        open.filter((todo) => todo.projectId === p.id),
-                      );
-                      const projectEvents = sortEvents(
-                        coming.filter((event) => event.projectId === p.id),
-                      );
-                      return (
-                        <div className="dashboard-project-row" key={p.id}>
-                          <div className="dashboard-project-head">
-                            <div>
+                  </div>
+                </div>
+              )}
+              {newProject && (
+                <form className="panel project-create" onSubmit={addProject}>
+                  <label className="field">
+                    Project name
+                    <Field
+                      autoFocus
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Name your project"
+                    />
+                  </label>
+                  <div className="form-grid">
+                    <label className="field">
+                      Project status
+                      <select
+                        value={status}
+                        onChange={(e) =>
+                          setStatus(e.target.value as ProjectStatus)
+                        }
+                      >
+                        {projectStatuses.map((s) => (
+                          <option key={s} value={s}>
+                            {statusLabel(s)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      Project topic
+                      <select
+                        value={
+                          data.projectCategories.some(
+                            (c) => c.id === categoryId,
+                          )
+                            ? categoryId
+                            : ""
+                        }
+                        onChange={(e) => setCategoryId(e.target.value)}
+                      >
+                        <option value="">No topic</option>
+                        {data.projectCategories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="actions">
+                    <Button disabled={busy}>Create project</Button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => setNewProject(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+              {!data.projects.length && view !== "Settings" && (
+                <section className="panel welcome">
+                  <p className="eyebrow">GET STARTED</p>
+                  <h2>Your next project starts here.</h2>
+                  <p>Create a project or explore the app with sample data.</p>
+                  <button
+                    className="button secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      void transact(() =>
+                        store.importData({
+                          ...demoData(),
+                          schemaVersion: 4,
+                          exportedAt: new Date().toISOString(),
+                        }),
+                      )
+                    }
+                  >
+                    Load sample data
+                  </button>
+                </section>
+              )}
+              {view === "Dashboard" && (
+                <>
+                  <div className="stats">
+                    <div>
+                      <strong>{active.length}</strong>
+                      <span>Projects with work</span>
+                    </div>
+                    <div>
+                      <strong>{open.length}</strong>
+                      <span>Open tasks</span>
+                    </div>
+                    <div>
+                      <strong>{coming.length}</strong>
+                      <span>Upcoming events</span>
+                    </div>
+                  </div>
+                  <div className="dashboard-columns">
+                    <section className="panel dashboard-projects">
+                      <div className="section-heading">
+                        <h2>Projects with open work</h2>
+                        <span className="muted">{active.length}</span>
+                      </div>
+                      {!active.length && (
+                        <p className="muted">
+                          No open tasks or upcoming events.
+                        </p>
+                      )}
+                      {active.map((p) => {
+                        const taskCount = open.filter(
+                          (task) => task.projectId === p.id,
+                        ).length;
+                        const eventCount = coming.filter(
+                          (event) => event.projectId === p.id,
+                        ).length;
+                        const projectTodos = sortTodos(
+                          open.filter((todo) => todo.projectId === p.id),
+                        );
+                        const projectEvents = sortEvents(
+                          coming.filter((event) => event.projectId === p.id),
+                        );
+                        return (
+                          <div className="dashboard-project-row" key={p.id}>
+                            <div className="dashboard-project-head">
+                              <div>
+                                <button
+                                  className="project-title"
+                                  onClick={() => goProject(p.id)}
+                                >
+                                  {p.name} <span>↗</span>
+                                </button>
+                                <p className="muted">{p.description}</p>
+                                <small>
+                                  {taskCount} open tasks · {eventCount} upcoming
+                                  events
+                                </small>
+                              </div>
+                              <StatusLabel>{statusLabel(p.status)}</StatusLabel>
+                            </div>
+                            <div className="overview-columns">
+                              <div>
+                                <h3>OPEN TASKS</h3>
+                                {!projectTodos.length && (
+                                  <p className="muted">No open tasks.</p>
+                                )}
+                                {projectTodos.map((todo) => (
+                                  <div key={todo.id} className="overview-todo">
+                                    <input
+                                      type="checkbox"
+                                      aria-label={todo.title}
+                                      checked={false}
+                                      disabled={busy}
+                                      onChange={() => void completeTodo(todo)}
+                                    />
+                                    <span>
+                                      {todo.doNext && (
+                                        <span className="do-next-badge">
+                                          Do next
+                                        </span>
+                                      )}
+                                      <button
+                                        className="task-title-button"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          openItem("task", todo.id)
+                                        }
+                                      >
+                                        {todo.title}
+                                      </button>
+                                      {todo.dueDate && (
+                                        <small
+                                          className={
+                                            overdue(todo, today)
+                                              ? "overdue"
+                                              : ""
+                                          }
+                                        >
+                                          {overdue(todo, today)
+                                            ? "Overdue · "
+                                            : ""}
+                                          {formatDate(todo.dueDate)}
+                                        </small>
+                                      )}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div>
+                                <h3>UPCOMING EVENTS</h3>
+                                {!projectEvents.length && (
+                                  <p className="muted">No upcoming events.</p>
+                                )}
+                                {projectEvents.slice(0, 5).map((event) => (
+                                  <div
+                                    className="overview-event"
+                                    key={event.id}
+                                  >
+                                    <span className="category">
+                                      {categoryLabel(event.category)}
+                                    </span>
+                                    <button
+                                      className="event-title"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        openItem("event", event.id)
+                                      }
+                                    >
+                                      {event.title}
+                                    </button>
+                                    <small>
+                                      {formatDate(event.date)}
+                                      {event.time && ` · ${event.time}`}
+                                    </small>
+                                  </div>
+                                ))}
+                                {projectEvents.length > 5 && (
+                                  <button
+                                    className="text-button"
+                                    onClick={() => goProject(p.id)}
+                                  >
+                                    + {projectEvents.length - 5} more events
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </section>
+                    <section className="panel dashboard-next">
+                      <div className="section-heading">
+                        <h2>Do next</h2>
+                        <span className="muted">{doNextTodos.length}</span>
+                      </div>
+                      {!doNextTodos.length && (
+                        <p className="muted">
+                          Mark an open task as Do next to see it here.
+                        </p>
+                      )}
+                      {doNextTodos.map((todo) => (
+                        <div className="dashboard-next-row" key={todo.id}>
+                          <input
+                            type="checkbox"
+                            aria-label={`${todo.title} completed`}
+                            checked={false}
+                            disabled={busy}
+                            onChange={() => void completeTodo(todo)}
+                          />
+                          <div>
+                            <button
+                              className="task-title-button"
+                              disabled={busy}
+                              onClick={() => openItem("task", todo.id)}
+                            >
+                              {todo.title}
+                            </button>
+                            <button
+                              className="text-button"
+                              onClick={() => goProject(todo.projectId)}
+                            >
+                              {data.projects.find(
+                                (p) => p.id === todo.projectId,
+                              )?.name || "Project"}
+                            </button>
+                            {todo.dueDate && (
+                              <small
+                                className={
+                                  overdue(todo, today) ? "overdue" : ""
+                                }
+                              >
+                                {overdue(todo, today) ? "Overdue · " : ""}
+                                {formatDate(todo.dueDate)}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+                  </div>
+                </>
+              )}
+              {view === "Settings" && (
+                <>
+                  <section className="panel appearance-settings">
+                    <h2>Appearance</h2>
+                    <p className="description">
+                      Choose a theme or follow your system setting.
+                    </p>
+                    <div
+                      className="actions"
+                      role="group"
+                      aria-label="Color theme"
+                    >
+                      {(["system", "light", "dark"] as ThemeChoice[]).map(
+                        (choice) => (
+                          <button
+                            key={choice}
+                            type="button"
+                            className={`button ${theme === choice ? "" : "secondary"}`}
+                            aria-pressed={theme === choice}
+                            onClick={() => setTheme(choice)}
+                          >
+                            {choice[0].toUpperCase() + choice.slice(1)}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </section>
+                  <CategorySettings
+                    categories={data.projectCategories}
+                    projects={data.projects}
+                    busy={busy}
+                    onChange={change}
+                  />
+                </>
+              )}
+              {view === "Projects" && (
+                <>
+                  <div className="panel form-grid project-filters">
+                    <fieldset className="status-filter">
+                      <legend className="sr-only">Show statuses</legend>
+                      <div>
+                        {projectStatuses.map((value) => (
+                          <label key={value}>
+                            <input
+                              type="checkbox"
+                              checked={selectedStatuses.has(value)}
+                              onChange={() => toggleStatus(value)}
+                            />
+                            {statusLabel(value)}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <label className="field">
+                      <span className="sr-only">Filter topic</span>
+                      <select
+                        value={effectiveCategoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                      >
+                        <option value="">All topics</option>
+                        <option value="none">No topic</option>
+                        {data.projectCategories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <SearchField
+                      label="Search projects"
+                      value={projectSearch}
+                      onChange={setProjectSearch}
+                    />
+                  </div>
+                  {!filteredProjects.length && !!data.projects.length && (
+                    <p className="panel empty">
+                      No projects match the current search or filters.
+                    </p>
+                  )}
+                  <Card className="table-wrap">
+                    <Table>
+                      <thead>
+                        <tr>
+                          <th>Project #</th>
+                          <th>Title</th>
+                          <th>Topic</th>
+                          <th>Status</th>
+                          <th>Open tasks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProjects.map((p) => (
+                          <tr key={p.id}>
+                            <td>
+                              PRJ-
+                              {String(data.projects.indexOf(p) + 1).padStart(
+                                3,
+                                "0",
+                              )}
+                            </td>
+                            <td>
                               <button
                                 className="project-title"
                                 onClick={() => goProject(p.id)}
                               >
-                                {p.name} <span>↗</span>
+                                {p.name}
                               </button>
-                              <p className="muted">{p.description}</p>
-                              <small>
-                                {taskCount} open tasks · {eventCount} upcoming
-                                events
-                              </small>
-                            </div>
-                            <StatusLabel>{statusLabel(p.status)}</StatusLabel>
-                          </div>
-                          <div className="overview-columns">
-                            <div>
-                              <h3>OPEN TASKS</h3>
-                              {!projectTodos.length && (
-                                <p className="muted">No open tasks.</p>
-                              )}
-                              {projectTodos.map((todo) => (
-                                <label key={todo.id} className="overview-todo">
-                                  <input
-                                    type="checkbox"
-                                    checked={false}
-                                    disabled={busy}
-                                    onChange={() => void completeTodo(todo)}
-                                  />
-                                  <span>
-                                    {todo.doNext && (
-                                      <span className="do-next-badge">
-                                        Do next
-                                      </span>
-                                    )}
-                                    {todo.title}
-                                    {todo.dueDate && (
-                                      <small
-                                        className={
-                                          overdue(todo, today) ? "overdue" : ""
-                                        }
-                                      >
-                                        {overdue(todo, today)
-                                          ? "Overdue · "
-                                          : ""}
-                                        {formatDate(todo.dueDate)}
-                                      </small>
-                                    )}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                            <div>
-                              <h3>UPCOMING EVENTS</h3>
-                              {!projectEvents.length && (
-                                <p className="muted">No upcoming events.</p>
-                              )}
-                              {projectEvents.slice(0, 5).map((event) => (
-                                <div className="overview-event" key={event.id}>
-                                  <span className="category">
-                                    {categoryLabel(event.category)}
-                                  </span>
-                                  <strong>{event.title}</strong>
-                                  <small>
-                                    {formatDate(event.date)}
-                                    {event.time && ` · ${event.time}`}
-                                  </small>
-                                </div>
-                              ))}
-                              {projectEvents.length > 5 && (
-                                <button
-                                  className="text-button"
-                                  onClick={() => goProject(p.id)}
-                                >
-                                  + {projectEvents.length - 5} more events
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </section>
-                  <section className="panel dashboard-next">
-                    <div className="section-heading">
-                      <h2>Do next</h2>
-                      <span className="muted">{doNextTodos.length}</span>
-                    </div>
-                    {!doNextTodos.length && (
-                      <p className="muted">
-                        Mark an open task as Do next to see it here.
-                      </p>
-                    )}
-                    {doNextTodos.map((todo) => (
-                      <div className="dashboard-next-row" key={todo.id}>
-                        <input
-                          type="checkbox"
-                          aria-label={`${todo.title} completed`}
-                          checked={false}
-                          disabled={busy}
-                          onChange={() => void completeTodo(todo)}
-                        />
-                        <div>
-                          <strong>{todo.title}</strong>
-                          <button
-                            className="text-button"
-                            onClick={() => goProject(todo.projectId)}
-                          >
-                            {data.projects.find((p) => p.id === todo.projectId)
-                              ?.name || "Project"}
-                          </button>
-                          {todo.dueDate && (
-                            <small
-                              className={overdue(todo, today) ? "overdue" : ""}
-                            >
-                              {overdue(todo, today) ? "Overdue · " : ""}
-                              {formatDate(todo.dueDate)}
-                            </small>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </section>
-                </div>
-              </>
-            )}
-            {view === "Settings" && (
-              <>
-                <section className="panel appearance-settings">
-                  <h2>Appearance</h2>
-                  <p className="description">
-                    Choose a theme or follow your system setting.
-                  </p>
-                  <div
-                    className="actions"
-                    role="group"
-                    aria-label="Color theme"
-                  >
-                    {(["system", "light", "dark"] as ThemeChoice[]).map(
-                      (choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`button ${theme === choice ? "" : "secondary"}`}
-                          aria-pressed={theme === choice}
-                          onClick={() => setTheme(choice)}
-                        >
-                          {choice[0].toUpperCase() + choice.slice(1)}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                </section>
-                <CategorySettings
-                  categories={data.projectCategories}
-                  projects={data.projects}
-                  busy={busy}
-                  onChange={change}
-                />
-              </>
-            )}
-            {view === "Projects" && (
-              <>
-                <div className="panel form-grid project-filters">
-                  <fieldset className="status-filter">
-                    <legend>Show statuses</legend>
-                    <div>
-                      {projectStatuses.map((value) => (
-                        <label key={value}>
-                          <input
-                            type="checkbox"
-                            checked={selectedStatuses.has(value)}
-                            onChange={() => toggleStatus(value)}
-                          />
-                          {statusLabel(value)}
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                  <label className="field">
-                    Filter topic
-                    <select
-                      value={effectiveCategoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                    >
-                      <option value="">All topics</option>
-                      <option value="none">No topic</option>
-                      {data.projectCategories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <SearchField
-                    label="Search projects"
-                    value={projectSearch}
-                    onChange={setProjectSearch}
-                  />
-                </div>
-                {!filteredProjects.length && !!data.projects.length && (
-                  <p className="panel empty">
-                    No projects match the current search or filters.
-                  </p>
-                )}
-                <Card className="table-wrap">
-                  <Table>
-                    <thead>
-                      <tr>
-                        <th>Project #</th>
-                        <th>Title</th>
-                        <th>Topic</th>
-                        <th>Status</th>
-                        <th>Open tasks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProjects.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            PRJ-
-                            {String(data.projects.indexOf(p) + 1).padStart(
-                              3,
-                              "0",
-                            )}
-                          </td>
-                          <td>
-                            <button
-                              className="project-title"
-                              onClick={() => goProject(p.id)}
-                            >
-                              {p.name}
-                            </button>
-                          </td>
-                          <td>
-                            {data.projectCategories.find(
-                              (c) => c.id === p.categoryId,
-                            )?.name || "No topic"}
-                          </td>
-                          <td>
-                            <StatusLabel>{statusLabel(p.status)}</StatusLabel>
-                          </td>
-                          <td>
-                            {
-                              data.todos.filter(
-                                (t) => t.projectId === p.id && !t.completed,
-                              ).length
-                            }
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </Card>
-              </>
-            )}
-            {view === "Tasks" && (
-              <TodosPanel
-                {...common}
-                todos={data.todos}
-                showHeading={false}
-                headerTarget={headerTarget}
-                search={taskSearch}
-                onSearchChange={setTaskSearch}
-              />
-            )}
-            {view === "Events" && (
-              <EventsPanel
-                key={view}
-                showHeading={false}
-                headerTarget={headerTarget}
-                {...common}
-                events={data.events}
-                search={eventSearch}
-                onSearchChange={setEventSearch}
-              />
-            )}
-            {view === "Project" &&
-              (project ? (
-                <>
-                  <button
-                    className="text-button breadcrumb"
-                    onClick={() => setView("Projects")}
-                  >
-                    ← All projects
-                  </button>
-                  <ProjectHeader
-                    key={project.id}
-                    project={project}
-                    projectCategories={data.projectCategories}
-                    links={data.links.filter((l) => l.projectId === project.id)}
-                    busy={busy}
-                    onChange={change}
-                    onDelete={deleteProject}
-                  />
-                  <div className="project-metadata">
-                    <span>
-                      PRJ-
-                      {String(data.projects.indexOf(project) + 1).padStart(
-                        3,
-                        "0",
-                      )}
-                    </span>
-                    <span>
-                      Created {formatDate(project.createdAt.slice(0, 10))}
-                    </span>
-                    <span>
-                      Updated {formatDate(project.updatedAt.slice(0, 10))}
-                    </span>
-                    <span>
-                      {
-                        data.todos.filter(
-                          (t) => t.projectId === project.id && t.completed,
-                        ).length
-                      }{" "}
-                      /{" "}
-                      {
-                        data.todos.filter((t) => t.projectId === project.id)
-                          .length
-                      }{" "}
-                      tasks completed
-                    </span>
-                  </div>
-                  <div className="detail-columns">
-                    <TodosPanel
-                      key={`todo-${project.id}`}
-                      {...common}
-                      projectId={project.id}
-                      todos={data.todos.filter(
-                        (t) => t.projectId === project.id,
-                      )}
-                    />
-                    <EventsPanel
-                      key={`event-${project.id}`}
-                      {...common}
-                      projectId={project.id}
-                      events={data.events.filter(
-                        (e) => e.projectId === project.id,
-                      )}
-                    />
-                  </div>
+                            </td>
+                            <td>
+                              {data.projectCategories.find(
+                                (c) => c.id === p.categoryId,
+                              )?.name || "No topic"}
+                            </td>
+                            <td>
+                              <StatusLabel>{statusLabel(p.status)}</StatusLabel>
+                            </td>
+                            <td>
+                              {
+                                data.todos.filter(
+                                  (t) => t.projectId === p.id && !t.completed,
+                                ).length
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </Card>
                 </>
-              ) : (
-                <section className="panel empty">
-                  This project no longer exists.
-                  <button
-                    className="text-button"
-                    onClick={() => setView("Projects")}
-                  >
-                    Back to projects
-                  </button>
-                </section>
-              ))}
-          </>
-        )}
+              )}
+              {view === "Tasks" && (
+                <TodosPanel
+                  {...common}
+                  todos={data.todos}
+                  showHeading={false}
+                  headerTarget={headerTarget}
+                  search={taskSearch}
+                  onSearchChange={setTaskSearch}
+                />
+              )}
+              {view === "Events" && (
+                <EventsPanel
+                  key={view}
+                  showHeading={false}
+                  headerTarget={headerTarget}
+                  {...common}
+                  events={data.events}
+                  search={eventSearch}
+                  onSearchChange={setEventSearch}
+                />
+              )}
+              {view === "Project" &&
+                (project ? (
+                  <>
+                    <button
+                      className="text-button breadcrumb"
+                      onClick={() => setView("Projects")}
+                    >
+                      ← All projects
+                    </button>
+                    <ProjectHeader
+                      key={project.id}
+                      project={project}
+                      projectCategories={data.projectCategories}
+                      links={data.links.filter(
+                        (l) => l.projectId === project.id,
+                      )}
+                      busy={busy}
+                      onChange={change}
+                      onDelete={deleteProject}
+                    />
+                    <div className="project-metadata">
+                      <span>
+                        PRJ-
+                        {String(data.projects.indexOf(project) + 1).padStart(
+                          3,
+                          "0",
+                        )}
+                      </span>
+                      <span>
+                        Created {formatDate(project.createdAt.slice(0, 10))}
+                      </span>
+                      <span>
+                        Updated {formatDate(project.updatedAt.slice(0, 10))}
+                      </span>
+                      <span>
+                        {
+                          data.todos.filter(
+                            (t) => t.projectId === project.id && t.completed,
+                          ).length
+                        }{" "}
+                        /{" "}
+                        {
+                          data.todos.filter((t) => t.projectId === project.id)
+                            .length
+                        }{" "}
+                        tasks completed
+                      </span>
+                    </div>
+                    <div className="detail-columns">
+                      <TodosPanel
+                        key={`todo-${project.id}`}
+                        {...common}
+                        projectId={project.id}
+                        todos={data.todos.filter(
+                          (t) => t.projectId === project.id,
+                        )}
+                      />
+                      <EventsPanel
+                        key={`event-${project.id}`}
+                        {...common}
+                        projectId={project.id}
+                        events={data.events.filter(
+                          (e) => e.projectId === project.id,
+                        )}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <section className="panel empty">
+                    This project no longer exists.
+                    <button
+                      className="text-button"
+                      onClick={() => setView("Projects")}
+                    >
+                      Back to projects
+                    </button>
+                  </section>
+                ))}
+            </>
+          )}
+        </div>
         <footer>
           WinProgMan <span>Personal projects · Local storage</span>
         </footer>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { useId, useState } from "react";
+import { Copy, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { projectStatusLabels } from "../../ui/labels";
 import {
   metadata,
@@ -27,6 +27,7 @@ export function ProjectHeader({
   onChange,
   onDelete,
 }: Props) {
+  const editorId = useId();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
@@ -100,21 +101,33 @@ export function ProjectHeader({
           </p>
         </div>
         <button
-          className="button secondary"
+          className={editing ? "button" : "button secondary"}
+          type={editing ? "submit" : "button"}
+          form={editing ? editorId : undefined}
           disabled={busy}
-          onClick={() => {
+          onClick={(event) => {
+            if (editing) return;
+            event.preventDefault();
             setName(project.name);
             setDescription(project.description);
             setStatus(project.status);
             setCategoryId(project.categoryId || "");
-            setEditing(!editing);
+            setEditing(true);
           }}
         >
-          <Pencil size={14} aria-hidden="true" /> Edit project
+          {editing ? (
+            <>
+              <Save size={14} aria-hidden="true" /> Save
+            </>
+          ) : (
+            <>
+              <Pencil size={14} aria-hidden="true" /> Edit project
+            </>
+          )}
         </button>
       </div>
       {editing && (
-        <form className="editor" onSubmit={save}>
+        <form id={editorId} className="editor" onSubmit={save}>
           <div className="form-grid">
             <label className="field">
               Status
@@ -161,9 +174,6 @@ export function ProjectHeader({
             />
           </label>
           <div className="actions">
-            <button className="button" disabled={busy}>
-              Save
-            </button>
             <button
               type="button"
               className="button secondary"
