@@ -197,35 +197,37 @@ export function EventsPanel({
               {event.time ? ` · ${event.time}` : ""}
             </time>
           </button>
-          <button
-            className="event-title"
-            disabled={busy}
-            onClick={() => openItem("event", event.id)}
-          >
-            {event.title}
-          </button>
+          <div className="event-title-group">
+            <button
+              className="event-title"
+              disabled={busy}
+              onClick={() => openItem("event", event.id)}
+            >
+              {event.title}
+            </button>
+            {event.note ? (
+              <>
+                <button
+                  className="text-button event-note-toggle"
+                  aria-label={`Show note ${event.title}`}
+                  aria-expanded={isExpanded}
+                  aria-controls={noteId}
+                  onClick={() =>
+                    setExpanded((current) => {
+                      const next = new Set(current);
+                      if (next.has(event.id)) next.delete(event.id);
+                      else next.add(event.id);
+                      return next;
+                    })
+                  }
+                >
+                  <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>{" "}
+                </button>
+              </>
+            ) : null}
+          </div>
           <span className="event-phase">{phase}</span>
           <span className="category">{categoryLabels[event.category]}</span>
-          {event.note ? (
-            <>
-              <button
-                className="text-button event-note-toggle"
-                aria-label={`Show note ${event.title}`}
-                aria-expanded={isExpanded}
-                aria-controls={noteId}
-                onClick={() =>
-                  setExpanded((current) => {
-                    const next = new Set(current);
-                    if (next.has(event.id)) next.delete(event.id);
-                    else next.add(event.id);
-                    return next;
-                  })
-                }
-              >
-                <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>{" "}
-              </button>
-            </>
-          ) : null}
           {!projectId && project && (
             <button
               className="project-link"
