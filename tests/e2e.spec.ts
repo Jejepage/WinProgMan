@@ -1,5 +1,31 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFile, mkdir } from "node:fs/promises";
+
+async function openEditor(page: Page, trigger: Locator) {
+  const pageCount = page.context().pages().length;
+  await trigger.click();
+  await expect(
+    page.locator(".editor:visible, .event-editor:visible"),
+  ).toBeVisible();
+  await expect(
+    page.locator(
+      ".todo-item:visible, .event-item:visible, .tasks-table:visible",
+    ),
+  ).toHaveCount(0);
+  expect(page.context().pages()).toHaveLength(pageCount);
+  await page.screenshot({
+    path: "test-results/visual/detail-view.png",
+    fullPage: true,
+  });
+  return page;
+}
+
+async function saveEditor(page: Page, detail: Page) {
+  await detail.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.locator(".editor:visible, .event-editor:visible"),
+  ).toHaveCount(0);
+}
 
 async function createProject(page: Page, name = "Browserprojekt") {
   await page
@@ -22,6 +48,14 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await createProject(page);
 
   await page.getByRole("button", { name: "Edit project", exact: true }).click();
+  await expect(
+    page
+      .locator(".project-header")
+      .getByRole("button", { name: "Save", exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Edit project", exact: true }),
+  ).toHaveCount(0);
   await page.getByLabel("Name", { exact: true }).fill("Geprüftes Projekt");
   await page.getByLabel("Description").fill("Browserabnahme");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -68,11 +102,20 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
       exact: true,
     }),
   ).not.toBeChecked();
-  await page
-    .getByRole("button", { name: "Aufgabe prüfen edit", exact: true })
-    .click();
-  await page.getByLabel("Title", { exact: true }).fill("Aufgabe fertig prüfen");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const taskEditor = await openEditor(
+    page,
+    page.getByRole("button", { name: "Aufgabe prüfen edit", exact: true }),
+  );
+  await expect(taskEditor.getByLabel("Title", { exact: true })).toHaveValue(
+    "Aufgabe prüfen",
+  );
+  await taskEditor
+    .getByLabel("Title", { exact: true })
+    .fill("Aufgabe fertig prüfen");
+  await saveEditor(page, taskEditor);
+  await expect(page.locator(".todo-item")).toContainText(
+    "Aufgabe fertig prüfen",
+  );
 
   await page.getByRole("button", { name: "Add event", exact: true }).click();
   const editor = page.locator(".event-editor");
@@ -80,19 +123,41 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await editor.getByLabel("Date", { exact: true }).fill("2099-01-01");
   await editor.getByLabel("Time (optional)").fill("09:30");
   await editor.getByRole("button", { name: "Save", exact: true }).click();
-  await page
-    .getByRole("button", {
+  const eventEditor = await openEditor(
+    page,
+    page.getByRole("button", {
       name: "Open event Meeting prüfen",
       exact: true,
-    })
-    .click();
-  await editor
+    }),
+  );
+  await expect(eventEditor.getByLabel("Title", { exact: true })).toHaveValue(
+    "Meeting prüfen",
+  );
+  await eventEditor
+    .locator(".event-editor")
     .getByLabel("Note text (optional)")
     .fill("Zeile eins\n<script>kein HTML</script>\nZeile drei");
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await saveEditor(page, eventEditor);
   await expect(page.locator(".markdown-note")).not.toBeVisible();
+  const eventTitleEditor = await openEditor(
+    page,
+    page.getByRole("button", { name: "Meeting prüfen", exact: true }),
+  );
+  await expect(
+    eventTitleEditor.getByLabel("Title", { exact: true }),
+  ).toHaveValue("Meeting prüfen");
+  await eventTitleEditor.getByLabel("Title", { exact: true }).fill("Verworfen");
+  await eventTitleEditor
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Meeting prüfen", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Verworfen", exact: true }),
+  ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Meeting prüfen", exact: true })
+    .getByRole("button", { name: "Show note Meeting prüfen", exact: true })
     .click();
   await expect(page.locator(".markdown-note")).toBeVisible();
   await expect(page.locator(".markdown-note")).toHaveText(
@@ -172,6 +237,19 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     page.getByRole("region", { name: "Import preview" }),
   ).toHaveCount(0);
 
+  await expect(
+    page.getByRole("button", {
+      name: "Delete event Meeting prüfen",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await openEditor(
+    page,
+    page.getByRole("button", {
+      name: "Open event Meeting prüfen",
+      exact: true,
+    }),
+  );
   await page
     .getByRole("button", {
       name: "Delete event Meeting prüfen",
@@ -179,14 +257,28 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     })
     .click();
   await page
+    .locator(".delete-confirm")
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Meeting prüfen",
+  );
+  await page
+    .getByRole("button", { name: "Delete event Meeting prüfen", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Delete permanently", exact: true })
     .click();
   await expect(page.locator(".event-item")).toHaveCount(1);
-  page.once("dialog", (dialog) => dialog.accept());
-  await page
-    .getByRole("button", { name: "Aufgabe fertig prüfen edit", exact: true })
-    .click();
-  await page
+  const deleteTaskEditor = await openEditor(
+    page,
+    page.getByRole("button", {
+      name: "Aufgabe fertig prüfen edit",
+      exact: true,
+    }),
+  );
+  deleteTaskEditor.once("dialog", (dialog) => dialog.accept());
+  await deleteTaskEditor
     .getByRole("button", { name: "Aufgabe fertig prüfen delete", exact: true })
     .click();
   await expect(page.locator(".todo-item")).toHaveCount(0);
@@ -593,7 +685,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".event-details")).not.toBeVisible();
   await page
-    .getByRole("button", { name: "Markdownabnahme", exact: true })
+    .getByRole("button", { name: "Show note Markdownabnahme", exact: true })
     .click();
   await expect(
     page
@@ -612,14 +704,19 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     .getByRole("button", { name: /Projects/ })
     .click();
   await page.locator(".project-title").click();
-  await page
-    .getByRole("button", {
+  const markdownEditor = await openEditor(
+    page,
+    page.getByRole("button", {
       name: "Open event Markdownabnahme",
       exact: true,
-    })
+    }),
+  );
+  await expect(markdownEditor.getByLabel("Note text (optional)")).toHaveValue(
+    markdown,
+  );
+  await markdownEditor
+    .getByRole("button", { name: "Cancel", exact: true })
     .click();
-  await expect(source).toHaveValue(markdown);
-  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
@@ -650,7 +747,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
       .getByRole("button", { name: "Replace data", exact: true })
       .click();
     await page.locator(".project-title").click();
-    await page.locator(".event-title[aria-expanded]").click();
+    await page.locator(".event-note-toggle[aria-expanded]").click();
     if (value === backup) {
       await expect(
         page
@@ -663,26 +760,29 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   await expect(
     page.locator(".event-note strong, .event-note script"),
   ).toHaveCount(0);
-  await page
-    .getByRole("button", {
+  const legacyEditor = await openEditor(
+    page,
+    page.getByRole("button", {
       name: "Open event Alte Klartextnotiz",
       exact: true,
-    })
-    .click();
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+    }),
+  );
+  await saveEditor(page, legacyEditor);
   await expect(page.locator(".event-note")).toHaveText(legacyNote);
   await expect(
     page.locator(".event-note strong, .event-note script"),
   ).toHaveCount(0);
-  await page
-    .getByRole("button", {
+  const editedLegacyEditor = await openEditor(
+    page,
+    page.getByRole("button", {
       name: "Open event Alte Klartextnotiz",
       exact: true,
-    })
-    .click();
-  const escapedLegacy = await source.inputValue();
-  await source.fill(`${escapedLegacy}\nZusatz`);
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+    }),
+  );
+  const legacySource = editedLegacyEditor.getByLabel("Note text (optional)");
+  const escapedLegacy = await legacySource.inputValue();
+  await legacySource.fill(`${escapedLegacy}\nZusatz`);
+  await saveEditor(page, editedLegacyEditor);
   await expect(page.locator(".markdown-note")).toHaveText(
     `${legacyNote}\nZusatz`,
   );
@@ -823,17 +923,21 @@ test("Do next, event dates, project controls and theme work after reload", async
   await expect(page.locator(".tasks-table tbody tr").first()).toHaveClass(
     /is-do-next/,
   );
-  await page.getByRole("button", { name: "Entwurf besprechen edit" }).click();
-  await page.getByLabel("Do next").uncheck();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const firstTaskEditor = await openEditor(
+    page,
+    page.getByRole("button", { name: "Entwurf besprechen edit" }),
+  );
+  await firstTaskEditor.getByLabel("Do next").uncheck();
+  await saveEditor(page, firstTaskEditor);
   await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
     "Bestehende Inhalte sichten",
   );
-  await page
-    .getByRole("button", { name: "Bestehende Inhalte sichten edit" })
-    .click();
-  await page.getByLabel("Do next").check();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const secondTaskEditor = await openEditor(
+    page,
+    page.getByRole("button", { name: "Bestehende Inhalte sichten edit" }),
+  );
+  await secondTaskEditor.getByLabel("Do next").check();
+  await saveEditor(page, secondTaskEditor);
   await page.reload();
   await nav.getByRole("button", { name: "Tasks" }).click();
   await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
@@ -846,12 +950,19 @@ test("Do next, event dates, project controls and theme work after reload", async
   await nav.getByRole("button", { name: "Events" }).click();
   await expect(page.locator(".event-item.is-past")).not.toHaveCount(0);
   await expect(page.locator(".event-item.is-upcoming")).not.toHaveCount(0);
-  await page.locator(".event-item.is-past .event-date-button").first().click();
-  await expect(page.getByRole("heading", { name: "Edit event" })).toBeVisible();
-  await page
+  const pastEventEditor = await openEditor(
+    page,
+    page.locator(".event-item.is-past .event-date-button").first(),
+  );
+  await pastEventEditor.reload();
+  await expect(
+    pastEventEditor.getByRole("heading", { name: "Edit event" }),
+  ).toBeVisible();
+  await pastEventEditor
     .locator(".event-editor")
     .getByRole("button", { name: "Cancel" })
     .click();
+  await expect(page.locator(".event-item:visible")).not.toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Edit event/ })).toHaveCount(
     0,
   );

@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { openItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
   metadata,
@@ -16,6 +17,9 @@ import {
   sortTodos,
 } from "../../domain/queries";
 interface Props {
+  initialTodo?: Todo;
+  detailOnly?: boolean;
+  onClose?: () => void;
   todos: Todo[];
   projects: Project[];
   projectId?: string;
@@ -29,6 +33,9 @@ interface Props {
   onProject: (id: string) => void;
 }
 export function TodosPanel({
+  initialTodo,
+  detailOnly = false,
+  onClose,
   todos,
   projects,
   projectId,
@@ -51,12 +58,17 @@ export function TodosPanel({
         projects.find((project) => project.id === todo.projectId)?.name || "",
       ),
   );
-  const [editing, setEditing] = useState<Todo | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [doNext, setDoNext] = useState(false);
-  const [owner, setOwner] = useState(projectId || projects[0]?.id || "");
+  const [editing, setEditing] = useState<Todo | null>(initialTodo || null);
+  const [adding, setAdding] = useState(Boolean(initialTodo));
+  const [title, setTitle] = useState(initialTodo?.title || "");
+  const [date, setDate] = useState(initialTodo?.dueDate || "");
+  const [doNext, setDoNext] = useState(Boolean(initialTodo?.doNext));
+  const [owner, setOwner] = useState(
+    initialTodo?.projectId || projectId || projects[0]?.id || "",
+  );
+  const currentTodo = editing
+    ? todos.find((todo) => todo.id === editing.id) || editing
+    : null;
   function open(todo?: Todo) {
     setEditing(todo || null);
     setTitle(todo?.title || "");
@@ -69,17 +81,21 @@ export function TodosPanel({
     e.preventDefault();
     if (!owner) return;
     const value: Todo = {
-      ...(editing || metadata()),
+      ...(currentTodo || metadata()),
       projectId: owner,
       title: title.trim() || "New task",
-      completed: editing?.completed || false,
+      completed: currentTodo?.completed || false,
       updatedAt: new Date().toISOString(),
     };
     if (doNext && !value.completed) value.doNext = true;
     else delete value.doNext;
     if (date) value.dueDate = date;
     else delete value.dueDate;
-    if (await onChange({ type: "todo.save", value })) setAdding(false);
+    if (await onChange({ type: "todo.save", value })) {
+      if (detailOnly) {
+        onClose?.();
+      } else setAdding(false);
+    }
   }
   const addButton = (
     <button
@@ -101,49 +117,53 @@ export function TodosPanel({
   }
   return (
     <section className="panel">
-      <div
-        className={`section-heading ${!showHeading && headerTarget ? "empty-heading" : ""}`}
-      >
-        {showHeading ? (
-          <h2>
-            Tasks{" "}
-            <span className="count">
-              {todos.filter((t) => !t.completed).length} open
-            </span>
-          </h2>
-        ) : null}
-        {headerTarget ? createPortal(addButton, headerTarget) : addButton}
-      </div>
-      <div className="task-filters actions" aria-label="Task filter">
-        <button
-          className={`button ${openOnly ? "secondary" : ""}`}
-          aria-pressed={!openOnly}
-          onClick={() => setOpenOnly(false)}
-        >
-          All tasks
-        </button>
-        <button
-          className={`button ${openOnly ? "" : "secondary"}`}
-          aria-pressed={openOnly}
-          onClick={() => setOpenOnly(true)}
-        >
-          Open tasks
-        </button>
-        {!showHeading && (
-          <span className="muted filter-count">
-            {search.trim()
-              ? `${visible.length} results`
-              : `${todos.filter((t) => !t.completed).length} open`}
-          </span>
-        )}
-        {onSearchChange && (
-          <SearchField
-            label="Search tasks"
-            value={search}
-            onChange={onSearchChange}
-          />
-        )}
-      </div>
+      {!detailOnly && (
+        <>
+          <div
+            className={`section-heading ${!showHeading && headerTarget ? "empty-heading" : ""}`}
+          >
+            {showHeading ? (
+              <h2>
+                Tasks{" "}
+                <span className="count">
+                  {todos.filter((t) => !t.completed).length} open
+                </span>
+              </h2>
+            ) : null}
+            {headerTarget ? createPortal(addButton, headerTarget) : addButton}
+          </div>
+          <div className="task-filters actions" aria-label="Task filter">
+            <button
+              className={`button ${openOnly ? "secondary" : ""}`}
+              aria-pressed={!openOnly}
+              onClick={() => setOpenOnly(false)}
+            >
+              All tasks
+            </button>
+            <button
+              className={`button ${openOnly ? "" : "secondary"}`}
+              aria-pressed={openOnly}
+              onClick={() => setOpenOnly(true)}
+            >
+              Open tasks
+            </button>
+            {!showHeading && (
+              <span className="muted filter-count">
+                {search.trim()
+                  ? `${visible.length} results`
+                  : `${todos.filter((t) => !t.completed).length} open`}
+              </span>
+            )}
+            {onSearchChange && (
+              <SearchField
+                label="Search tasks"
+                value={search}
+                onChange={onSearchChange}
+              />
+            )}
+          </div>
+        </>
+      )}
       {adding && (
         <form className="editor" onSubmit={save}>
           <div className="form-grid">
@@ -183,10 +203,12 @@ export function TodosPanel({
               <input
                 type="checkbox"
                 checked={doNext}
-                disabled={Boolean(editing?.completed)}
+                disabled={Boolean(currentTodo?.completed)}
                 onChange={(event) => setDoNext(event.target.checked)}
               />
-              {editing?.completed ? "Do next (reopen task first)" : "Do next"}
+              {currentTodo?.completed
+                ? "Do next (reopen task first)"
+                : "Do next"}
             </label>
           </div>
           <div className="actions">
@@ -196,7 +218,7 @@ export function TodosPanel({
             <button
               type="button"
               className="button secondary"
-              onClick={() => setAdding(false)}
+              onClick={() => (detailOnly ? onClose?.() : setAdding(false))}
             >
               Cancel
             </button>
@@ -210,8 +232,10 @@ export function TodosPanel({
                   if (
                     confirm(`Delete "${editing.title}"?`) &&
                     (await onChange({ type: "todo.delete", id: editing.id }))
-                  )
+                  ) {
                     setAdding(false);
+                    if (detailOnly) onClose?.();
+                  }
                 }}
               >
                 Delete task
@@ -220,91 +244,95 @@ export function TodosPanel({
           </div>
         </form>
       )}
-      {!visible.length && (
-        <p className="empty">
-          {search.trim()
-            ? "No tasks match this search and filter."
-            : openOnly && todos.length
-              ? "No open tasks."
-              : "No tasks yet. Add the next step."}
-        </p>
-      )}
-      <div className="table-scroll">
-        <table
-          className={`data-table tasks-table ${projectId ? "project-tasks" : "global-tasks"}`}
-        >
-          <colgroup>
-            <col className="task-check-col" />
-            <col className="task-title-col" />
-            {!projectId && <col className="task-project-col" />}
-            <col className="task-date-col" />
-            <col className="task-created-col" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">
-                <span className="sr-only">Completed</span>
-              </th>
-              <th scope="col">Task</th>
-              {!projectId && <th scope="col">Project</th>}
-              <th scope="col">Due date</th>
-              <th scope="col">Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortTodos(visible).map((todo) => (
-              <tr
-                key={todo.id}
-                className={`todo-item ${todo.completed ? "completed" : ""} ${todo.doNext && !todo.completed ? "is-do-next" : ""}`}
-              >
-                <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`${todo.title} completed`}
-                    checked={todo.completed}
-                    disabled={busy}
-                    onChange={() => toggle(todo)}
-                  />
-                </td>
-                <td className="task-title">
-                  <button
-                    className="task-title-button"
-                    aria-label={`${todo.title} edit`}
-                    disabled={busy}
-                    onClick={() => open(todo)}
+      {!detailOnly && (
+        <>
+          {!visible.length && (
+            <p className="empty">
+              {search.trim()
+                ? "No tasks match this search and filter."
+                : openOnly && todos.length
+                  ? "No open tasks."
+                  : "No tasks yet. Add the next step."}
+            </p>
+          )}
+          <div className="table-scroll">
+            <table
+              className={`data-table tasks-table ${projectId ? "project-tasks" : "global-tasks"}`}
+            >
+              <colgroup>
+                <col className="task-check-col" />
+                <col className="task-title-col" />
+                {!projectId && <col className="task-project-col" />}
+                <col className="task-date-col" />
+                <col className="task-created-col" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <span className="sr-only">Completed</span>
+                  </th>
+                  <th scope="col">Task</th>
+                  {!projectId && <th scope="col">Project</th>}
+                  <th scope="col">Due date</th>
+                  <th scope="col">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortTodos(visible).map((todo) => (
+                  <tr
+                    key={todo.id}
+                    className={`todo-item ${todo.completed ? "completed" : ""} ${todo.doNext && !todo.completed ? "is-do-next" : ""}`}
                   >
-                    {todo.title}
-                  </button>
-                  {todo.doNext && !todo.completed && (
-                    <span className="do-next-badge">Do next</span>
-                  )}
-                </td>
-                {!projectId && (
-                  <td>
-                    <button
-                      className="text-button"
-                      onClick={() => onProject(todo.projectId)}
-                    >
-                      {projects.find((p) => p.id === todo.projectId)?.name}
-                    </button>
-                  </td>
-                )}
-                <td>
-                  {todo.dueDate ? (
-                    <span className={overdue(todo, today) ? "overdue" : ""}>
-                      {overdue(todo, today) ? "Overdue · " : ""}
-                      {formatDate(todo.dueDate)}
-                    </span>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-                <td>{formatTimestampDate(todo.createdAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={`${todo.title} completed`}
+                        checked={todo.completed}
+                        disabled={busy}
+                        onChange={() => toggle(todo)}
+                      />
+                    </td>
+                    <td className="task-title">
+                      <button
+                        className="task-title-button"
+                        aria-label={`${todo.title} edit`}
+                        disabled={busy}
+                        onClick={() => openItem("task", todo.id)}
+                      >
+                        {todo.title}
+                      </button>
+                      {todo.doNext && !todo.completed && (
+                        <span className="do-next-badge">Do next</span>
+                      )}
+                    </td>
+                    {!projectId && (
+                      <td>
+                        <button
+                          className="text-button"
+                          onClick={() => onProject(todo.projectId)}
+                        >
+                          {projects.find((p) => p.id === todo.projectId)?.name}
+                        </button>
+                      </td>
+                    )}
+                    <td>
+                      {todo.dueDate ? (
+                        <span className={overdue(todo, today) ? "overdue" : ""}>
+                          {overdue(todo, today) ? "Overdue · " : ""}
+                          {formatDate(todo.dueDate)}
+                        </span>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>{formatTimestampDate(todo.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { openItem } from "../../ui/itemNavigation";
 import { useId, useState, type FormEvent } from "react";
 import {
   categories,
@@ -18,6 +19,9 @@ import { matchesSearch } from "../../domain/queries";
 import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
 interface Props {
+  initialEvent?: ProjectEvent;
+  detailOnly?: boolean;
+  onClose?: () => void;
   events: ProjectEvent[];
   projects: Project[];
   projectId?: string;
@@ -43,6 +47,9 @@ interface Draft {
 }
 
 export function EventsPanel({
+  initialEvent,
+  detailOnly = false,
+  onClose,
   events,
   projects,
   projectId,
@@ -66,7 +73,25 @@ export function EventsPanel({
   const [editor, setEditor] = useState<{
     original?: ProjectEvent;
     draft: Draft;
-  } | null>(null);
+  } | null>(
+    initialEvent
+      ? {
+          original: initialEvent,
+          draft: {
+            projectId: initialEvent.projectId,
+            category: initialEvent.category,
+            title: initialEvent.title,
+            date: initialEvent.date,
+            time: initialEvent.time || "",
+            note: initialEvent.note
+              ? initialEvent.noteFormat === "markdown"
+                ? initialEvent.note
+                : legacyNoteToMarkdown(initialEvent.note)
+              : "",
+          },
+        }
+      : null,
+  );
   const [deleting, setDeleting] = useState<ProjectEvent | null>(null);
   const visible = sortEvents(
     events.filter(
@@ -139,7 +164,11 @@ export function EventsPanel({
     } else {
       delete value.noteFormat;
     }
-    if (await onChange({ type: "event.save", value })) setEditor(null);
+    if (await onChange({ type: "event.save", value })) {
+      if (detailOnly) {
+        onClose?.();
+      } else setEditor(null);
+    }
   }
 
   function renderEvent(event: ProjectEvent) {
@@ -159,7 +188,7 @@ export function EventsPanel({
             className="event-date event-date-button"
             disabled={busy}
             aria-label={`Open event ${event.title}`}
-            onClick={() => begin(event)}
+            onClick={() => openItem("event", event.id)}
           >
             <time
               dateTime={event.time ? `${event.date}T${event.time}` : event.date}
@@ -168,30 +197,35 @@ export function EventsPanel({
               {event.time ? ` · ${event.time}` : ""}
             </time>
           </button>
+          <button
+            className="event-title"
+            disabled={busy}
+            onClick={() => openItem("event", event.id)}
+          >
+            {event.title}
+          </button>
           <span className="event-phase">{phase}</span>
           <span className="category">{categoryLabels[event.category]}</span>
           {event.note ? (
-            <button
-              className="event-title"
-              aria-expanded={isExpanded}
-              aria-controls={noteId}
-              onClick={() =>
-                setExpanded((current) => {
-                  const next = new Set(current);
-                  if (next.has(event.id)) next.delete(event.id);
-                  else next.add(event.id);
-                  return next;
-                })
-              }
-            >
-              <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>{" "}
-              {event.title}
-            </button>
-          ) : (
-            <span className="event-title event-title-static">
-              {event.title}
-            </span>
-          )}
+            <>
+              <button
+                className="text-button event-note-toggle"
+                aria-label={`Show note ${event.title}`}
+                aria-expanded={isExpanded}
+                aria-controls={noteId}
+                onClick={() =>
+                  setExpanded((current) => {
+                    const next = new Set(current);
+                    if (next.has(event.id)) next.delete(event.id);
+                    else next.add(event.id);
+                    return next;
+                  })
+                }
+              >
+                <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>{" "}
+              </button>
+            </>
+          ) : null}
           {!projectId && project && (
             <button
               className="project-link"
@@ -200,19 +234,6 @@ export function EventsPanel({
               {project.name}
             </button>
           )}
-          <div className="actions event-actions">
-            <button
-              className="button danger"
-              disabled={busy}
-              onClick={() => {
-                setEditor(null);
-                setDeleting(event);
-              }}
-              aria-label={`Delete event ${event.title}`}
-            >
-              Delete
-            </button>
-          </div>
         </div>
         {event.note && (
           <div id={noteId} className="event-details" hidden={!isExpanded}>
@@ -258,73 +279,81 @@ export function EventsPanel({
       className="panel events-panel"
       aria-label={notesOnly ? "Notes" : "Events"}
     >
-      <div
-        className={`section-heading ${!showHeading && headerTarget ? "empty-heading" : ""}`}
-      >
-        {showHeading ? (
-          <h2>
-            {notesOnly ? "Notes" : "Events"}{" "}
-            <span className="muted">({visible.length})</span>
-          </h2>
-        ) : null}
-        {headerTarget ? createPortal(addButton, headerTarget) : addButton}
-      </div>
-      <div className="actions event-filters">
-        {!notesOnly && (
-          <label className="field" htmlFor={`${prefix}-filter`}>
-            Category
-            <select
-              id={`${prefix}-filter`}
-              aria-label="Category"
-              value={category}
-              onChange={(event) =>
-                setCategory(event.target.value as Category | "")
-              }
-            >
-              <option value="">All categories</option>
-              {categories.map((item) => (
-                <option key={item} value={item}>
-                  {categoryLabels[item]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {
-          <div className="actions" aria-label="Event view">
-            <button
-              className={`button ${timeline ? "secondary" : ""}`}
-              aria-pressed={!timeline}
-              onClick={() => setTimeline(false)}
-            >
-              List
-            </button>
-            <button
-              className={`button ${timeline ? "" : "secondary"}`}
-              aria-pressed={timeline}
-              onClick={() => setTimeline(true)}
-            >
-              Timeline
-            </button>
+      {!detailOnly && (
+        <>
+          <div
+            className={`section-heading ${!showHeading && headerTarget ? "empty-heading" : ""}`}
+          >
+            {showHeading ? (
+              <h2>
+                {notesOnly ? "Notes" : "Events"}{" "}
+                <span className="muted">({visible.length})</span>
+              </h2>
+            ) : null}
+            {headerTarget ? createPortal(addButton, headerTarget) : addButton}
           </div>
-        }
-        {!showHeading && (
-          <span className="muted filter-count">{visible.length} entries</span>
-        )}
-        {onSearchChange && (
-          <SearchField
-            label="Search events"
-            value={search}
-            onChange={onSearchChange}
-          />
-        )}
-      </div>
-      {projects.length === 0 && (
-        <p className="empty">Create a project to add events.</p>
+          <div className="actions event-filters">
+            {!notesOnly && (
+              <label className="field" htmlFor={`${prefix}-filter`}>
+                <span className="sr-only">Category</span>
+                <select
+                  id={`${prefix}-filter`}
+                  aria-label="Category"
+                  value={category}
+                  onChange={(event) =>
+                    setCategory(event.target.value as Category | "")
+                  }
+                >
+                  <option value="">All categories</option>
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {categoryLabels[item]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {
+              <div className="actions" aria-label="Event view">
+                <button
+                  className={`button ${timeline ? "secondary" : ""}`}
+                  aria-pressed={!timeline}
+                  onClick={() => setTimeline(false)}
+                >
+                  List
+                </button>
+                <button
+                  className={`button ${timeline ? "" : "secondary"}`}
+                  aria-pressed={timeline}
+                  onClick={() => setTimeline(true)}
+                >
+                  Timeline
+                </button>
+              </div>
+            }
+            {!showHeading && (
+              <span className="muted filter-count">
+                {visible.length} entries
+              </span>
+            )}
+            {onSearchChange && (
+              <SearchField
+                label="Search events"
+                value={search}
+                onChange={onSearchChange}
+              />
+            )}
+          </div>
+          {projects.length === 0 && (
+            <p className="empty">Create a project to add events.</p>
+          )}
+        </>
       )}
-      {editor && (
+      {editor && !deleting && (
         <form className="event-editor" onSubmit={save}>
-          <h3>{editor.original ? "Edit event" : "New event"}</h3>
+          {!detailOnly && (
+            <h3>{editor.original ? "Edit event" : "New event"}</h3>
+          )}
           <div className="form-grid">
             {!projectId && (
               <label className="field" htmlFor={`${prefix}-project`}>
@@ -424,10 +453,21 @@ export function EventsPanel({
               type="button"
               className="button secondary"
               disabled={busy}
-              onClick={() => setEditor(null)}
+              onClick={() => (detailOnly ? onClose?.() : setEditor(null))}
             >
               Cancel
             </button>
+            {editor.original && (
+              <button
+                type="button"
+                className="button danger"
+                disabled={busy}
+                aria-label={`Delete event ${editor.original.title}`}
+                onClick={() => setDeleting(editor.original || null)}
+              >
+                Delete event
+              </button>
+            )}
           </div>
         </form>
       )}
@@ -439,8 +479,11 @@ export function EventsPanel({
               className="button danger"
               disabled={busy}
               onClick={async () => {
-                if (await onChange({ type: "event.delete", id: deleting.id }))
+                if (await onChange({ type: "event.delete", id: deleting.id })) {
                   setDeleting(null);
+                  setEditor(null);
+                  if (detailOnly) onClose?.();
+                }
               }}
             >
               Delete permanently
@@ -455,26 +498,30 @@ export function EventsPanel({
           </div>
         </div>
       )}
-      {visible.length === 0 && (
-        <p className="empty">
-          {search.trim()
-            ? "No events match this search and filter."
-            : category
-              ? `No events in ${categoryLabels[category]}.`
-              : "No events yet."}
-        </p>
+      {!detailOnly && (
+        <>
+          {visible.length === 0 && (
+            <p className="empty">
+              {search.trim()
+                ? "No events match this search and filter."
+                : category
+                  ? `No events in ${categoryLabels[category]}.`
+                  : "No events yet."}
+            </p>
+          )}
+          <ul className={timeline ? "item-list timeline" : "item-list"}>
+            {timeline ? (
+              <>
+                {past.map(renderEvent)}
+                {marker}
+                {future.map(renderEvent)}
+              </>
+            ) : (
+              visible.map(renderEvent)
+            )}
+          </ul>
+        </>
       )}
-      <ul className={timeline ? "item-list timeline" : "item-list"}>
-        {timeline ? (
-          <>
-            {past.map(renderEvent)}
-            {marker}
-            {future.map(renderEvent)}
-          </>
-        ) : (
-          visible.map(renderEvent)
-        )}
-      </ul>
     </section>
   );
 }
