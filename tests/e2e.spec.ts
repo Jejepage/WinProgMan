@@ -41,6 +41,7 @@ async function createProject(page: Page, name = "Browserprojekt") {
 test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "Load sample data" }),
@@ -63,6 +64,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
   ).toBeVisible();
 
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
   await page.getByRole("button", { name: "Add link", exact: true }).click();
   await page.getByLabel("Label").fill("Dokumentation");
   await page.getByLabel("URL or path").fill("example.com/docs");
@@ -76,6 +78,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await page.getByLabel("URL or path").fill("C:\\Projekte\\Dokumentation");
   await page.getByRole("button", { name: "Save link", exact: true }).click();
   await expect(linkRow).toContainText("C:\\Projekte\\Dokumentation");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.getByRole("button", { name: "Add task", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Aufgabe prüfen");
@@ -172,15 +175,17 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await page
     .locator('section[aria-label="Events"]')
     .getByLabel("Category", { exact: true })
-    .selectOption("Notiz");
+    .selectOption("Telefonat");
   await expect(page.locator(".timeline .event-item")).toHaveCount(0);
   await page
     .locator('section[aria-label="Events"]')
     .getByLabel("Category", { exact: true })
     .selectOption("");
-  await page.getByRole("button", { name: "Add event", exact: true }).click();
-  await editor.getByLabel("Category", { exact: true }).selectOption("Notiz");
-  await expect(editor.getByLabel("Date", { exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
+  await expect(editor.getByLabel("Category", { exact: true })).toHaveCount(0);
+  await expect(editor.getByLabel("Date", { exact: true })).toHaveValue(
+    /^\d{4}-\d{2}-\d{2}$/,
+  );
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".event-item")).toHaveCount(2);
 
@@ -282,9 +287,11 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     .getByRole("button", { name: "Aufgabe fertig prüfen delete", exact: true })
     .click();
   await expect(page.locator(".todo-item")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await linkRow.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(linkRow).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
 
   await page.locator('input[type="file"]').setInputFiles({
     name: "backup.json",
@@ -529,7 +536,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
 }) => {
   await page.goto("/");
   await createProject(page, "Markdownprojekt");
-  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await page.getByRole("button", { name: "Add note", exact: true }).click();
   const editor = page.locator(".event-editor");
   const source = editor.getByLabel("Note text (optional)");
   await editor.getByLabel("Title", { exact: true }).fill("Markdownabnahme");
@@ -707,7 +714,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const markdownEditor = await openEditor(
     page,
     page.getByRole("button", {
-      name: "Open event Markdownabnahme",
+      name: "Open note Markdownabnahme",
       exact: true,
     }),
   );
@@ -763,7 +770,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const legacyEditor = await openEditor(
     page,
     page.getByRole("button", {
-      name: "Open event Alte Klartextnotiz",
+      name: "Open note Alte Klartextnotiz",
       exact: true,
     }),
   );
@@ -775,7 +782,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const editedLegacyEditor = await openEditor(
     page,
     page.getByRole("button", {
-      name: "Open event Alte Klartextnotiz",
+      name: "Open note Alte Klartextnotiz",
       exact: true,
     }),
   );
@@ -809,11 +816,11 @@ test("header actions, task filters and integrated event timeline", async ({
   const rows = page.locator(".tasks-table tbody tr");
   const initial = await rows.count();
   const openCount = await page
-    .locator(".tasks-table input:not(:checked)")
+    .locator('.tasks-table input[aria-label$=" completed"]:not(:checked)')
     .count();
   const taskLabel = await rows
     .first()
-    .getByRole("checkbox")
+    .getByRole("checkbox", { name: / completed$/ })
     .getAttribute("aria-label");
   const checkbox = page.getByRole("checkbox", {
     name: taskLabel!,
@@ -970,7 +977,7 @@ test("Add task and Add event use detail pages, preserve filters and only save co
   await nav.getByRole("button", { name: "Tasks", exact: true }).click();
   await expect(page.locator(".tasks-table tbody tr")).toHaveCount(6);
   await nav.getByRole("button", { name: "Events", exact: true }).click();
-  await expect(page.locator(".event-item")).toHaveCount(8);
+  await expect(page.locator(".event-item")).toHaveCount(7);
 });
 
 test("text search combines with existing list filters and can be cleared", async ({
@@ -1016,7 +1023,7 @@ test("text search combines with existing list filters and can be cleared", async
     .getByRole("searchbox", { name: "Search events" })
     .fill("ENTWURF ABSTIMMEN");
   await expect(page.locator(".event-item")).toHaveCount(1);
-  await page.getByLabel("Category", { exact: true }).selectOption("Notiz");
+  await page.getByLabel("Category", { exact: true }).selectOption("Telefonat");
   await expect(page.locator(".event-item")).toHaveCount(0);
   await expect(
     page.getByText("No events match this search and filter."),
@@ -1025,7 +1032,7 @@ test("text search combines with existing list filters and can be cleared", async
   await page.getByRole("button", { name: "Timeline" }).click();
   await expect(page.locator(".timeline .event-item")).toHaveCount(1);
   await page.getByRole("button", { name: "Clear search" }).click();
-  await expect(page.locator(".timeline .event-item")).toHaveCount(6);
+  await expect(page.locator(".timeline .event-item")).toHaveCount(5);
 });
 
 test("Do next, event dates, project controls and theme work after reload", async ({
@@ -1039,6 +1046,7 @@ test("Do next, event dates, project controls and theme work after reload", async
   await nav.getByRole("button", { name: "Tasks" }).click();
   await expect(page.locator(".tasks-table th")).toContainText([
     "Completed",
+    "Do next",
     "Task",
     "Project",
     "Due date",
@@ -1054,7 +1062,7 @@ test("Do next, event dates, project controls and theme work after reload", async
     page,
     page.getByRole("button", { name: "Entwurf besprechen edit" }),
   );
-  await firstTaskEditor.getByLabel("Do next").uncheck();
+  await firstTaskEditor.getByLabel("Do next", { exact: true }).uncheck();
   await saveEditor(page, firstTaskEditor);
   await expect(page.locator(".tasks-table tbody tr").first()).toContainText(
     "Bestehende Inhalte sichten",
@@ -1063,7 +1071,7 @@ test("Do next, event dates, project controls and theme work after reload", async
     page,
     page.getByRole("button", { name: "Bestehende Inhalte sichten edit" }),
   );
-  await secondTaskEditor.getByLabel("Do next").check();
+  await secondTaskEditor.getByLabel("Do next", { exact: true }).check();
   await saveEditor(page, secondTaskEditor);
   await page.reload();
   await nav.getByRole("button", { name: "Tasks" }).click();

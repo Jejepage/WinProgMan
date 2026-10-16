@@ -8,6 +8,35 @@ import type { ProjectStore } from "./ProjectStore";
 import { validateData, validateImport } from "./validation";
 
 function applyChange(data: AppData, change: DomainChange): AppData {
+  if (change.type === "project.saveWithLinks") {
+    if (!data.projects.some((project) => project.id === change.value.id))
+      throw new Error("The project no longer exists.");
+    if (change.links.some((link) => link.projectId !== change.value.id))
+      throw new Error("Links must belong to the edited project.");
+    return {
+      ...data,
+      projects: data.projects.map((project) =>
+        project.id === change.value.id ? change.value : project,
+      ),
+      links: [
+        ...data.links.filter((link) => link.projectId !== change.value.id),
+        ...change.links,
+      ],
+    };
+  }
+  if (change.type === "todo.setDoNext") {
+    const todo = data.todos.find((item) => item.id === change.id);
+    if (!todo) throw new Error("The task no longer exists.");
+    if (todo.completed && change.doNext)
+      throw new Error("Reopen the task before marking it as Do next.");
+    const value = { ...todo, updatedAt: new Date().toISOString() };
+    if (change.doNext) value.doNext = true;
+    else delete value.doNext;
+    return {
+      ...data,
+      todos: data.todos.map((item) => (item.id === value.id ? value : item)),
+    };
+  }
   if (change.type === "project.delete") {
     return {
       ...data,

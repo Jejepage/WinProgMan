@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { confirmAction } from "../../platform/desktop";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Flag, Plus } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
@@ -67,7 +67,11 @@ export function TodosPanel({
   const [date, setDate] = useState(initialTodo?.dueDate || "");
   const [doNext, setDoNext] = useState(Boolean(initialTodo?.doNext));
   const [owner, setOwner] = useState(
-    initialTodo?.projectId || initialProjectId || projectId || projects[0]?.id || "",
+    initialTodo?.projectId ||
+      initialProjectId ||
+      projectId ||
+      projects[0]?.id ||
+      "",
   );
   const currentTodo = editing
     ? todos.find((todo) => todo.id === editing.id) || editing
@@ -256,6 +260,7 @@ export function TodosPanel({
             >
               <colgroup>
                 <col className="task-check-col" />
+                <col className="task-next-col" />
                 <col className="task-title-col" />
                 {!projectId && <col className="task-project-col" />}
                 <col className="task-date-col" />
@@ -265,6 +270,9 @@ export function TodosPanel({
                 <tr>
                   <th scope="col">
                     <span className="sr-only">Completed</span>
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Do next</span>
                   </th>
                   <th scope="col">Task</th>
                   {!projectId && <th scope="col">Project</th>}
@@ -286,6 +294,33 @@ export function TodosPanel({
                         disabled={busy}
                         onChange={() => toggle(todo)}
                       />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`icon-button task-next-toggle ${todo.doNext ? "marked" : ""}`}
+                        aria-label={`${todo.title} Do next`}
+                        aria-pressed={Boolean(todo.doNext)}
+                        title={
+                          todo.completed
+                            ? "Reopen task to mark as Do next"
+                            : "Do next"
+                        }
+                        disabled={busy || todo.completed}
+                        onClick={() =>
+                          void onChange({
+                            type: "todo.setDoNext",
+                            id: todo.id,
+                            doNext: !todo.doNext,
+                          })
+                        }
+                      >
+                        <Flag
+                          size={15}
+                          fill={todo.doNext ? "currentColor" : "none"}
+                          aria-hidden="true"
+                        />
+                      </button>
                     </td>
                     <td className="task-title">
                       <button

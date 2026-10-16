@@ -1575,6 +1575,70 @@ button.event-title:hover {
 .task-check-col {
   width: 44px;
 }
+.task-next-col {
+  width: 40px;
+}
+.task-next-toggle {
+  padding: 5px;
+  color: var(--muted);
+}
+.task-next-toggle.marked {
+  color: var(--accent);
+}
+.task-next-toggle:disabled {
+  cursor: default;
+}
+.topic-group-heading {
+  margin: 0;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.project-topic-group + .project-topic-group {
+  margin-top: 18px;
+}
+.detail-columns > .notes-panel {
+  grid-column: 1 / -1;
+}
+.project-resource {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow-wrap: anywhere;
+}
+.project-resource > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.project-resource-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.project-resource-type {
+  color: var(--muted);
+  font-size: 10px;
+}
+button.project-resource {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  text-align: left;
+}
+.storage-settings .storage-path {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  padding: 10px;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
 .task-project-col {
   width: 175px;
 }

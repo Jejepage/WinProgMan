@@ -103,6 +103,12 @@ Phase 1 liefert die komplette Oberfläche als Web-App im Browser, mit lokaler Sp
 3. **Phase 4 – iPhone / iPad:** iOS-Wrapper, Sync-Modul für iOS.
 4. **Optional:** Meetings in den Outlook-Kalender übertragen.
 
+### Verbindliche Ergänzungen vom 16. Oktober 2026 (Version 0.3.0)
+
+Nach Benutzerfeedback gelten die folgenden Änderungen gegenüber der ursprünglichen Oberfläche: eigene Notes-Navigation und separate Tasks-/Events-/Notes-Bereiche im Projekt; Notizen zählen nicht als kommende Ereignisse. Projektliste nach dem vorhandenen Topic gruppieren. Do-next-Flag direkt in Aufgabenlisten bedienen. Linktypen Ordner, Website und SharePoint mit Icons kennzeichnen; Windows öffnet Ordnerlinks im Explorer. Linkverwaltung einschließlich Kopieraktion ausschließlich im Projekteditor; Projekt und Links gemeinsam mit Save/Cancel behandeln.
+
+Unter Windows muss der Speicherort aller internen Projektdaten samt Datenbank in Settings auswählbar sein. Verlinkte Dateien und Ordner werden nicht verschoben. Bestehende Daten beim kontrollierten Neustart übernehmen, Altbestand behalten und bei fehlgeschlagenem Wechsel weiterverwenden. IndexedDB und der gemeinsame Web-Kern bleiben erhalten; Notes dürfen intern in derselben Sammlung wie Events gespeichert werden. Die inzwischen ausdrücklich gewünschte englische Oberfläche bleibt bestehen. Details und Abnahme siehe README sowie Umsetzungsplan Abschnitt 12.
+
 **Offene Punkte**
 
 - Wird die App-Registrierung im abgesicherten Tenant genehmigt, oder braucht es eine private Microsoft-Anbindung?

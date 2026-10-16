@@ -178,3 +178,16 @@ Die Benutzerentscheidungen zu Statusliste, einer Kategorie je Projekt und allen 
 ## 11. Markdown-Notizen
 
 Am 13. Oktober 2026 zur Umsetzung beauftragt: Markdown-Editor für alle Ereignisnotizen mit Formatierungsleiste, Bearbeiten/Vorschau, Überschriften, Listen, Zitaten, Links, Tabellen und Codeblöcken. Formatierte Zwischenablageinhalte werden in Markdown umgewandelt; Klartext-Einfügen bleibt wählbar. Vorhandene Klartextnotizen werden durch eine optionale Formatmarkierung unterschieden und behalten ihre bisherige Darstellung. Sicherungsformat 3 ergänzt die Markierung; Versionen 1 und 2 bleiben importierbar. Anzeige ohne aktives HTML und ohne automatisch geladene Bilder. Prüfstand siehe README.md.
+
+## 12. Folgeauftrag 0.3.0 – 16. Oktober 2026
+
+Benutzer hat zunächst Planung und anschließend Umsetzung mit „weiter“ beauftragt. Diese Änderungen ersetzen die früheren Einschränkungen zu fehlender Gruppierung, Notizen nur als Ereignisansicht und nativer Ordneröffnung:
+
+1. Datenordner unter Windows in Settings auswählbar; umfasst nur interne Projektdaten und Datenbank. Gemeinsamer Web-Kern und IndexedDB bleiben erhalten. Geschlossenes WebView-Profil beim nächsten Start in einen leeren lokalen Zielordner kopieren, Quelle behalten, stabile Pfadkonfiguration außerhalb des verschiebbaren Profils. Fehler und unterbrochene Aktivierung dürfen den Altbestand nicht verlieren oder mit einem leeren Profil ersetzen.
+2. Do-next-Flag direkt in Aufgabenlisten mit sofortiger Speicherung, bestehender Dashboard-Integration und Schutz erledigter Aufgaben.
+3. Linktypen Ordner/Web/SharePoint automatisch erkennen und mit Icons darstellen. Native Windows-Ordneröffnung prüft absolute Pfade und tatsächliche Ordner; Browser zeigt einen passenden Hinweis.
+4. Events und Notes in Navigation, Listen, Suche, Editoren und Projektseite trennen. Intern bestehende Ereignissammlung mit Kategorie Notiz beibehalten, dadurch keine Daten-/Sicherungsmigration. Dashboard, Ereigniszähler und Timeline schließen Notizen aus. Notes mit Datum, Titel, Projekt und Markdown; alte Klartextinhalte bleiben erhalten.
+5. Linkaktionen ausschließlich im Projekteditor. Projekt- und Linkentwurf gemeinsam atomar speichern, bei Cancel vollständig verwerfen.
+6. Projektliste nach vorhandenen Topics gruppieren; nach Such-/Status-/Topicfilter gruppieren, leere Gruppen auslassen und No topic zuletzt anzeigen. Bisherige Projektnummern erhalten.
+
+Hauptagent verantwortet gemeinsame Typen, Domänenabfragen, atomare Speicheränderungen, App-Integration, Flag-Bedienung, Gruppierung, Styles und Abnahme. Subagenten bearbeiten getrennt native Speicherortwahl, Ereignis-/Notizenoberfläche sowie Links/Projekteditor; unabhängige Prüfungen ergänzen die Integration. Prüfstand, Installation und verbliebene Einschränkungen siehe README.

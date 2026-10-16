@@ -20,6 +20,7 @@ import {
 import {
   activeProjects,
   formatDate,
+  groupProjects,
   localToday,
   matchesSearch,
   overdue,
@@ -34,19 +35,27 @@ import { TodosPanel } from "../features/todos/TodosPanel";
 import { EventsPanel } from "../features/events/EventsPanel";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { CategorySettings } from "../features/projects/CategorySettings";
+import { StorageSettings } from "../features/settings/StorageSettings";
 import { openItem } from "../ui/itemNavigation";
-import { confirmAction, saveBackup } from "../platform/desktop";
+import { confirmAction, isDesktop, saveBackup } from "../platform/desktop";
 const store = new IndexedDbProjectStore();
 import {
   LayoutDashboard,
   Folder,
   CheckSquare,
   CalendarDays,
+  NotebookPen,
   Settings,
 } from "lucide-react";
 import { statusLabel, categoryLabel, errorLabel } from "../ui/labels";
 type View =
-  "Dashboard" | "Projects" | "Tasks" | "Events" | "Project" | "Settings";
+  | "Dashboard"
+  | "Projects"
+  | "Tasks"
+  | "Events"
+  | "Notes"
+  | "Project"
+  | "Settings";
 type ThemeChoice = "system" | "light" | "dark";
 export function App() {
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
@@ -57,9 +66,11 @@ export function App() {
     );
     return kind === "task"
       ? "Tasks"
-      : kind === "event"
-        ? "Events"
-        : "Dashboard";
+      : kind === "note"
+        ? "Notes"
+        : kind === "event"
+          ? "Events"
+          : "Dashboard";
   });
   const [projectId, setProjectId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +88,7 @@ export function App() {
   const [projectSearch, setProjectSearch] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
+  const [noteSearch, setNoteSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState<ThemeChoice>(() => {
@@ -94,7 +106,7 @@ export function App() {
   const readDetail = () => {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const kind = params.get("detail");
-    return kind === "task" || kind === "event"
+    return kind === "task" || kind === "event" || kind === "note"
       ? {
           kind,
           id: params.get("id") || "",
@@ -105,7 +117,16 @@ export function App() {
       : null;
   };
   const [detail, setDetail] = useState(readDetail);
+  const openedOnLoad = useRef(Boolean(detail));
   const closeDetail = () => {
+    if (openedOnLoad.current && detail && detail.kind !== "task") {
+      const note = detail.creating
+        ? detail.kind === "note" || detail.notesOnly
+        : data.events.find((event) => event.id === detail.id)?.category ===
+          "Notiz";
+      setView(note ? "Notes" : "Events");
+    }
+    openedOnLoad.current = false;
     window.history.replaceState(
       null,
       "",
@@ -241,11 +262,19 @@ export function App() {
   async function download() {
     try {
       const value = await store.exportData();
-      if (await saveBackup(`winprogman-${today}.json`, JSON.stringify(value, null, 2)))
+      if (
+        await saveBackup(
+          `winprogman-${today}.json`,
+          JSON.stringify(value, null, 2),
+        )
+      ) {
         setNotice("JSON backup downloaded.");
+        return true;
+      }
     } catch (e) {
       setError(errorLabel(e));
     }
+    return false;
   }
   async function readFile(value: File | undefined) {
     if (!value) return;
@@ -282,10 +311,14 @@ export function App() {
           : p.categoryId === effectiveCategoryFilter)) &&
       matchesSearch(projectSearch, p.name),
   );
+  const projectGroups = groupProjects(filteredProjects, data.projectCategories);
   const detailContent = detail
     ? (() => {
         const todo = data.todos.find((item) => item.id === detail.id);
         const event = data.events.find((item) => item.id === detail.id);
+        const isNote = detail.creating
+          ? detail.kind === "note" || Boolean(detail.notesOnly)
+          : event?.category === "Notiz";
         const item = detail.kind === "task" ? todo : event;
         const initialProjectId = data.projects.some(
           (p) => p.id === detail.projectId,
@@ -300,7 +333,7 @@ export function App() {
           <section className="detail-page">
             <div className="page-heading">
               <h1>
-                {`${detail.creating ? "New" : "Edit"} ${detail.kind}`}
+                {`${detail.creating ? "New" : "Edit"} ${detail.kind === "task" ? "task" : isNote ? "note" : "event"}`}
               </h1>
             </div>
             {error && (
@@ -314,7 +347,7 @@ export function App() {
               <section className="panel">
                 <p>
                   {detail.creating
-                    ? "Create a project before adding tasks or events."
+                    ? "Create a project before adding tasks, events or notes."
                     : "This item no longer exists."}
                 </p>
                 <button className="button secondary" onClick={closeDetail}>
@@ -338,7 +371,7 @@ export function App() {
                 events={!detail.creating && event ? [event] : []}
                 initialEvent={detail.creating ? undefined : event}
                 initialProjectId={initialProjectId}
-                notesOnly={detail.creating && detail.notesOnly}
+                notesOnly={isNote}
                 detailOnly
                 onClose={closeDetail}
               />
@@ -366,7 +399,14 @@ export function App() {
         </a>
         <nav aria-label="Main navigation">
           {(
-            ["Dashboard", "Projects", "Tasks", "Events", "Settings"] as View[]
+            [
+              "Dashboard",
+              "Projects",
+              "Tasks",
+              "Events",
+              "Notes",
+              "Settings",
+            ] as View[]
           ).map((v, i) => (
             <button
               key={v}
@@ -383,6 +423,7 @@ export function App() {
                   Folder,
                   CheckSquare,
                   CalendarDays,
+                  NotebookPen,
                   Settings,
                 ][i];
                 return <Icon size={18} aria-hidden="true" />;
@@ -394,7 +435,11 @@ export function App() {
         </nav>
         <div className="sidebar-bottom">
           <span className="local-dot" /> Stored locally
-          <small>Your data stays in this browser.</small>
+          <small>
+            {isDesktop()
+              ? "Your data stays on this computer."
+              : "Your data stays in this browser."}
+          </small>
           <button
             className="text-button"
             disabled={busy || loading}
@@ -440,7 +485,17 @@ export function App() {
             <h2>Import backup</h2>
             <p>
               {pending.projects.length} Projects · {pending.todos.length} Tasks
-              · {pending.events.length} Events · {pending.links.length} Links ·{" "}
+              ·{" "}
+              {
+                pending.events.filter((event) => event.category !== "Notiz")
+                  .length
+              }{" "}
+              Events ·{" "}
+              {
+                pending.events.filter((event) => event.category === "Notiz")
+                  .length
+              }{" "}
+              Notes · {pending.links.length} Links ·{" "}
               {pending.projectCategories.length} project topics
             </p>
             <p>All current data will be replaced. Back it up first as JSON.</p>
@@ -455,7 +510,11 @@ export function App() {
                 className="button danger"
                 disabled={busy}
                 onClick={async () => {
-                  if (await confirmAction("Replace all current data with this backup?"))
+                  if (
+                    await confirmAction(
+                      "Replace all current data with this backup?",
+                    )
+                  )
                     void transact(() => store.importData(pending)).then(
                       (ok) => {
                         if (ok) {
@@ -463,6 +522,7 @@ export function App() {
                           setView("Projects");
                           setSelectedStatuses(new Set(projectStatuses));
                           setCategoryFilter("");
+                          setNoteSearch("");
                           setProjectSearch("");
                           setTaskSearch("");
                           setEventSearch("");
@@ -497,7 +557,9 @@ export function App() {
                     <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
                   </div>
                   <div className="page-actions" ref={setHeaderTarget}>
-                    {!["Settings", "Tasks", "Events"].includes(view) && (
+                    {!["Settings", "Tasks", "Events", "Notes"].includes(
+                      view,
+                    ) && (
                       <button
                         className="button"
                         disabled={busy}
@@ -818,6 +880,7 @@ export function App() {
                       )}
                     </div>
                   </section>
+                  <StorageSettings busy={busy} onBackup={download} />
                   <CategorySettings
                     categories={data.projectCategories}
                     projects={data.projects}
@@ -870,55 +933,66 @@ export function App() {
                       No projects match the current search or filters.
                     </p>
                   )}
-                  <Card className="table-wrap">
-                    <Table>
-                      <thead>
-                        <tr>
-                          <th>Project #</th>
-                          <th>Title</th>
-                          <th>Topic</th>
-                          <th>Status</th>
-                          <th>Open tasks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProjects.map((p) => (
-                          <tr key={p.id}>
-                            <td>
-                              PRJ-
-                              {String(data.projects.indexOf(p) + 1).padStart(
-                                3,
-                                "0",
-                              )}
-                            </td>
-                            <td>
-                              <button
-                                className="project-title"
-                                onClick={() => goProject(p.id)}
-                              >
-                                {p.name}
-                              </button>
-                            </td>
-                            <td>
-                              {data.projectCategories.find(
-                                (c) => c.id === p.categoryId,
-                              )?.name || "No topic"}
-                            </td>
-                            <td>
-                              <StatusLabel>{statusLabel(p.status)}</StatusLabel>
-                            </td>
-                            <td>
-                              {
-                                data.todos.filter(
-                                  (t) => t.projectId === p.id && !t.completed,
-                                ).length
-                              }
-                            </td>
+                  {projectGroups.map((group) => (
+                    <Card
+                      className="table-wrap project-topic-group"
+                      key={group.id}
+                    >
+                      <h2 className="topic-group-heading">
+                        {group.name}{" "}
+                        <span className="count">{group.projects.length}</span>
+                      </h2>
+                      <Table>
+                        <thead>
+                          <tr>
+                            <th>Project #</th>
+                            <th>Title</th>
+                            <th>Topic</th>
+                            <th>Status</th>
+                            <th>Open tasks</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </Card>
+                        </thead>
+                        <tbody>
+                          {group.projects.map((p) => (
+                            <tr key={p.id}>
+                              <td>
+                                PRJ-
+                                {String(data.projects.indexOf(p) + 1).padStart(
+                                  3,
+                                  "0",
+                                )}
+                              </td>
+                              <td>
+                                <button
+                                  className="project-title"
+                                  onClick={() => goProject(p.id)}
+                                >
+                                  {p.name}
+                                </button>
+                              </td>
+                              <td>
+                                {data.projectCategories.find(
+                                  (c) => c.id === p.categoryId,
+                                )?.name || "No topic"}
+                              </td>
+                              <td>
+                                <StatusLabel>
+                                  {statusLabel(p.status)}
+                                </StatusLabel>
+                              </td>
+                              <td>
+                                {
+                                  data.todos.filter(
+                                    (t) => t.projectId === p.id && !t.completed,
+                                  ).length
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </Card>
+                  ))}
                 </>
               )}
               {view === "Tasks" && (
@@ -940,6 +1014,18 @@ export function App() {
                   events={data.events}
                   search={eventSearch}
                   onSearchChange={setEventSearch}
+                />
+              )}
+              {view === "Notes" && (
+                <EventsPanel
+                  key={view}
+                  {...common}
+                  notesOnly
+                  showHeading={false}
+                  headerTarget={headerTarget}
+                  events={data.events}
+                  search={noteSearch}
+                  onSearchChange={setNoteSearch}
                 />
               )}
               {view === "Project" &&
@@ -1005,6 +1091,15 @@ export function App() {
                         projectId={project.id}
                         events={data.events.filter(
                           (e) => e.projectId === project.id,
+                        )}
+                      />
+                      <EventsPanel
+                        key={`notes-${project.id}`}
+                        {...common}
+                        notesOnly
+                        projectId={project.id}
+                        events={data.events.filter(
+                          (event) => event.projectId === project.id,
                         )}
                       />
                     </div>

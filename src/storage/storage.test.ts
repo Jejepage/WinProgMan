@@ -206,6 +206,95 @@ describe("Sicherungsvalidierung", () => {
 });
 
 describe("IndexedDB", () => {
+  it("speichert Projekt und Linkentwurf gemeinsam und erhält bei Fehlern den gesamten alten Bestand", async () => {
+    const adapter = store();
+    const data = envelope();
+    await adapter.importData(data);
+    const before = await adapter.load();
+    const project = { ...before.projects[0], name: "Changed" };
+    const link = {
+      ...metadata(),
+      projectId: project.id,
+      label: "Docs",
+      target: "https://example.com",
+    };
+    await expect(
+      adapter.apply({
+        type: "project.saveWithLinks",
+        value: project,
+        links: [{ ...link, projectId: before.projects[1].id }],
+      }),
+    ).rejects.toThrow();
+    expect(await adapter.load()).toEqual(before);
+    const failure = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(() => {
+        throw new Error("Disk full");
+      });
+    try {
+      await expect(
+        adapter.apply({
+          type: "project.saveWithLinks",
+          value: project,
+          links: [link],
+        }),
+      ).rejects.toThrow("Disk full");
+    } finally {
+      failure.mockRestore();
+    }
+    expect(await adapter.load()).toEqual(before);
+    await adapter.apply({
+      type: "project.saveWithLinks",
+      value: project,
+      links: [link],
+    });
+    const after = await adapter.load();
+    expect(after.projects.map((item) => item.id)).toEqual(
+      before.projects.map((item) => item.id),
+    );
+    expect(after.projects[0].name).toBe("Changed");
+    expect(after.links.filter((item) => item.projectId === project.id)).toEqual(
+      [link],
+    );
+    expect(after.links.filter((item) => item.projectId !== project.id)).toEqual(
+      before.links.filter((item) => item.projectId !== project.id),
+    );
+    await adapter.apply({ type: "project.delete", id: project.id });
+    await expect(
+      adapter.apply({
+        type: "project.saveWithLinks",
+        value: project,
+        links: [],
+      }),
+    ).rejects.toThrow("no longer exists");
+  });
+  it("ändert Do next am aktuellen Datensatz ohne andere Änderungen zu verlieren und schützt erledigte Aufgaben", async () => {
+    const adapter = store();
+    await adapter.importData(envelope());
+    const task = (await adapter.load()).todos.find((item) => !item.completed)!;
+    const modified = { ...task, title: "Newer title" };
+    await adapter.apply({ type: "todo.save", value: modified });
+    await adapter.apply({ type: "todo.setDoNext", id: task.id, doNext: true });
+    expect(
+      (await adapter.load()).todos.find((item) => item.id === task.id),
+    ).toMatchObject({ title: "Newer title", doNext: true });
+    await adapter.apply({ type: "todo.setDoNext", id: task.id, doNext: false });
+    expect(
+      (await adapter.load()).todos.find((item) => item.id === task.id),
+    ).not.toHaveProperty("doNext");
+    await adapter.apply({
+      type: "todo.save",
+      value: { ...modified, completed: true },
+    });
+    const before = await adapter.load();
+    await expect(
+      adapter.apply({ type: "todo.setDoNext", id: task.id, doNext: true }),
+    ).rejects.toThrow("Reopen");
+    expect(await adapter.load()).toEqual(before);
+    await expect(
+      adapter.apply({ type: "todo.setDoNext", id: "missing", doNext: false }),
+    ).rejects.toThrow("no longer exists");
+  });
   it("speichert Markdown mit Formatkennzeichnung und erhält Klartext beim Reload und Export", async () => {
     const name = `notes-${crypto.randomUUID()}`;
     const adapter = new IndexedDbProjectStore(name);

@@ -61,10 +61,12 @@ export interface ExportEnvelope extends AppData {
 }
 export type DomainChange =
   | { type: "project.save"; value: Project }
+  | { type: "project.saveWithLinks"; value: Project; links: Link[] }
   | { type: "category.save"; value: ProjectCategory }
   | { type: "category.delete"; id: string }
   | { type: "link.save"; value: Link }
   | { type: "todo.save"; value: Todo }
+  | { type: "todo.setDoNext"; id: string; doNext: boolean }
   | { type: "event.save"; value: ProjectEvent }
   | {
       type: "project.delete" | "link.delete" | "todo.delete" | "event.delete";

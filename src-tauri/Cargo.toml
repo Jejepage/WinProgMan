@@ -1,6 +1,6 @@
 [package]
 name = "winprogman"
-version = "0.2.1"
+version = "0.3.0"
 description = "Personal project management"
 authors = ["WinProgMan"]
 edition = "2021"
@@ -19,3 +19,5 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

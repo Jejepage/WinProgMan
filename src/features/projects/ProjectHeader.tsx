@@ -10,9 +10,9 @@ import {
   type ProjectCategory,
   type ProjectStatus,
 } from "../../domain/types";
-import { normalizeLinkTarget } from "../../domain/links";
+import { classifyLinkTarget, normalizeLinkTarget } from "../../domain/links";
 import { confirmAction } from "../../platform/desktop";
-import { ExternalLink } from "../../ui/ExternalLink";
+import { ProjectLink } from "../../ui/ProjectLink";
 interface Props {
   project: Project;
   links: Link[];
@@ -40,8 +40,13 @@ export function ProjectHeader({
   const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
+  const [draftLinks, setDraftLinks] = useState<Link[]>([]);
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (linkEditor) {
+      setMessage("Save or cancel the link draft before saving the project.");
+      return;
+    }
     const value: Project = {
       ...project,
       name: name.trim() || "New project",
@@ -53,8 +58,9 @@ export function ProjectHeader({
     else delete value.categoryId;
     if (
       await onChange({
-        type: "project.save",
+        type: "project.saveWithLinks",
         value,
+        links: draftLinks,
       })
     )
       setEditing(false);
@@ -66,25 +72,26 @@ export function ProjectHeader({
     setMessage("");
     setLinkEditor(true);
   }
-  async function saveLink(e: React.FormEvent) {
+  function saveLink(e: React.FormEvent) {
     e.preventDefault();
-    if (!target.trim()) {
-      setMessage("Enter a link destination.");
+    if (classifyLinkTarget(target).kind === "unknown") {
+      setMessage("Enter a website address or an absolute Windows folder path.");
       return;
     }
-    if (
-      await onChange({
-        type: "link.save",
-        value: {
-          ...(link || metadata()),
-          projectId: project.id,
-          label: label.trim() || target.trim(),
-          target: normalizeLinkTarget(target),
-          updatedAt: new Date().toISOString(),
-        },
-      })
-    )
-      setLinkEditor(false);
+    const value: Link = {
+      ...(link || metadata()),
+      projectId: project.id,
+      label: label.trim() || target.trim(),
+      target: normalizeLinkTarget(target),
+      updatedAt: new Date().toISOString(),
+    };
+    setDraftLinks((current) =>
+      link
+        ? current.map((item) => (item.id === link.id ? value : item))
+        : [...current, value],
+    );
+    setLinkEditor(false);
+    setMessage("");
   }
   return (
     <section className="project-header panel">
@@ -114,6 +121,9 @@ export function ProjectHeader({
             setDescription(project.description);
             setStatus(project.status);
             setCategoryId(project.categoryId || "");
+            setDraftLinks(links.map((item) => ({ ...item })));
+            setLinkEditor(false);
+            setMessage("");
             setEditing(true);
           }}
         >
@@ -179,7 +189,12 @@ export function ProjectHeader({
             <button
               type="button"
               className="button secondary"
-              onClick={() => setEditing(false)}
+              disabled={busy}
+              onClick={() => {
+                setEditing(false);
+                setLinkEditor(false);
+                setMessage("");
+              }}
             >
               Cancel
             </button>
@@ -196,74 +211,70 @@ export function ProjectHeader({
       )}
       <div className="links-heading">
         <h2>Links & resources</h2>
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() => editLink()}
-        >
-          <Plus size={14} aria-hidden="true" /> Add link
-        </button>
+        {editing && (
+          <button
+            className="text-button"
+            disabled={busy}
+            onClick={() => editLink()}
+          >
+            <Plus size={14} aria-hidden="true" /> Add link
+          </button>
+        )}
       </div>
       <ul className="links-list">
-        {links.map((l) => (
+        {(editing ? draftLinks : links).map((l) => (
           <li key={l.id}>
             <div>
-              {/^(https?:\/\/|mailto:|tel:)/i.test(
-                normalizeLinkTarget(l.target),
-              ) ? (
-                <ExternalLink
-                  href={normalizeLinkTarget(l.target)}
+              <ProjectLink link={l} />
+            </div>
+            {editing && (
+              <div className="row-actions">
+                <button
+                  className="icon-button"
+                  onClick={() =>
+                    void navigator.clipboard.writeText(l.target).then(
+                      () => setMessage("Destination copied."),
+                      () =>
+                        setMessage(
+                          "Unable to copy. Select the displayed path to copy it manually.",
+                        ),
+                    )
+                  }
                 >
-                  {l.label} ↗
-                </ExternalLink>
-              ) : (
-                <strong>{l.label}</strong>
-              )}
-              <small>{l.target}</small>
-            </div>
-            <div className="row-actions">
-              <button
-                className="icon-button"
-                onClick={() =>
-                  void navigator.clipboard.writeText(l.target).then(
-                    () => setMessage("Destination copied."),
-                    () =>
-                      setMessage(
-                        "Unable to copy. Select the displayed path to copy it manually.",
-                      ),
-                  )
-                }
-              >
-                <Copy size={14} aria-hidden="true" /> Copy
-              </button>
-              <button
-                className="icon-button"
-                disabled={busy}
-                onClick={() => editLink(l)}
-              >
-                <Pencil size={14} aria-hidden="true" /> Edit
-              </button>
-              <button
-                className="icon-button danger"
-                disabled={busy}
-                onClick={async () => {
-                  if (await confirmAction(`Delete link "${l.label}"?`))
-                    void onChange({ type: "link.delete", id: l.id });
-                }}
-              >
-                <Trash2 size={14} aria-hidden="true" /> Delete
-              </button>
-            </div>
+                  <Copy size={14} aria-hidden="true" /> Copy
+                </button>
+                <button
+                  className="icon-button"
+                  disabled={busy}
+                  onClick={() => editLink(l)}
+                >
+                  <Pencil size={14} aria-hidden="true" /> Edit
+                </button>
+                <button
+                  className="icon-button danger"
+                  disabled={busy}
+                  onClick={async () => {
+                    if (await confirmAction(`Delete link "${l.label}"?`)) {
+                      setDraftLinks((current) =>
+                        current.filter((item) => item.id !== l.id),
+                      );
+                      if (link?.id === l.id) setLinkEditor(false);
+                    }
+                  }}
+                >
+                  <Trash2 size={14} aria-hidden="true" /> Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
-      {!links.length && (
+      {!(editing ? draftLinks : links).length && (
         <p className="muted">
-          <Plus size={14} aria-hidden="true" /> Add links to folders, documents
-          or websites.
+          {editing ? "Add links to folders or websites." : "No links yet."}
         </p>
       )}
-      {linkEditor && (
+      {editing && linkEditor && (
         <form className="editor" onSubmit={saveLink}>
           <div className="form-grid">
             <label className="field">
