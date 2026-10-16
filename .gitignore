@@ -5,3 +5,10 @@ test-results/
 playwright-report/
 .env*
 *.local
+winprogman-*.json
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/*
+!src-tauri/icons/app.svg
+!src-tauri/icons/icon.ico
+!src-tauri/icons/icon.png

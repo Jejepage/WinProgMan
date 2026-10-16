@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { openItem } from "../../ui/itemNavigation";
+import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { useId, useState, type FormEvent } from "react";
 import {
   categories,
@@ -20,6 +20,7 @@ import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
 interface Props {
   initialEvent?: ProjectEvent;
+  initialProjectId?: string;
   detailOnly?: boolean;
   onClose?: () => void;
   events: ProjectEvent[];
@@ -48,6 +49,7 @@ interface Draft {
 
 export function EventsPanel({
   initialEvent,
+  initialProjectId,
   detailOnly = false,
   onClose,
   events,
@@ -74,16 +76,17 @@ export function EventsPanel({
     original?: ProjectEvent;
     draft: Draft;
   } | null>(
-    initialEvent
+    initialEvent || detailOnly
       ? {
           original: initialEvent,
           draft: {
-            projectId: initialEvent.projectId,
-            category: initialEvent.category,
-            title: initialEvent.title,
-            date: initialEvent.date,
-            time: initialEvent.time || "",
-            note: initialEvent.note
+            projectId:
+              initialEvent?.projectId || initialProjectId || projectId || projects[0]?.id || "",
+            category: initialEvent?.category || (notesOnly ? "Notiz" : "Meeting"),
+            title: initialEvent?.title || "",
+            date: initialEvent?.date || today,
+            time: initialEvent?.time || "",
+            note: initialEvent?.note
               ? initialEvent.noteFormat === "markdown"
                 ? initialEvent.note
                 : legacyNoteToMarkdown(initialEvent.note)
@@ -113,25 +116,6 @@ export function EventsPanel({
         ? { ...current, draft: { ...current.draft, ...change } }
         : current,
     );
-
-  function begin(event?: ProjectEvent) {
-    setDeleting(null);
-    setEditor({
-      original: event,
-      draft: {
-        projectId: event?.projectId ?? projectId ?? projects[0]?.id ?? "",
-        category: event?.category ?? (notesOnly ? "Notiz" : "Meeting"),
-        title: event?.title ?? "",
-        date: event?.date ?? today,
-        time: event?.time ?? "",
-        note: event?.note
-          ? event.noteFormat === "markdown"
-            ? event.note
-            : legacyNoteToMarkdown(event.note)
-          : "",
-      },
-    });
-  }
 
   async function save(submit: FormEvent) {
     submit.preventDefault();
@@ -271,7 +255,7 @@ export function EventsPanel({
     <button
       className="button"
       disabled={busy || projects.length === 0}
-      onClick={() => begin()}
+      onClick={() => openNewItem("event", projectId, notesOnly)}
     >
       {notesOnly ? "Add note" : "Add event"}
     </button>

@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { safeNoteUrl } from "./markdown";
+import { ExternalLink } from "../../ui/ExternalLink";
 
 export function MarkdownNote({ text }: { text: string }) {
   return (
@@ -17,9 +18,9 @@ export function MarkdownNote({ text }: { text: string }) {
           ),
           a: ({ href, children }) =>
             href ? (
-              <a href={href} target="_blank" rel="noopener noreferrer">
+              <ExternalLink href={href}>
                 {children}
-              </a>
+              </ExternalLink>
             ) : (
               <span>{children}</span>
             ),

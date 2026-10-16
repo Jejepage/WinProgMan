@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { confirmAction } from "../../platform/desktop";
 import {
   metadata,
   type DomainChange,
@@ -123,7 +124,7 @@ export function CategorySettings({
                   disabled={busy}
                   onClick={async () => {
                     if (
-                      confirm(
+                      await confirmAction(
                         `Delete topic "${c.name}"? ${count} projects will have no topic. Projects and their contents are retained.`,
                       )
                     ) {

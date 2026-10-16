@@ -1,6 +1,6 @@
 {
   "name": "winprogman",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,10 +11,16 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "format": "prettier --write src tests package.json tsconfig.json vite.config.ts playwright.config.ts index.html .github/workflows/ci.yml",
-    "format:check": "prettier --check src tests package.json tsconfig.json vite.config.ts playwright.config.ts index.html .github/workflows/ci.yml"
+    "format:check": "prettier --check src tests package.json tsconfig.json vite.config.ts playwright.config.ts index.html .github/workflows/ci.yml",
+    "desktop:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
+    "@tauri-apps/plugin-fs": "^2.7.1",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "lucide-react": "^1.56.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -26,6 +32,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
+    "@tauri-apps/cli": "^2.12.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
