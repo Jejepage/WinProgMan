@@ -1,4 +1,10 @@
-import type { Todo, ProjectEvent, AppData } from "./types";
+import type {
+  Todo,
+  ProjectEvent,
+  AppData,
+  Project,
+  ProjectCategory,
+} from "./types";
 export const matchesSearch = (query: string, ...values: string[]) => {
   const needle = query.trim().toLocaleLowerCase("en");
   return (
@@ -12,7 +18,28 @@ export function localToday(date = new Date()): string {
 export const overdue = (todo: Todo, today = localToday()) =>
   !todo.completed && !!todo.dueDate && todo.dueDate < today;
 export const upcoming = (event: ProjectEvent, today = localToday()) =>
-  event.date >= today;
+  event.category !== "Notiz" && event.date >= today;
+
+/** Filter first, then group. Categories are identities, even when named No topic. */
+export function groupProjects(projects: Project[], topics: ProjectCategory[]) {
+  const groups = [...topics]
+    .sort(
+      (a, b) =>
+        a.name.localeCompare(b.name, "en", { sensitivity: "base" }) ||
+        a.id.localeCompare(b.id),
+    )
+    .map((topic) => ({
+      id: topic.id,
+      name: topic.name,
+      projects: projects.filter((project) => project.categoryId === topic.id),
+    }));
+  groups.push({
+    id: "",
+    name: "No topic",
+    projects: projects.filter((project) => !project.categoryId),
+  });
+  return groups.filter((group) => group.projects.length);
+}
 export const sortTodos = (todos: Todo[]) =>
   [...todos].sort(
     (a, b) =>

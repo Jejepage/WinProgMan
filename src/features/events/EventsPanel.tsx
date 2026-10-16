@@ -18,6 +18,8 @@ import { matchesSearch } from "../../domain/queries";
 
 import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
+const eventCategories = categories.filter((category) => category !== "Notiz");
+
 interface Props {
   initialEvent?: ProjectEvent;
   initialProjectId?: string;
@@ -67,10 +69,12 @@ export function EventsPanel({
   onProject,
 }: Props) {
   const prefix = useId();
-  const [category, setCategory] = useState<Category | "">(
-    notesOnly ? "Notiz" : "",
+  const [category, setCategory] = useState<Category | "">("");
+  const [timeline, setTimeline] = useState(
+    !notesOnly && initialMode === "timeline",
   );
-  const [timeline, setTimeline] = useState(initialMode === "timeline");
+  const itemKind = notesOnly ? "note" : "event";
+  const itemLabel = notesOnly ? "note" : "event";
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editor, setEditor] = useState<{
     original?: ProjectEvent;
@@ -81,8 +85,12 @@ export function EventsPanel({
           original: initialEvent,
           draft: {
             projectId:
-              initialEvent?.projectId || initialProjectId || projectId || projects[0]?.id || "",
-            category: initialEvent?.category || (notesOnly ? "Notiz" : "Meeting"),
+              initialEvent?.projectId ||
+              initialProjectId ||
+              projectId ||
+              projects[0]?.id ||
+              "",
+            category: notesOnly ? "Notiz" : initialEvent?.category || "Meeting",
             title: initialEvent?.title || "",
             date: initialEvent?.date || today,
             time: initialEvent?.time || "",
@@ -101,7 +109,7 @@ export function EventsPanel({
       (event) =>
         (!projectId || event.projectId === projectId) &&
         (!category || event.category === category) &&
-        (!notesOnly || event.category === "Notiz") &&
+        (notesOnly ? event.category === "Notiz" : event.category !== "Notiz") &&
         matchesSearch(
           search,
           event.title,
@@ -110,6 +118,7 @@ export function EventsPanel({
         ),
     ),
   );
+  if (notesOnly) visible.reverse();
   const patch = (change: Partial<Draft>) =>
     setEditor((current) =>
       current
@@ -125,15 +134,16 @@ export function EventsPanel({
       ...(original ?? metadata()),
       updatedAt: new Date().toISOString(),
       projectId: draft.projectId,
-      category: draft.category,
-      title: draft.title.trim() || "Untitled event",
-      date:
-        !original && draft.category === "Notiz" ? today : draft.date || today,
-      ...(draft.time ? { time: draft.time } : {}),
+      category: notesOnly ? "Notiz" : draft.category,
+      title:
+        draft.title.trim() || (notesOnly ? "Untitled note" : "Untitled event"),
+      date: draft.date || today,
+      ...(!notesOnly && draft.time ? { time: draft.time } : {}),
       ...(draft.note ? { note: draft.note } : {}),
     };
     // Explicitly remove optional fields when the user clears them while editing.
-    if (!draft.time) delete value.time;
+    // Notes do not expose time, but retain imported legacy times without data loss.
+    if (!notesOnly && !draft.time) delete value.time;
     if (!draft.note) delete value.note;
     // Other event edits do not change the bytes or interpretation of legacy notes.
     if (
@@ -164,28 +174,32 @@ export function EventsPanel({
     return (
       <li
         key={event.id}
-        className={`event-item ${isExpanded ? "is-expanded" : ""} ${event.date < today ? "is-past" : "is-upcoming"}`}
+        className={`event-item ${notesOnly ? "note-item" : event.date < today ? "is-past" : "is-upcoming"} ${isExpanded ? "is-expanded" : ""}`}
       >
         <div className="event-row">
           <button
             type="button"
             className="event-date event-date-button"
             disabled={busy}
-            aria-label={`Open event ${event.title}`}
-            onClick={() => openItem("event", event.id)}
+            aria-label={`Open ${itemLabel} ${event.title}`}
+            onClick={() => openItem(itemKind, event.id)}
           >
             <time
-              dateTime={event.time ? `${event.date}T${event.time}` : event.date}
+              dateTime={
+                !notesOnly && event.time
+                  ? `${event.date}T${event.time}`
+                  : event.date
+              }
             >
               {formatDate(event.date)}
-              {event.time ? ` · ${event.time}` : ""}
+              {!notesOnly && event.time ? ` · ${event.time}` : ""}
             </time>
           </button>
           <div className="event-title-group">
             <button
               className="event-title"
               disabled={busy}
-              onClick={() => openItem("event", event.id)}
+              onClick={() => openItem(itemKind, event.id)}
             >
               {event.title}
             </button>
@@ -210,8 +224,10 @@ export function EventsPanel({
               </>
             ) : null}
           </div>
-          <span className="event-phase">{phase}</span>
-          <span className="category">{categoryLabels[event.category]}</span>
+          {!notesOnly && <span className="event-phase">{phase}</span>}
+          {!notesOnly && (
+            <span className="category">{categoryLabels[event.category]}</span>
+          )}
           {!projectId && project && (
             <button
               className="project-link"
@@ -255,14 +271,14 @@ export function EventsPanel({
     <button
       className="button"
       disabled={busy || projects.length === 0}
-      onClick={() => openNewItem("event", projectId, notesOnly)}
+      onClick={() => openNewItem(itemKind, projectId)}
     >
       {notesOnly ? "Add note" : "Add event"}
     </button>
   );
   return (
     <section
-      className="panel events-panel"
+      className={`panel events-panel${notesOnly ? " notes-panel" : ""}`}
       aria-label={notesOnly ? "Notes" : "Events"}
     >
       {!detailOnly && (
@@ -291,7 +307,7 @@ export function EventsPanel({
                   }
                 >
                   <option value="">All categories</option>
-                  {categories.map((item) => (
+                  {eventCategories.map((item) => (
                     <option key={item} value={item}>
                       {categoryLabels[item]}
                     </option>
@@ -299,7 +315,7 @@ export function EventsPanel({
                 </select>
               </label>
             )}
-            {
+            {!notesOnly && (
               <div className="actions" aria-label="Event view">
                 <button
                   className={`button ${timeline ? "secondary" : ""}`}
@@ -316,7 +332,7 @@ export function EventsPanel({
                   Timeline
                 </button>
               </div>
-            }
+            )}
             {!showHeading && (
               <span className="muted filter-count">
                 {visible.length} entries
@@ -324,21 +340,25 @@ export function EventsPanel({
             )}
             {onSearchChange && (
               <SearchField
-                label="Search events"
+                label={notesOnly ? "Search notes" : "Search events"}
                 value={search}
                 onChange={onSearchChange}
               />
             )}
           </div>
           {projects.length === 0 && (
-            <p className="empty">Create a project to add events.</p>
+            <p className="empty">
+              Create a project to add {notesOnly ? "notes" : "events"}.
+            </p>
           )}
         </>
       )}
       {editor && !deleting && (
         <form className="event-editor" onSubmit={save}>
           {!detailOnly && (
-            <h3>{editor.original ? "Edit event" : "New event"}</h3>
+            <h3>
+              {editor.original ? `Edit ${itemLabel}` : `New ${itemLabel}`}
+            </h3>
           )}
           <div className="form-grid">
             {!projectId && (
@@ -359,36 +379,33 @@ export function EventsPanel({
                 </select>
               </label>
             )}
-            <label className="field" htmlFor={`${prefix}-category`}>
-              Category
-              <select
-                id={`${prefix}-category`}
-                aria-label="Category"
-                value={editor.draft.category}
-                disabled={busy}
-                onChange={(event) =>
-                  patch({
-                    category: event.target.value as Category,
-                    ...(!editor.original && event.target.value === "Notiz"
-                      ? { date: today }
-                      : {}),
-                  })
-                }
-              >
-                {categories.map((item) => (
-                  <option key={item} value={item}>
-                    {categoryLabels[item]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!notesOnly && (
+              <label className="field" htmlFor={`${prefix}-category`}>
+                Category
+                <select
+                  id={`${prefix}-category`}
+                  aria-label="Category"
+                  value={editor.draft.category}
+                  disabled={busy}
+                  onChange={(event) =>
+                    patch({ category: event.target.value as Category })
+                  }
+                >
+                  {eventCategories.map((item) => (
+                    <option key={item} value={item}>
+                      {categoryLabels[item]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="field" htmlFor={`${prefix}-title`}>
               Title
               <input
                 id={`${prefix}-title`}
                 autoFocus
                 value={editor.draft.title}
-                placeholder="Untitled event"
+                placeholder={notesOnly ? "Untitled note" : "Untitled event"}
                 disabled={busy}
                 onChange={(event) => patch({ title: event.target.value })}
               />
@@ -398,28 +415,23 @@ export function EventsPanel({
               <input
                 id={`${prefix}-date`}
                 type="date"
-                value={
-                  !editor.original && editor.draft.category === "Notiz"
-                    ? today
-                    : editor.draft.date
-                }
-                disabled={
-                  busy ||
-                  (!editor.original && editor.draft.category === "Notiz")
-                }
+                value={editor.draft.date}
+                disabled={busy}
                 onChange={(event) => patch({ date: event.target.value })}
               />
             </label>
-            <label className="field" htmlFor={`${prefix}-time`}>
-              Time (optional)
-              <input
-                id={`${prefix}-time`}
-                type="time"
-                value={editor.draft.time}
-                disabled={busy}
-                onChange={(event) => patch({ time: event.target.value })}
-              />
-            </label>
+            {!notesOnly && (
+              <label className="field" htmlFor={`${prefix}-time`}>
+                Time (optional)
+                <input
+                  id={`${prefix}-time`}
+                  type="time"
+                  value={editor.draft.time}
+                  disabled={busy}
+                  onChange={(event) => patch({ time: event.target.value })}
+                />
+              </label>
+            )}
           </div>
           <MarkdownEditor
             key={editor.original?.id || "new"}
@@ -428,9 +440,6 @@ export function EventsPanel({
             disabled={busy}
             onChange={(note) => patch({ note })}
           />
-          {!editor.original && editor.draft.category === "Notiz" && (
-            <p className="muted">New notes automatically use today’s date.</p>
-          )}
           <div className="actions">
             <button className="button" disabled={busy}>
               Save
@@ -448,10 +457,10 @@ export function EventsPanel({
                 type="button"
                 className="button danger"
                 disabled={busy}
-                aria-label={`Delete event ${editor.original.title}`}
+                aria-label={`Delete ${itemLabel} ${editor.original.title}`}
                 onClick={() => setDeleting(editor.original || null)}
               >
-                Delete event
+                Delete {itemLabel}
               </button>
             )}
           </div>
@@ -459,7 +468,9 @@ export function EventsPanel({
       )}
       {deleting && (
         <div className="delete-confirm" role="alert">
-          <p>Delete event “{deleting.title}”?</p>
+          <p>
+            Delete {itemLabel} “{deleting.title}”?
+          </p>
           <div className="actions">
             <button
               className="button danger"
@@ -489,10 +500,12 @@ export function EventsPanel({
           {visible.length === 0 && (
             <p className="empty">
               {search.trim()
-                ? "No events match this search and filter."
-                : category
-                  ? `No events in ${categoryLabels[category]}.`
-                  : "No events yet."}
+                ? `No ${notesOnly ? "notes" : "events"} match this search and filter.`
+                : notesOnly
+                  ? "No notes yet."
+                  : category
+                    ? `No events in ${categoryLabels[category]}.`
+                    : "No events yet."}
             </p>
           )}
           <ul className={timeline ? "item-list timeline" : "item-list"}>

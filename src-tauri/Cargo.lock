@@ -4691,8 +4691,10 @@ dependencies = [
 
 [[package]]
 name = "winprogman"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

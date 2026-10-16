@@ -1,11 +1,11 @@
-export function openItem(kind: "task" | "event", id: string) {
+export function openItem(kind: "task" | "event" | "note", id: string) {
   const url = new URL(window.location.href);
   url.hash = new URLSearchParams({ detail: kind, id }).toString();
   window.location.hash = url.hash;
 }
 
 export function openNewItem(
-  kind: "task" | "event",
+  kind: "task" | "event" | "note",
   projectId?: string,
   notesOnly = false,
 ) {
