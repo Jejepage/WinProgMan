@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { confirmAction } from "../../platform/desktop";
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { openItem } from "../../ui/itemNavigation";
+import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
   metadata,
@@ -19,6 +19,7 @@ import {
 } from "../../domain/queries";
 interface Props {
   initialTodo?: Todo;
+  initialProjectId?: string;
   detailOnly?: boolean;
   onClose?: () => void;
   todos: Todo[];
@@ -35,6 +36,7 @@ interface Props {
 }
 export function TodosPanel({
   initialTodo,
+  initialProjectId,
   detailOnly = false,
   onClose,
   todos,
@@ -59,25 +61,17 @@ export function TodosPanel({
         projects.find((project) => project.id === todo.projectId)?.name || "",
       ),
   );
-  const [editing, setEditing] = useState<Todo | null>(initialTodo || null);
-  const [adding, setAdding] = useState(Boolean(initialTodo));
+  const editing = initialTodo || null;
+  const [adding, setAdding] = useState(detailOnly || Boolean(initialTodo));
   const [title, setTitle] = useState(initialTodo?.title || "");
   const [date, setDate] = useState(initialTodo?.dueDate || "");
   const [doNext, setDoNext] = useState(Boolean(initialTodo?.doNext));
   const [owner, setOwner] = useState(
-    initialTodo?.projectId || projectId || projects[0]?.id || "",
+    initialTodo?.projectId || initialProjectId || projectId || projects[0]?.id || "",
   );
   const currentTodo = editing
     ? todos.find((todo) => todo.id === editing.id) || editing
     : null;
-  function open(todo?: Todo) {
-    setEditing(todo || null);
-    setTitle(todo?.title || "");
-    setDate(todo?.dueDate || "");
-    setDoNext(Boolean(todo?.doNext));
-    setOwner(todo?.projectId || projectId || projects[0]?.id || "");
-    setAdding(true);
-  }
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!owner) return;
@@ -102,7 +96,7 @@ export function TodosPanel({
     <button
       className="button secondary"
       disabled={busy || !projects.length}
-      onClick={() => open()}
+      onClick={() => openNewItem("task", projectId)}
     >
       <Plus size={14} aria-hidden="true" /> Add task
     </button>

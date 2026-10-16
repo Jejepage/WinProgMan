@@ -846,6 +846,133 @@ test("header actions, task filters and integrated event timeline", async ({
   await expect(page.locator(".today-marker")).toBeVisible();
 });
 
+test("Add task and Add event use detail pages, preserve filters and only save confirmed drafts", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Load sample data" }).click();
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  const detail = page.locator(".detail-page");
+  const pageCount = page.context().pages().length;
+
+  await nav.getByRole("button", { name: /Projects/ }).click();
+  await page
+    .getByRole("button", { name: "Arbeitsplatz erneuern", exact: true })
+    .click();
+  for (const kind of ["task", "event"] as const) {
+    await openEditor(
+      page,
+      page.getByRole("button", { name: `Add ${kind}`, exact: true }),
+    );
+    await expect(detail.getByRole("heading", { level: 1 })).toHaveText(
+      `New ${kind}`,
+    );
+    await expect(page).toHaveURL(new RegExp(`detail=${kind}.*mode=new`));
+    await expect(
+      detail
+        .getByRole("combobox", { name: "Project", exact: true })
+        .locator("option:checked"),
+    ).toHaveText("Arbeitsplatz erneuern");
+    await detail.getByLabel("Title", { exact: true }).fill(`Projekt-${kind}`);
+    await expect(detail.getByRole("button", { name: /Delete/ })).toHaveCount(0);
+    await saveEditor(page, page);
+    await expect(
+      page.getByRole("heading", { name: "Arbeitsplatz erneuern", exact: true }),
+    ).toBeVisible();
+  }
+
+  await nav.getByRole("button", { name: "Tasks", exact: true }).click();
+  await page.getByRole("searchbox", { name: "Search tasks" }).fill("Projekt");
+  await page.getByRole("button", { name: "Open tasks", exact: true }).click();
+  await openEditor(
+    page,
+    page.getByRole("button", { name: "Add task", exact: true }),
+  );
+  await detail.getByLabel("Title", { exact: true }).fill("Verworfene Aufgabe");
+  await detail.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(
+    page.getByRole("searchbox", { name: "Search tasks" }),
+  ).toHaveValue("Projekt");
+  await expect(
+    page.getByRole("button", { name: "Open tasks", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".tasks-table tbody tr:visible")).toHaveCount(1);
+  await openEditor(
+    page,
+    page.getByRole("button", { name: "Add task", exact: true }),
+  );
+  await detail
+    .getByRole("combobox", { name: "Project", exact: true })
+    .selectOption({
+      label: "Arbeitsplatz erneuern",
+    });
+  await detail.getByLabel("Title", { exact: true }).fill("Projekt-global-task");
+  await saveEditor(page, page);
+  await expect(
+    page.getByRole("searchbox", { name: "Search tasks" }),
+  ).toHaveValue("Projekt");
+  await expect(page.locator(".tasks-table tbody tr:visible")).toHaveCount(2);
+
+  await nav.getByRole("button", { name: "Events", exact: true }).click();
+  await page.getByRole("searchbox", { name: "Search events" }).fill("Projekt");
+  await page.getByLabel("Category", { exact: true }).selectOption("Meeting");
+  await page.getByRole("button", { name: "Timeline", exact: true }).click();
+  for (const save of [false, true]) {
+    await openEditor(
+      page,
+      page.getByRole("button", { name: "Add event", exact: true }),
+    );
+    await detail
+      .getByRole("combobox", { name: "Project", exact: true })
+      .selectOption({
+        label: "Arbeitsplatz erneuern",
+      });
+    await detail
+      .getByLabel("Title", { exact: true })
+      .fill(save ? "Projekt-global-event" : "Verworfenes Ereignis");
+    await detail
+      .getByRole("button", { name: save ? "Save" : "Cancel", exact: true })
+      .click();
+    await expect(
+      page.getByRole("searchbox", { name: "Search events" }),
+    ).toHaveValue("Projekt");
+    await expect(page.getByLabel("Category", { exact: true })).toHaveValue(
+      "Meeting",
+    );
+    await expect(
+      page.getByRole("button", { name: "Timeline", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".timeline .event-item:visible")).toHaveCount(
+      save ? 2 : 1,
+    );
+  }
+  expect(page.context().pages()).toHaveLength(pageCount);
+
+  const downloaded = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
+    .click();
+  const backup = JSON.parse(
+    await readFile((await (await downloaded).path())!, "utf8"),
+  );
+  const owner = backup.projects.find(
+    (project: { name: string }) => project.name === "Arbeitsplatz erneuern",
+  );
+  expect(backup.projects[0].id).not.toBe(owner.id);
+  expect(backup.todos).toHaveLength(6);
+  expect(backup.events).toHaveLength(8);
+  for (const item of [...backup.todos, ...backup.events]) {
+    expect(item.title).not.toMatch(/^Verworfen/);
+    if (item.title.startsWith("Projekt-"))
+      expect(item.projectId).toBe(owner.id);
+  }
+  await page.reload();
+  await nav.getByRole("button", { name: "Tasks", exact: true }).click();
+  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(6);
+  await nav.getByRole("button", { name: "Events", exact: true }).click();
+  await expect(page.locator(".event-item")).toHaveCount(8);
+});
+
 test("text search combines with existing list filters and can be cleared", async ({
   page,
 }) => {

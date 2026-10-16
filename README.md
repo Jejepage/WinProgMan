@@ -6,7 +6,7 @@ Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische
 
 Seit 16. Oktober 2026 ist die Windows-Hülle als Quellprojekt enthalten. Die gebaute Anwendung startet ohne Node.js, Terminal oder lokalen Webserver. Voraussetzung auf dem Zielgerät ist Microsoft Edge WebView2; der Installer lädt es bei Bedarf nach. Die Testversion ist nicht signiert. Automatische Updates sind noch nicht eingerichtet.
 
-Der Installer wird unter `src-tauri/target/windows/release/bundle/nsis/WinProgMan_0.2.0_x64-setup.exe` erzeugt. Er installiert für den aktuellen Windows-Benutzer. Die eigentliche Anwendung liegt im Build unter `src-tauri/target/windows/release/winprogman.exe`. Diese EXE verwendet denselben festen Benutzerdatenbereich wie die installierte Version; sie ist keine portable Ausgabe mit Daten neben der EXE.
+Der Installer wird unter `src-tauri/target/windows/release/bundle/nsis/WinProgMan_0.2.1_x64-setup.exe` erzeugt. Er installiert für den aktuellen Windows-Benutzer. Die eigentliche Anwendung liegt im Build unter `src-tauri/target/windows/release/winprogman.exe`. Diese EXE verwendet denselben festen Benutzerdatenbereich wie die installierte Version; sie ist keine portable Ausgabe mit Daten neben der EXE.
 
 Die Windows-App beginnt mit einem eigenen Bestand; Browser-Testdaten werden nicht übernommen. Der WebView-Profilordner mit IndexedDB und Darstellungseinstellungen liegt unter `%LOCALAPPDATA%/io.github.jejepage.winprogman/webview`. Kennung und Pfad müssen bei Updates erhalten bleiben. Programmdateien können ersetzt werden, während dieser Datenordner bestehen bleibt. Vor Updates trotzdem JSON exportieren. Ein JSON-Export öffnet unter Windows einen nativen Speicherdialog; Abbrechen schreibt keine Datei. JSON-Import behält die geprüfte Vorschau und Ersetzungsbestätigung. Weblinks öffnen im Standardbrowser. Datei-/Netzwerkpfade bleiben vorerst zum Anzeigen und Kopieren verfügbar.
 
@@ -27,6 +27,8 @@ Der [Windows-Build für Commit 87fe048](https://github.com/Jejepage/WinProgMan/a
 Besonderheit dieser Entwicklungsumgebung: Die aus Codex gestartete Testinstallation liegt tatsächlich unter `C:/Users/User/AppData/Local/Packages/OpenAI.Codex_2p2nqsd0c76g0/LocalCache/Local/WinProgMan`. Auch AppData kann in diesem Kontext umgeleitet werden. Für eine reguläre Installation außerhalb dieser Umgebung den heruntergeladenen Installer direkt aus dem Windows-Explorer starten; die lokale Testinstallation und deren Prüfbestand müssen nicht übernommen werden.
 
 ## Start
+
+Änderung in 0.2.1 (16. Oktober 2026): „Add task“ und „Add event“ öffnen dieselbe Detailseite innerhalb der App wie das Bearbeiten. Es gibt kein separates Inline-Anlegeformular mehr. Auf der Projektseite wird das aktuelle Projekt vorgewählt; es bleibt im Detailformular auswählbar. „Save“ legt den Eintrag an und führt zurück, „Cancel“ verwirft den Entwurf ohne Datensatz. Listenfilter und Timeline-Auswahl bleiben beim Zurückkehren erhalten. Die Browser-URL kann auch eine neue Detailansicht öffnen; ein Reload verwirft ungespeicherte Eingaben wie beim Bearbeiten. Bereits gespeicherte Daten bleiben beim Windows-Update erhalten.
 
 Voraussetzung: Node.js 24 und npm.
 

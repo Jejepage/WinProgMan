@@ -95,7 +95,13 @@ export function App() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const kind = params.get("detail");
     return kind === "task" || kind === "event"
-      ? { kind, id: params.get("id") || "" }
+      ? {
+          kind,
+          id: params.get("id") || "",
+          creating: params.get("mode") === "new",
+          projectId: params.get("project") || undefined,
+          notesOnly: params.get("note") === "1",
+        }
       : null;
   };
   const [detail, setDetail] = useState(readDetail);
@@ -281,10 +287,21 @@ export function App() {
         const todo = data.todos.find((item) => item.id === detail.id);
         const event = data.events.find((item) => item.id === detail.id);
         const item = detail.kind === "task" ? todo : event;
+        const initialProjectId = data.projects.some(
+          (p) => p.id === detail.projectId,
+        )
+          ? detail.projectId
+          : undefined;
+        const detailKey = detail.creating
+          ? `new-${detail.kind}-${initialProjectId || "global"}`
+          : detail.id;
+        const unavailable = detail.creating ? !data.projects.length : !item;
         return (
           <section className="detail-page">
             <div className="page-heading">
-              <h1>{detail.kind === "task" ? "Edit task" : "Edit event"}</h1>
+              <h1>
+                {`${detail.creating ? "New" : "Edit"} ${detail.kind}`}
+              </h1>
             </div>
             {error && (
               <p role="alert" className="panel">
@@ -293,32 +310,39 @@ export function App() {
             )}
             {loading ? (
               <p>Loading …</p>
-            ) : !item ? (
+            ) : unavailable ? (
               <section className="panel">
-                <p>This item no longer exists.</p>
+                <p>
+                  {detail.creating
+                    ? "Create a project before adding tasks or events."
+                    : "This item no longer exists."}
+                </p>
                 <button className="button secondary" onClick={closeDetail}>
                   Back to list
                 </button>
               </section>
-            ) : detail.kind === "task" && todo ? (
+            ) : detail.kind === "task" ? (
               <TodosPanel
-                key={todo.id}
+                key={detailKey}
                 {...common}
-                todos={[todo]}
-                initialTodo={todo}
+                todos={!detail.creating && todo ? [todo] : []}
+                initialTodo={detail.creating ? undefined : todo}
+                initialProjectId={initialProjectId}
                 detailOnly
                 onClose={closeDetail}
               />
-            ) : event ? (
+            ) : (
               <EventsPanel
-                key={event.id}
+                key={detailKey}
                 {...common}
-                events={[event]}
-                initialEvent={event}
+                events={!detail.creating && event ? [event] : []}
+                initialEvent={detail.creating ? undefined : event}
+                initialProjectId={initialProjectId}
+                notesOnly={detail.creating && detail.notesOnly}
                 detailOnly
                 onClose={closeDetail}
               />
-            ) : null}
+            )}
           </section>
         );
       })()
