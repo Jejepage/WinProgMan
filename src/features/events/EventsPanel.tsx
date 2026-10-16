@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import {
   categories,
   metadata,
@@ -10,7 +10,7 @@ import {
   type ProjectEvent,
 } from "../../domain/types";
 import { formatDate, sortEvents } from "../../domain/queries";
-import { MarkdownEditor } from "./MarkdownEditor";
+import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
 import { MarkdownNote } from "./MarkdownNote";
 import { legacyNoteToMarkdown } from "./markdown";
 import { SearchField } from "../../ui/components";
@@ -69,6 +69,8 @@ export function EventsPanel({
   onProject,
 }: Props) {
   const prefix = useId();
+  const noteEditor = useRef<MarkdownEditorHandle>(null);
+  const [noteError, setNoteError] = useState("");
   const [category, setCategory] = useState<Category | "">("");
   const [timeline, setTimeline] = useState(
     !notesOnly && initialMode === "timeline",
@@ -129,7 +131,18 @@ export function EventsPanel({
   async function save(submit: FormEvent) {
     submit.preventDefault();
     if (!editor || busy || !editor.draft.projectId) return;
-    const { draft, original } = editor;
+    const { original } = editor;
+    let note: string;
+    try {
+      note = noteEditor.current?.read() ?? editor.draft.note;
+    } catch (error) {
+      setNoteError(
+        error instanceof Error ? error.message : "Unable to read the note.",
+      );
+      return;
+    }
+    setNoteError("");
+    const draft = { ...editor.draft, note };
     const value: ProjectEvent = {
       ...(original ?? metadata()),
       updatedAt: new Date().toISOString(),
@@ -147,12 +160,16 @@ export function EventsPanel({
     if (!draft.note) delete value.note;
     // Other event edits do not change the bytes or interpretation of legacy notes.
     if (
-      original?.note &&
-      !original.noteFormat &&
-      draft.note === legacyNoteToMarkdown(original.note)
+      original &&
+      draft.note ===
+        (original.noteFormat === "markdown"
+          ? original.note || ""
+          : legacyNoteToMarkdown(original.note || ""))
     ) {
-      value.note = original.note;
-      delete value.noteFormat;
+      if (original.note !== undefined) value.note = original.note;
+      else delete value.note;
+      if (original.noteFormat) value.noteFormat = original.noteFormat;
+      else delete value.noteFormat;
     } else if (draft.note) {
       value.noteFormat = "markdown";
     } else {
@@ -434,12 +451,13 @@ export function EventsPanel({
             )}
           </div>
           <MarkdownEditor
+            ref={noteEditor}
             key={editor.original?.id || "new"}
             id={`${prefix}-note`}
             value={editor.draft.note}
             disabled={busy}
-            onChange={(note) => patch({ note })}
           />
+          {noteError && <p role="alert">{noteError}</p>}
           <div className="actions">
             <button className="button" disabled={busy}>
               Save
@@ -458,7 +476,20 @@ export function EventsPanel({
                 className="button danger"
                 disabled={busy}
                 aria-label={`Delete ${itemLabel} ${editor.original.title}`}
-                onClick={() => setDeleting(editor.original || null)}
+                onClick={() => {
+                  try {
+                    const note =
+                      noteEditor.current?.read() ?? editor.draft.note;
+                    patch({ note });
+                    setDeleting(editor.original || null);
+                  } catch (error) {
+                    setNoteError(
+                      error instanceof Error
+                        ? error.message
+                        : "Unable to read the note.",
+                    );
+                  }
+                }}
               >
                 Delete {itemLabel}
               </button>

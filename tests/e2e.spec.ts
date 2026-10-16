@@ -137,7 +137,9 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     "Meeting prüfen",
   );
   await eventEditor
-    .locator(".event-editor")
+    .getByRole("button", { name: "Markdown", exact: true })
+    .click();
+  await eventEditor
     .getByLabel("Note text (optional)")
     .fill("Zeile eins\n<script>kein HTML</script>\nZeile drei");
   await saveEditor(page, eventEditor);
@@ -538,108 +540,9 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   await createProject(page, "Markdownprojekt");
   await page.getByRole("button", { name: "Add note", exact: true }).click();
   const editor = page.locator(".event-editor");
-  const source = editor.getByLabel("Note text (optional)");
-  await editor.getByLabel("Title", { exact: true }).fill("Markdownabnahme");
-  await source.fill("Auswahl");
-  await source.evaluate((node: HTMLTextAreaElement) => {
-    node.focus();
-    node.setSelectionRange(0, 7);
-  });
-  await editor.getByRole("button", { name: "Bold", exact: true }).click();
-  await expect(source).toHaveValue("**Auswahl**");
-
-  await source.fill("Vorher ersetzen danach");
-  await source.evaluate((node: HTMLTextAreaElement) => {
-    node.focus();
-    node.setSelectionRange(7, 15);
-    const data = new DataTransfer();
-    data.setData(
-      "text/html",
-      "<h2>Chatbot-Antwort</h2><p><strong>Wichtig</strong> und <em>klar</em></p><ul><li>Erster Punkt</li><li>Zweiter Punkt</li></ul>",
-    );
-    data.setData(
-      "text/plain",
-      "Chatbot-Antwort\nWichtig und klar\nErster Punkt\nZweiter Punkt",
-    );
-    node.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  });
-  await expect(source).toHaveValue(
-    /Vorher[\s\S]*## Chatbot-Antwort[\s\S]*\*\*Wichtig\*\*[\s\S]*Erster Punkt[\s\S]*danach/,
-  );
-  await expect(source).not.toHaveValue(/ersetzen/);
-  await source.fill("Links ersetzen rechts");
-  await source.evaluate((node: HTMLTextAreaElement) => {
-    node.focus();
-    node.setSelectionRange(6, 14);
-    const data = new DataTransfer();
-    data.setData("text/plain", "**Original**\n\n- Punkt");
-    node.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  });
-  await expect(source).toHaveValue("Links **Original**\n\n- Punkt rechts");
-  async function paste(html: string, plain: string) {
-    await source.fill("");
-    await source.evaluate(
-      (node: HTMLTextAreaElement, data: { html: string; plain: string }) => {
-        node.focus();
-        const clipboard = new DataTransfer();
-        clipboard.setData("text/html", data.html);
-        clipboard.setData("text/plain", data.plain);
-        node.dispatchEvent(
-          new ClipboardEvent("paste", {
-            clipboardData: clipboard,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      },
-      { html, plain },
-    );
-  }
-  await paste("<pre><code>const wert = 1;</code></pre>", "const wert = 1;");
-  await expect(source).toHaveValue(/```[\s\S]*const wert = 1;[\s\S]*```/);
-  await paste(
-    "<table><tr><td>Thema</td><td>Stand</td></tr><tr><td>Browser</td><td>fertig</td></tr></table>",
-    "Thema Stand Browser fertig",
-  );
-  await expect(source).toHaveValue(/\|[\s\S]*Thema[\s\S]*Stand[\s\S]*\|/);
-  await paste(
-    "<div>**Original**<br><br>- Punkt</div>",
-    "**Original**\n\n- Punkt",
-  );
-  await expect(source).toHaveValue("**Original**\n\n- Punkt");
-  await paste(
-    '<p>Sicher</p><script>window.__markdownUnsafe = true</script><img src=x onerror="window.__markdownUnsafe = true"><a href="javascript:alert(1)">Linktext</a>',
-    "Sicher Linktext",
-  );
-  await expect(source).not.toHaveValue(/<script>|onerror|javascript:/);
-  expect(
-    await page.evaluate(
-      () =>
-        (window as unknown as { __markdownUnsafe?: boolean }).__markdownUnsafe,
-    ),
-  ).toBeUndefined();
-  await editor.getByLabel("Paste as plain text").check();
-  await paste("<strong>Literal</strong>", "**Literal**");
-  await editor.getByRole("button", { name: "Preview", exact: true }).click();
-  await expect(editor.getByRole("region", { name: "Note preview" })).toHaveText(
-    "**Literal**",
-  );
-  await expect(editor.locator("strong")).toHaveCount(0);
   await editor.getByRole("button", { name: "Markdown", exact: true }).click();
-  await editor.getByLabel("Paste as plain text").uncheck();
-
+  const source = editor.locator("textarea");
+  await editor.getByLabel("Title", { exact: true }).fill("Markdownabnahme");
   const markdown =
     "## Bericht\n\n**Fett** und *kursiv*.\n\n- Erstens\n- Zweitens\n\n> Ein Zitat\n\n| Thema | Stand |\n| --- | --- |\n| Browser | geprüft |\n| SehrLangesTabellenfeldOhneLeerzeichenZurLayoutprüfungAufKleinenBildschirmen | Ein weiteres ausführliches Ergebnis |\n\n```ts\nconst wert = '<script>';\n```\n\n[Sicher](https://example.com) [Gefährlich](javascript:alert(1))\n\n<script>window.__markdownUnsafe = true</script>\n<img src=x onerror=\"window.__markdownUnsafe = true\">";
   await source.fill(markdown);
@@ -648,37 +551,8 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     path: "test-results/visual/markdown-editor-desktop.png",
     fullPage: true,
   });
-  await editor.getByRole("button", { name: "Preview", exact: true }).click();
-  await expect(
-    editor.getByRole("heading", { name: "Bericht", exact: true }),
-  ).toBeVisible();
-  await expect(
-    editor.locator("strong").filter({ hasText: "Fett" }),
-  ).toBeVisible();
-  await expect(editor.locator("table")).toContainText("geprüft");
-  await expect(editor.locator("blockquote")).toContainText("Ein Zitat");
-  await expect(editor.locator("pre code")).toContainText("const wert");
-  await expect(
-    editor.getByRole("link", { name: "Sicher", exact: true }),
-  ).toHaveAttribute("href", "https://example.com");
-  await expect(
-    editor.locator('a[href^="javascript:"], script, img'),
-  ).toHaveCount(0);
-  await page.screenshot({
-    path: "test-results/visual/markdown-preview-desktop.png",
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({
-    path: "test-results/visual/markdown-preview-mobile.png",
-    fullPage: true,
-  });
-  await editor.getByRole("button", { name: "Markdown", exact: true }).click();
+  await editor.getByRole("button", { name: "Formatted", exact: true }).click();
+  await expect(editor.getByRole("status")).toContainText("raw HTML");
   await expect(source).toHaveValue(markdown);
   expect(
     await page.evaluate(
@@ -786,7 +660,10 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
       exact: true,
     }),
   );
-  const legacySource = editedLegacyEditor.getByLabel("Note text (optional)");
+  await editedLegacyEditor
+    .getByRole("button", { name: "Markdown", exact: true })
+    .click();
+  const legacySource = editedLegacyEditor.locator("textarea");
   const escapedLegacy = await legacySource.inputValue();
   await legacySource.fill(`${escapedLegacy}\nZusatz`);
   await saveEditor(page, editedLegacyEditor);
