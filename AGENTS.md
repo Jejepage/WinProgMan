@@ -42,3 +42,10 @@
 - Playwright benutzt Edge und Port 5174; `npm run test:e2e`. Bei Sandbox-EPERM Prüfung außerhalb der Sandbox anfordern. `npm run format:check` für Formatierung.
 - Erweiterungen am 2026-10-13: Projektstatus, eine Projektkategorie mit Einstellungen/Filtern, alle offenen To-Dos im Überblick, Webadressen ohne Protokoll und Markdown-Notizen mit Vorschau/Toolbar/HTML-Einfügen umgesetzt. Sicherungsformat 3, v1/v2 weiterhin importierbar.
 - Als Nächstes Benutzerfeedback zur Phase-1-Oberfläche aufnehmen; erst danach Phase 2 angehen. Tenant-Freigabe kann parallel geklärt werden.
+
+## Folgeauftrag 16. Oktober 2026
+- Benutzer hat die Tauri-Windows-Testversion mit Installer und festem lokalen Datenbereich ausdrücklich beauftragt. Browser-Testdaten müssen nicht übernommen werden. Die bisherige Einschränkung zu Tauri ist damit für diesen Auftrag aufgehoben.
+- Gemeinsamer Web-Kern bleibt erhalten, IndexedDB weiterhin hinter ProjectStore. Native Plattformfunktionen unter `src/platform`, Rust-Hülle unter `src-tauri`.
+- Feste Produktionskennung: `io.github.jejepage.winprogman`; WebView-Profil unter `%LOCALAPPDATA%/io.github.jejepage.winprogman/webview`. Entwicklung nutzt `.dev` als getrennte Kennung. Keine automatische Löschung oder Umbenennung dieses Profils bei Updates.
+- `npm run desktop:dev` und `npm run desktop:build -- -- --locked`; Buildausgaben unter `src-tauri/target/windows`. Alte lokale Buildreste erhalten, nicht versionieren oder als aktuellen Quellstand behandeln.
+- Microsoft-Login, Sync, Outlook, native Pfadöffnung und automatische Updates bleiben spätere Aufgaben. Aktuelle Windows-Abnahme und Einschränkungen in README dokumentieren.

@@ -1,0 +1,21 @@
+[package]
+name = "winprogman"
+version = "0.2.0"
+description = "Personal project management"
+authors = ["WinProgMan"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "winprogman_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"

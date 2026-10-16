@@ -2,6 +2,24 @@
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
+## Windows-Testversion (Tauri)
+
+Seit 16. Oktober 2026 ist die Windows-Hülle als Quellprojekt enthalten. Die gebaute Anwendung startet ohne Node.js, Terminal oder lokalen Webserver. Voraussetzung auf dem Zielgerät ist Microsoft Edge WebView2; der Installer lädt es bei Bedarf nach. Die Testversion ist nicht signiert. Automatische Updates sind noch nicht eingerichtet.
+
+Der Installer wird unter `src-tauri/target/windows/release/bundle/nsis/WinProgMan_0.2.0_x64-setup.exe` erzeugt. Er installiert für den aktuellen Windows-Benutzer. Die eigentliche Anwendung liegt im Build unter `src-tauri/target/windows/release/winprogman.exe`. Diese EXE verwendet denselben festen Benutzerdatenbereich wie die installierte Version; sie ist keine portable Ausgabe mit Daten neben der EXE.
+
+Die Windows-App beginnt mit einem eigenen Bestand; Browser-Testdaten werden nicht übernommen. Der WebView-Profilordner mit IndexedDB und Darstellungseinstellungen liegt unter `%LOCALAPPDATA%/io.github.jejepage.winprogman/webview`. Kennung und Pfad müssen bei Updates erhalten bleiben. Programmdateien können ersetzt werden, während dieser Datenordner bestehen bleibt. Vor Updates trotzdem JSON exportieren. Ein JSON-Export öffnet unter Windows einen nativen Speicherdialog; Abbrechen schreibt keine Datei. JSON-Import behält die geprüfte Vorschau und Ersetzungsbestätigung. Weblinks öffnen im Standardbrowser. Datei-/Netzwerkpfade bleiben vorerst zum Anzeigen und Kopieren verfügbar.
+
+Zum Entwickeln und Bauen zusätzlich Rust (MSVC-Toolchain), Visual Studio C++ Build Tools mit Windows SDK und WebView2 installieren; siehe [Tauri-Voraussetzungen](https://v2.tauri.app/start/prerequisites/).
+
+```powershell
+npm ci
+npm run desktop:dev
+npm run desktop:build -- -- --locked
+```
+
+`desktop:dev` verwendet Port 1420 und einen separaten Datenbereich unter `%LOCALAPPDATA%/io.github.jejepage.winprogman.dev/webview`; dadurch verändert die Entwicklung den installierten Bestand nicht. Neue Rust-Builds liegen bewusst unter `src-tauri/target/windows`, getrennt von alten lokalen Buildresten. `Cargo.lock` und `package-lock.json` gehören zum Quellprojekt; `target/`, generierte Schemas und lokale Daten gehören nicht ins Repository. Die Windows-CI baut den Installer als herunterladbares Artefakt; sie veröffentlicht keine Releases automatisch.
+
 ## Start
 
 Voraussetzung: Node.js 24 und npm.

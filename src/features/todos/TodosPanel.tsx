@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { confirmAction } from "../../platform/desktop";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { openItem } from "../../ui/itemNavigation";
@@ -230,7 +231,7 @@ export function TodosPanel({
                 aria-label={`${editing.title} delete`}
                 onClick={async () => {
                   if (
-                    confirm(`Delete "${editing.title}"?`) &&
+                    (await confirmAction(`Delete "${editing.title}"?`)) &&
                     (await onChange({ type: "todo.delete", id: editing.id }))
                   ) {
                     setAdding(false);

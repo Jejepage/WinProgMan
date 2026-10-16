@@ -35,6 +35,7 @@ import { EventsPanel } from "../features/events/EventsPanel";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { CategorySettings } from "../features/projects/CategorySettings";
 import { openItem } from "../ui/itemNavigation";
+import { confirmAction, saveBackup } from "../platform/desktop";
 const store = new IndexedDbProjectStore();
 import {
   LayoutDashboard,
@@ -214,9 +215,9 @@ export function App() {
       data.events.filter((event) => event.projectId === project.id).length +
       data.links.filter((link) => link.projectId === project.id).length;
     if (
-      confirm(
+      (await confirmAction(
         `Delete project "${project.name}" and ${count} related items permanently?`,
-      ) &&
+      )) &&
       (await change({ type: "project.delete", id: project.id }))
     ) {
       setProjectId("");
@@ -234,17 +235,8 @@ export function App() {
   async function download() {
     try {
       const value = await store.exportData();
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(value, null, 2)], {
-          type: "application/json",
-        }),
-      );
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `winprogman-${today}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setNotice("JSON backup downloaded.");
+      if (await saveBackup(`winprogman-${today}.json`, JSON.stringify(value, null, 2)))
+        setNotice("JSON backup downloaded.");
     } catch (e) {
       setError(errorLabel(e));
     }
@@ -438,8 +430,8 @@ export function App() {
               <button
                 className="button danger"
                 disabled={busy}
-                onClick={() => {
-                  if (confirm("Replace all current data with this backup?"))
+                onClick={async () => {
+                  if (await confirmAction("Replace all current data with this backup?"))
                     void transact(() => store.importData(pending)).then(
                       (ok) => {
                         if (ok) {

@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Local app window; backup access is limited to files selected in a dialog.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-save",
+    "dialog:allow-confirm",
+    "fs:allow-write-text-file",
+    "opener:default"
+  ]
+}

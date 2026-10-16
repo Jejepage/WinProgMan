@@ -1,0 +1,3 @@
+[build]
+# Keep new reproducible builds separate from historical local build artifacts.
+target-dir = "target/windows"

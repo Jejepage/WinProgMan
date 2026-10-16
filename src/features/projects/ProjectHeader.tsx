@@ -11,6 +11,8 @@ import {
   type ProjectStatus,
 } from "../../domain/types";
 import { normalizeLinkTarget } from "../../domain/links";
+import { confirmAction } from "../../platform/desktop";
+import { ExternalLink } from "../../ui/ExternalLink";
 interface Props {
   project: Project;
   links: Link[];
@@ -209,13 +211,11 @@ export function ProjectHeader({
               {/^(https?:\/\/|mailto:|tel:)/i.test(
                 normalizeLinkTarget(l.target),
               ) ? (
-                <a
+                <ExternalLink
                   href={normalizeLinkTarget(l.target)}
-                  target="_blank"
-                  rel="noreferrer"
                 >
                   {l.label} ↗
-                </a>
+                </ExternalLink>
               ) : (
                 <strong>{l.label}</strong>
               )}
@@ -246,8 +246,8 @@ export function ProjectHeader({
               <button
                 className="icon-button danger"
                 disabled={busy}
-                onClick={() => {
-                  if (confirm(`Delete link "${l.label}"?`))
+                onClick={async () => {
+                  if (await confirmAction(`Delete link "${l.label}"?`))
                     void onChange({ type: "link.delete", id: l.id });
                 }}
               >
