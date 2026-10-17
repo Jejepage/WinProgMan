@@ -8,6 +8,40 @@ import type { ProjectStore } from "./ProjectStore";
 import { validateData, validateImport } from "./validation";
 
 function applyChange(data: AppData, change: DomainChange): AppData {
+  if (change.type === "samples.load") {
+    if (data.projects.length > 0)
+      throw new Error(
+        "Sample data can only be loaded when there are no projects.",
+      );
+    return { ...change.value, brainstorm: data.brainstorm };
+  }
+  if (change.type === "brainstorm.save") {
+    if (change.expectedRevision !== data.brainstorm.revision)
+      throw new Error(
+        "Brainstorm was changed in another window. Your draft has been preserved.",
+      );
+    return {
+      ...data,
+      brainstorm: {
+        text: change.text,
+        revision: data.brainstorm.revision + 1,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+  }
+  if (
+    change.type === "project.save" &&
+    !data.projects.some((project) => project.id === change.value.id)
+  ) {
+    const number =
+      change.value.number === 0
+        ? Math.max(0, ...data.projects.map((project) => project.number)) + 1
+        : change.value.number;
+    return {
+      ...data,
+      projects: [...data.projects, { ...change.value, number }],
+    };
+  }
   if (change.type === "project.saveWithLinks") {
     if (!data.projects.some((project) => project.id === change.value.id))
       throw new Error("The project no longer exists.");
@@ -184,7 +218,7 @@ export class IndexedDbProjectStore implements ProjectStore {
   async exportData(): Promise<ExportEnvelope> {
     return {
       ...(await this.load()),
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportedAt: new Date().toISOString(),
     };
   }

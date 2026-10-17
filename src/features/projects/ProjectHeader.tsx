@@ -15,6 +15,7 @@ import { confirmAction } from "../../platform/desktop";
 import { ProjectLink } from "../../ui/ProjectLink";
 interface Props {
   project: Project;
+  projects: Project[];
   links: Link[];
   projectCategories: ProjectCategory[];
   busy: boolean;
@@ -23,6 +24,7 @@ interface Props {
 }
 export function ProjectHeader({
   project,
+  projects,
   links,
   projectCategories,
   busy,
@@ -32,6 +34,8 @@ export function ProjectHeader({
   const editorId = useId();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
+  const [number, setNumber] = useState(String(project.number));
+  const [numberError, setNumberError] = useState("");
   const [description, setDescription] = useState(project.description);
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [categoryId, setCategoryId] = useState(project.categoryId || "");
@@ -43,12 +47,31 @@ export function ProjectHeader({
   const [draftLinks, setDraftLinks] = useState<Link[]>([]);
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const parsedNumber = Number(number);
+    if (
+      !/^\d+$/.test(number) ||
+      !Number.isSafeInteger(parsedNumber) ||
+      parsedNumber < 1
+    ) {
+      setNumberError("Enter a positive whole project number.");
+      return;
+    }
+    if (
+      projects.some(
+        (item) => item.id !== project.id && item.number === parsedNumber,
+      )
+    ) {
+      setNumberError(`Project number ${parsedNumber} is already in use.`);
+      return;
+    }
+    setNumberError("");
     if (linkEditor) {
       setMessage("Save or cancel the link draft before saving the project.");
       return;
     }
     const value: Project = {
       ...project,
+      number: parsedNumber,
       name: name.trim() || "New project",
       description,
       status,
@@ -118,6 +141,8 @@ export function ProjectHeader({
             if (editing) return;
             event.preventDefault();
             setName(project.name);
+            setNumber(String(project.number));
+            setNumberError("");
             setDescription(project.description);
             setStatus(project.status);
             setCategoryId(project.categoryId || "");
@@ -141,6 +166,27 @@ export function ProjectHeader({
       {editing && (
         <form id={editorId} className="editor" onSubmit={save}>
           <div className="form-grid">
+            <label className="field">
+              Project number
+              <input
+                inputMode="numeric"
+                aria-label="Project number"
+                value={number}
+                aria-invalid={!!numberError}
+                aria-describedby={
+                  numberError ? `${editorId}-number-error` : undefined
+                }
+                onChange={(event) => {
+                  setNumber(event.target.value);
+                  setNumberError("");
+                }}
+              />
+              {numberError && (
+                <span id={`${editorId}-number-error`} role="alert">
+                  {numberError}
+                </span>
+              )}
+            </label>
             <label className="field">
               Status
               <select

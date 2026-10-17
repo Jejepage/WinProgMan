@@ -62,6 +62,7 @@ describe("fachliche Kalendergrenzen", () => {
       {
         ...base,
         id: "p",
+        number: 1,
         name: "Notes only",
         description: "",
         status: "Aktiv",
@@ -83,6 +84,7 @@ describe("fachliche Kalendergrenzen", () => {
       {
         ...base,
         id: "p1",
+        number: 1,
         name: "First",
         description: "",
         status: "Aktiv" as const,
@@ -91,6 +93,7 @@ describe("fachliche Kalendergrenzen", () => {
       {
         ...base,
         id: "p2",
+        number: 2,
         name: "Second",
         description: "",
         status: "Aktiv" as const,
@@ -98,6 +101,7 @@ describe("fachliche Kalendergrenzen", () => {
       {
         ...base,
         id: "p3",
+        number: 3,
         name: "Third",
         description: "",
         status: "Aktiv" as const,
@@ -106,6 +110,7 @@ describe("fachliche Kalendergrenzen", () => {
       {
         ...base,
         id: "p4",
+        number: 4,
         name: "Fourth",
         description: "",
         status: "Aktiv" as const,
@@ -134,7 +139,8 @@ describe("fachliche Kalendergrenzen", () => {
   });
   it("leitet ruhend ab und zählt offene Aufgaben ohne Datum", () => {
     const data = emptyData();
-    data.projects = ["p", "q", "r", "s"].map((id) => ({
+    data.projects = ["p", "q", "r", "s"].map((id, index) => ({
+      number: index + 1,
       ...base,
       id,
       name: id,

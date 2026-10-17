@@ -9,6 +9,7 @@ const base = {
   updatedAt: "2026-10-16T08:00:00Z",
 };
 const project: Project = {
+  number: 1,
   ...base,
   id: "project",
   name: "Garden",

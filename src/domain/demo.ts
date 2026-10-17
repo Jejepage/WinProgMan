@@ -1,4 +1,4 @@
-import { metadata, type AppData } from "./types";
+import { emptyBrainstorm, metadata, type AppData } from "./types";
 import { localToday } from "./queries";
 
 export function demoData(): AppData {
@@ -8,6 +8,7 @@ export function demoData(): AppData {
     return localToday(value);
   };
   const active = {
+    number: 1,
     ...metadata(),
     status: "Aktiv" as const,
     name: "Website überarbeiten",
@@ -15,6 +16,7 @@ export function demoData(): AppData {
       "Konzept, Inhalte und Veröffentlichung der persönlichen Website.",
   };
   const resting = {
+    number: 2,
     ...metadata(),
     status: "Abgeschlossen" as const,
     name: "Arbeitsplatz erneuern",
@@ -22,6 +24,7 @@ export function demoData(): AppData {
       "Abgeschlossenes Beispielprojekt – bleibt in der Projektliste erreichbar.",
   };
   return {
+    brainstorm: emptyBrainstorm(),
     projectCategories: [],
     projects: [active, resting],
     links: [

@@ -10,7 +10,7 @@ import { safeNoteUrl } from "./markdown";
 import { ExternalLink } from "../../ui/ExternalLink";
 
 export interface MarkdownEditorHandle {
-  read(): string;
+  read(allowOpenLink?: boolean): string;
 }
 
 /** Crepe owns the working document. Reading on Save avoids per-keystroke parent renders. */
@@ -19,12 +19,20 @@ export function MarkdownEditor({
   value,
   disabled,
   ref,
+  onDocumentChange,
+  label = "Note text (optional)",
+  compact = false,
 }: {
   id: string;
   value: string;
   disabled: boolean;
   ref?: Ref<MarkdownEditorHandle>;
+  onDocumentChange?: () => void;
+  label?: string;
+  compact?: boolean;
 }) {
+  const changeRef = useRef(onDocumentChange);
+  changeRef.current = onDocumentChange;
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<RichEditor | null>(null);
   const original = useRef(value);
@@ -50,8 +58,8 @@ export function MarkdownEditor({
   useImperativeHandle(
     ref,
     () => ({
-      read() {
-        if (linkOpen.current)
+      read(allowOpenLink = false) {
+        if (linkOpen.current && !allowOpenLink)
           throw new Error("Apply or close the link editor before saving.");
         if (modeRef.current === "markdown")
           return sourceDirty.current
@@ -74,6 +82,7 @@ export function MarkdownEditor({
         if (cancelled) return;
         const result = await createRichEditor(mount, original.current, {
           id,
+          onDocumentChange: () => changeRef.current?.(),
           plainPaste: () => plainRef.current,
           notice: (message) => {
             if (!cancelled) setNotice(message);
@@ -125,11 +134,9 @@ export function MarkdownEditor({
       ?.querySelector(".ProseMirror")
       ?.setAttribute(
         "aria-label",
-        mode === "formatted"
-          ? "Note text (optional)"
-          : "Inactive formatted editor",
+        mode === "formatted" ? label : "Inactive formatted editor",
       );
-  }, [mode, ready]);
+  }, [mode, ready, label]);
   function showSource() {
     if (modeRef.current === "markdown") return;
     try {
@@ -177,7 +184,7 @@ export function MarkdownEditor({
         className="field"
         htmlFor={mode === "markdown" ? `${id}-source` : id}
       >
-        Note text (optional)
+        {label}
       </label>
       <div
         className="actions editor-modes"
@@ -224,22 +231,25 @@ export function MarkdownEditor({
         <textarea
           ref={source}
           id={`${id}-source`}
-          aria-label="Note text (optional)"
+          aria-label={label}
           rows={12}
           disabled={disabled}
           defaultValue={sourceDisplay}
           onChange={(event) => {
             sourceDirty.current = true;
             sourceValue.current = event.target.value;
+            changeRef.current?.();
           }}
         />
       )}
-      <p className="muted">
-        {mode === "formatted"
-          ? "Edit formatted text directly. Ctrl+B / Ctrl+I / Ctrl+K · Ctrl+Z / Ctrl+Y · Ctrl+Shift+V pastes plain text."
-          : "Markdown source is saved as entered. Unsupported content stays in this mode; formatting tools are available in Formatted."}{" "}
-        Images appear as text. No attachments or uploads.
-      </p>
+      {!compact && (
+        <p className="muted">
+          {mode === "formatted"
+            ? "Edit formatted text directly. Ctrl+B / Ctrl+I / Ctrl+K · Ctrl+Z / Ctrl+Y · Ctrl+Shift+V pastes plain text."
+            : "Markdown source is saved as entered. Unsupported content stays in this mode; formatting tools are available in Formatted."}{" "}
+          Images appear as text. No attachments or uploads.
+        </p>
+      )}
       {link && (
         <div
           className="note-link-dialog"

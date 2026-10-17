@@ -223,7 +223,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify({ ...backup, schemaVersion: 999 })),
   });
   await expect(page.getByRole("alert")).toContainText(
-    "Only backup formats 1, 2, 3 and 4 are supported.",
+    "Only backup formats 1, 2, 3, 4 and 5 are supported.",
   );
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
@@ -308,7 +308,9 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await expect(page.locator(".event-item")).toHaveCount(2);
   await expect(linkRow).toHaveCount(1);
   await page.locator(".breadcrumb").click();
-  await page.locator(".table-wrap tbody tr .project-title").click();
+  await page
+    .locator(".table-wrap tbody tr:has(.project-title) .project-title")
+    .click();
   await page.getByRole("button", { name: "Edit project" }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page
@@ -319,7 +321,9 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await page
     .getByRole("button", { name: "Delete project", exact: true })
     .click();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Load sample data" }),
@@ -431,11 +435,15 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   await page.getByRole("checkbox", { name: "Planned" }).uncheck();
   await page.getByRole("checkbox", { name: "Paused" }).uncheck();
   await page.getByRole("checkbox", { name: "Completed" }).uncheck();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Paused" }).check();
   await page.getByRole("checkbox", { name: "In progress" }).uncheck();
   await page.getByLabel("Filter topic").selectOption({ label: "Persönlich" });
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(1);
 
   const downloadEvent = page.waitForEvent("download");
   await page
@@ -444,7 +452,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const backup = JSON.parse(
     await readFile((await (await downloadEvent).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(4);
+  expect(backup.schemaVersion).toBe(5);
   expect(backup.projectCategories[0].name).toBe("Persönlich");
   expect(backup.projects[0].status).toBe("Pausiert");
   expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
@@ -460,7 +468,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .getByRole("navigation")
     .getByRole("button", { name: /Projects/ })
     .click();
-  await expect(page.locator(".table-wrap tbody tr")).toContainText("No topic");
+  await expect(page.locator(".topic-group-heading")).toContainText("No topic");
   for (const name of ["Planned", "In progress", "Completed"])
     await page.getByRole("checkbox", { name }).check();
   await page.getByLabel("Filter topic").selectOption("");
@@ -469,6 +477,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const completedProject = {
     ...backup.projects[0],
     id: "completed-project",
+    number: backup.projects[0].number + 1,
     name: "Abgeschlossenes Projekt",
     status: "Abgeschlossen",
   };
@@ -513,8 +522,10 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   ).toContainText("1 project topics");
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Replace data", exact: true }).click();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(2);
-  await expect(page.locator(".table-wrap tbody tr").first()).toContainText(
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(2);
+  await expect(page.locator(".topic-group-heading").first()).toContainText(
     "Persönlich",
   );
   await page.reload();
@@ -605,7 +616,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const backup = JSON.parse(
     await readFile((await (await downloaded).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(4);
+  expect(backup.schemaVersion).toBe(5);
   expect(backup.events[0].note).toBe(markdown);
   expect(backup.events[0].noteFormat).toBe("markdown");
   const legacyNote = "**Klartext bleibt Klartext**\n<script>kein HTML</script>";
@@ -616,7 +627,13 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     note: legacyNote,
   };
   delete legacyEvent.noteFormat;
-  const legacy = { ...backup, schemaVersion: 2, events: [legacyEvent] };
+  const legacy = {
+    ...structuredClone(backup),
+    schemaVersion: 2,
+    events: [legacyEvent],
+  };
+  delete legacy.brainstorm;
+  for (const project of legacy.projects) delete project.number;
   for (const value of [backup, legacy]) {
     await page.locator('input[type="file"]').setInputFiles({
       name: "notes.json",
@@ -868,18 +885,24 @@ test("text search combines with existing list filters and can be cleared", async
   await page
     .getByRole("searchbox", { name: "Search projects" })
     .fill("arbeitsplatz");
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
-  await expect(page.locator(".table-wrap tbody tr")).toContainText(
-    "Arbeitsplatz erneuern",
-  );
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toContainText("Arbeitsplatz erneuern");
   await page.getByRole("checkbox", { name: "Completed" }).uncheck();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(0);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(0);
   await expect(
     page.getByText("No projects match the current search or filters."),
   ).toBeVisible();
   await page.getByRole("checkbox", { name: "Completed" }).check();
   await page.getByRole("button", { name: "Clear search" }).click();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(2);
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(2);
 
   await nav.getByRole("button", { name: "Tasks" }).click();
   await page
@@ -962,6 +985,11 @@ test("Do next, event dates, project controls and theme work after reload", async
   await nav.getByRole("button", { name: "Events" }).click();
   await expect(page.locator(".event-item.is-past")).not.toHaveCount(0);
   await expect(page.locator(".event-item.is-upcoming")).not.toHaveCount(0);
+  await expect(
+    page
+      .locator(".event-item")
+      .getByText(/^(Past|Today|Upcoming)$/, { exact: true }),
+  ).toHaveCount(0);
   const pastEventEditor = await openEditor(
     page,
     page.locator(".event-item.is-past .event-date-button").first(),
@@ -984,8 +1012,12 @@ test("Do next, event dates, project controls and theme work after reload", async
     page.locator(".table-wrap").getByRole("button", { name: "Delete" }),
   ).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Completed" }).uncheck();
-  await expect(page.locator(".table-wrap tbody tr")).toHaveCount(1);
-  await page.locator(".table-wrap tbody tr .project-title").click();
+  await expect(
+    page.locator(".table-wrap tbody tr:has(.project-title)"),
+  ).toHaveCount(1);
+  await page
+    .locator(".table-wrap tbody tr:has(.project-title) .project-title")
+    .click();
   await page.getByRole("button", { name: "Edit project" }).click();
   await expect(
     page.getByRole("button", { name: "Delete project" }),
