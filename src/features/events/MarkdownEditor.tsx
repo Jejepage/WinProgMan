@@ -1,136 +1,321 @@
-import { useRef, useState, type ClipboardEvent } from "react";
-import { MarkdownNote } from "./MarkdownNote";
-import { formatNoteSelection, type NoteAction } from "./markdown";
-import { clipboardToMarkdown } from "./clipboard";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
+import type { RichEditor } from "../markdown/crepeAdapter";
+import { safeNoteUrl } from "./markdown";
+import { ExternalLink } from "../../ui/ExternalLink";
 
-const tools: [NoteAction, string][] = [
-  ["bold", "Bold"],
-  ["italic", "Italic"],
-  ["heading", "Heading"],
-  ["list", "List"],
-  ["ordered", "Numbered list"],
-  ["quote", "Quote"],
-  ["link", "Link"],
-  ["code", "Code block"],
-];
+export interface MarkdownEditorHandle {
+  read(): string;
+}
 
+/** Crepe owns the working document. Reading on Save avoids per-keystroke parent renders. */
 export function MarkdownEditor({
   id,
   value,
   disabled,
-  onChange,
+  ref,
 }: {
   id: string;
   value: string;
   disabled: boolean;
-  onChange: (value: string) => void;
+  ref?: Ref<MarkdownEditorHandle>;
 }) {
-  const textarea = useRef<HTMLTextAreaElement>(null);
-  const [preview, setPreview] = useState(false);
-  const [plainPaste, setPlainPaste] = useState(false);
-  function replace(nextValue: string, start: number, end: number) {
-    onChange(nextValue);
-    requestAnimationFrame(() => {
-      textarea.current?.focus();
-      textarea.current?.setSelectionRange(start, end);
-    });
+  const host = useRef<HTMLDivElement>(null);
+  const editor = useRef<RichEditor | null>(null);
+  const original = useRef(value);
+  const modeRef = useRef<"formatted" | "markdown">("formatted");
+  const readyRef = useRef(false);
+  const plainRef = useRef(false);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+  const source = useRef<HTMLTextAreaElement>(null);
+  const sourceValue = useRef(value);
+  const sourceDirty = useRef(false);
+  const [mode, setMode] = useState(modeRef.current);
+  const [sourceDisplay, setSourceDisplay] = useState(value);
+  const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [link, setLink] = useState<{ href: string; text: string } | null>(null);
+  const [linkError, setLinkError] = useState("");
+  const linkOpen = useRef(false);
+  function changeMode(next: typeof mode) {
+    modeRef.current = next;
+    setMode(next);
   }
-  function format(action: NoteAction) {
-    const element = textarea.current;
-    if (!element) return;
-    const result = formatNoteSelection(
-      value,
-      element.selectionStart,
-      element.selectionEnd,
-      action,
-    );
-    replace(result.value, result.selectionStart, result.selectionEnd);
+  useImperativeHandle(
+    ref,
+    () => ({
+      read() {
+        if (linkOpen.current)
+          throw new Error("Apply or close the link editor before saving.");
+        if (modeRef.current === "markdown")
+          return sourceDirty.current
+            ? (source.current?.value ?? sourceValue.current)
+            : sourceValue.current;
+        // Before mounting, no formatted editing is possible: Save the untouched source.
+        if (!readyRef.current || !editor.current) return sourceValue.current;
+        return editor.current.read();
+      },
+    }),
+    [],
+  );
+  useEffect(() => {
+    let cancelled = false;
+    let instance: RichEditor | undefined;
+    const mount = document.createElement("div");
+    host.current!.append(mount);
+    void import("../markdown/crepeAdapter")
+      .then(async ({ createRichEditor }) => {
+        if (cancelled) return;
+        const result = await createRichEditor(mount, original.current, {
+          id,
+          plainPaste: () => plainRef.current,
+          notice: (message) => {
+            if (!cancelled) setNotice(message);
+          },
+          editLink: () => {
+            if (!disabledRef.current) {
+              linkOpen.current = true;
+              setLinkError("");
+              setLink(editor.current!.link());
+            }
+          },
+        });
+        instance = result.editor;
+        if (cancelled) {
+          await instance.destroy();
+          return;
+        }
+        editor.current = instance;
+        instance.setDisabled(disabledRef.current);
+        readyRef.current = true;
+        setReady(true);
+        if (result.reason) {
+          setNotice(result.reason);
+          changeMode("markdown");
+        }
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setNotice(
+          `Formatted editor unavailable. Your source is preserved. ${error instanceof Error ? error.message : ""}`,
+        );
+        changeMode("markdown");
+        readyRef.current = true;
+        setReady(true);
+      });
+    return () => {
+      cancelled = true;
+      readyRef.current = false;
+      editor.current = null;
+      if (instance) void instance.destroy();
+      mount.remove();
+    };
+  }, [id]);
+  useEffect(() => {
+    editor.current?.setDisabled(disabled);
+  }, [disabled]);
+  useEffect(() => {
+    host.current
+      ?.querySelector(".ProseMirror")
+      ?.setAttribute(
+        "aria-label",
+        mode === "formatted"
+          ? "Note text (optional)"
+          : "Inactive formatted editor",
+      );
+  }, [mode, ready]);
+  function showSource() {
+    if (modeRef.current === "markdown") return;
+    try {
+      const next = editor.current?.read() ?? sourceValue.current;
+      sourceValue.current = next;
+      sourceDirty.current = false;
+      setSourceDisplay(next);
+      changeMode("markdown");
+    } catch (error) {
+      setNotice(String(error));
+    }
   }
-  function paste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const plain = event.clipboardData.getData("text/plain");
-    const html = event.clipboardData.getData("text/html");
-    if (!plain && !html) return;
-    event.preventDefault();
-    const insertion = clipboardToMarkdown(plain, html, plainPaste);
-    const element = event.currentTarget;
-    const start = element.selectionStart;
-    replace(
-      value.slice(0, start) + insertion + value.slice(element.selectionEnd),
-      start + insertion.length,
-      start + insertion.length,
-    );
+  function showFormatted() {
+    if (modeRef.current === "formatted" || !editor.current) return;
+    const next = sourceDirty.current
+      ? (source.current?.value ?? sourceValue.current)
+      : sourceValue.current;
+    sourceValue.current = next;
+    try {
+      const changed = next !== editor.current.read();
+      const reason = editor.current.load(next);
+      if (reason) {
+        setNotice(reason);
+        return;
+      }
+      setNotice(
+        changed
+          ? "Markdown applied. Undo history starts from this version."
+          : "",
+      );
+      changeMode("formatted");
+      requestAnimationFrame(() => editor.current?.focus());
+    } catch {
+      setNotice("Unable to apply Markdown. Your source is preserved.");
+    }
+  }
+  function closeLink() {
+    linkOpen.current = false;
+    setLink(null);
+    requestAnimationFrame(() => editor.current?.focus());
   }
   return (
-    <div className="markdown-editor">
-      <label className="field" htmlFor={id}>
+    <div className="markdown-editor rich-note-editor" aria-busy={!ready}>
+      <label
+        className="field"
+        htmlFor={mode === "markdown" ? `${id}-source` : id}
+      >
         Note text (optional)
       </label>
-      <div className="markdown-toolbar" role="group" aria-label="Format note">
-        {tools.map(([action, label]) => (
-          <button
-            key={action}
-            type="button"
-            className="button secondary"
-            disabled={disabled || preview}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => format(action)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="actions">
+      <div
+        className="actions editor-modes"
+        role="group"
+        aria-label="Format note"
+      >
         <button
           type="button"
-          className={`button ${preview ? "secondary" : ""}`}
-          aria-pressed={!preview}
-          onClick={() => setPreview(false)}
+          className={`button ${mode === "formatted" ? "" : "secondary"}`}
+          disabled={disabled || !ready || !editor.current || !!link}
+          aria-pressed={mode === "formatted"}
+          onClick={showFormatted}
         >
-          Markdown
+          Formatted
         </button>
         <button
           type="button"
-          className={`button ${preview ? "" : "secondary"}`}
-          aria-pressed={preview}
-          onClick={() => setPreview(true)}
+          className={`button ${mode === "markdown" ? "" : "secondary"}`}
+          disabled={disabled || !ready || !!link}
+          aria-pressed={mode === "markdown"}
+          onClick={showSource}
         >
-          Preview
+          Markdown
         </button>
         <label className="markdown-paste-option">
           <input
             type="checkbox"
-            checked={plainPaste}
-            onChange={(event) => setPlainPaste(event.target.checked)}
+            disabled={disabled}
+            onChange={(event) => {
+              plainRef.current = event.target.checked;
+            }}
           />{" "}
           Paste as plain text
         </label>
       </div>
-      {preview ? (
-        <div
-          className="markdown-preview"
-          role="region"
-          aria-label="Note preview"
-        >
-          {value ? (
-            <MarkdownNote text={value} />
-          ) : (
-            <p className="muted">No note text yet.</p>
-          )}
-        </div>
-      ) : (
+      {!ready && <p role="status">Loading editor…</p>}
+      {notice && (
+        <p className="editor-notice" role="status">
+          {notice}
+        </p>
+      )}
+      <div ref={host} className="crepe-host" hidden={mode !== "formatted"} />
+      {mode === "markdown" && (
         <textarea
-          ref={textarea}
-          id={id}
-          rows={7}
-          value={value}
+          ref={source}
+          id={`${id}-source`}
+          aria-label="Note text (optional)"
+          rows={12}
           disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          onPaste={paste}
+          defaultValue={sourceDisplay}
+          onChange={(event) => {
+            sourceDirty.current = true;
+            sourceValue.current = event.target.value;
+          }}
         />
       )}
       <p className="muted">
-        Markdown supports formatting, lists and links. Images appear as text.
+        {mode === "formatted"
+          ? "Edit formatted text directly. Ctrl+B / Ctrl+I / Ctrl+K · Ctrl+Z / Ctrl+Y · Ctrl+Shift+V pastes plain text."
+          : "Markdown source is saved as entered. Unsupported content stays in this mode; formatting tools are available in Formatted."}{" "}
+        Images appear as text. No attachments or uploads.
       </p>
+      {link && (
+        <div
+          className="note-link-dialog"
+          role="dialog"
+          aria-label="Edit link"
+          aria-modal="false"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              closeLink();
+            }
+            if (event.key === "Enter") event.preventDefault();
+          }}
+        >
+          <label className="field">
+            Link text
+            <input
+              autoFocus
+              value={link.text}
+              onChange={(event) =>
+                setLink({ ...link, text: event.target.value })
+              }
+            />
+          </label>
+          <label className="field">
+            Link destination
+            <input
+              value={link.href}
+              placeholder="https://example.com"
+              onChange={(event) =>
+                setLink({ ...link, href: event.target.value })
+              }
+            />
+          </label>
+          {linkError && <p role="alert">{linkError}</p>}
+          <div className="actions">
+            <button
+              type="button"
+              className="button"
+              onClick={() => {
+                const href = link.href.trim();
+                if (!safeNoteUrl(href)) {
+                  setLinkError(
+                    "Use an explicit https://, http://, mailto: or tel: destination.",
+                  );
+                  return;
+                }
+                editor.current?.setLink(href, link.text);
+                closeLink();
+              }}
+            >
+              Apply link
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => {
+                editor.current?.setLink("", "");
+                closeLink();
+              }}
+            >
+              Remove link
+            </button>
+            {safeNoteUrl(link.href) && (
+              <ExternalLink href={link.href}>Open link</ExternalLink>
+            )}
+            <button
+              type="button"
+              className="button secondary"
+              onClick={closeLink}
+            >
+              Close link editor
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

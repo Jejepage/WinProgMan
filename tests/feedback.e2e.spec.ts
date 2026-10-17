@@ -244,6 +244,7 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
   await page.getByLabel("Search notes").fill("");
   await page.getByRole("button", { name: "Add note", exact: true }).click();
   await page.getByLabel("Title", { exact: true }).fill("Saved note");
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
   await page.getByLabel("Note text (optional)").fill("**New Markdown**");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".note-item")).toHaveCount(2);
@@ -254,6 +255,7 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
   await expect(
     page.getByRole("heading", { name: "Edit note", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
   await expect(page.getByLabel("Note text (optional)")).toHaveValue(
     "**New Markdown**",
   );

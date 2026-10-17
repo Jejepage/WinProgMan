@@ -1,0 +1,155 @@
+.rich-note-editor .milkdown {
+  --crepe-color-background: var(--surface);
+  --crepe-color-on-background: var(--ink);
+  --crepe-color-surface: var(--canvas);
+  --crepe-color-surface-low: var(--accent-soft);
+  --crepe-color-on-surface: var(--ink);
+  --crepe-color-on-surface-variant: var(--muted);
+  --crepe-color-outline: var(--line);
+  --crepe-color-primary: var(--accent);
+  --crepe-color-secondary: var(--accent-soft);
+  --crepe-color-on-secondary: var(--ink);
+  --crepe-color-inverse: var(--surface);
+  --crepe-color-on-inverse: var(--ink);
+  --crepe-color-inline-code: var(--accent);
+  --crepe-color-error: var(--danger);
+  --crepe-color-hover: var(--accent-soft);
+  --crepe-color-selected: var(--accent-soft);
+  --crepe-color-inline-area: var(--line);
+  --crepe-base-font-size: 14px;
+  --crepe-font-title: "IBM Plex Mono", monospace;
+  --crepe-font-default: "IBM Plex Mono", monospace;
+  --crepe-font-code: "IBM Plex Mono", monospace;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-width: 0;
+}
+.rich-note-editor [hidden] {
+  display: none !important;
+}
+.rich-note-editor .crepe-host {
+  margin-top: 10px;
+  min-width: 0;
+}
+.rich-note-editor .milkdown .ProseMirror {
+  padding: 20px 24px;
+  min-height: 260px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.rich-note-editor .milkdown .ProseMirror:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.rich-note-editor .milkdown .milkdown-top-bar {
+  top: 0;
+  border-radius: 6px 6px 0 0;
+  background: var(--surface);
+}
+.rich-note-editor .milkdown button {
+  font: inherit;
+}
+.rich-note-editor .milkdown .top-bar-item {
+  min-width: 34px;
+  min-height: 34px;
+}
+.rich-note-editor .milkdown .top-bar-item svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--ink);
+  color: var(--ink);
+}
+.rich-note-editor .milkdown .top-bar-item.active svg {
+  fill: var(--accent);
+  color: var(--accent);
+}
+.rich-note-editor .milkdown .top-bar-heading-button .top-bar-chevron svg {
+  stroke: var(--muted);
+  color: var(--muted);
+}
+.rich-note-editor .milkdown button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.rich-note-editor .milkdown .top-bar-heading-dropdown {
+  max-height: 290px;
+  overflow: auto;
+  min-width: 170px;
+}
+.rich-note-editor .milkdown .ProseMirror h1,
+.rich-note-editor .milkdown .ProseMirror h2,
+.rich-note-editor .milkdown .ProseMirror h3,
+.rich-note-editor .milkdown .ProseMirror h4 {
+  color: var(--ink);
+}
+.rich-note-editor .milkdown .tableWrapper,
+.rich-note-editor .milkdown .milkdown-table-block .table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.rich-note-editor .milkdown .milkdown-table-block table.children {
+  min-width: 100%;
+  width: max-content;
+  max-width: none;
+  table-layout: auto;
+}
+.rich-note-editor .milkdown .milkdown-table-block table.children :is(th, td) {
+  min-width: 110px;
+  overflow-wrap: normal;
+}
+.rich-note-editor .milkdown .cm-editor {
+  background: var(--canvas);
+  color: var(--ink);
+}
+.rich-note-editor .milkdown .cm-gutters {
+  background: var(--surface);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.rich-note-editor .milkdown .cm-cursor {
+  border-left-color: var(--ink);
+}
+.rich-note-editor .milkdown .cm-selectionBackground {
+  background: var(--accent-soft) !important;
+}
+.rich-note-editor .editor-modes {
+  flex-wrap: wrap;
+}
+.rich-note-editor .editor-notice {
+  padding: 10px;
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  background: var(--accent-soft);
+  font-size: 12px;
+}
+.note-image-placeholder {
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  padding: 1px 5px;
+}
+.note-link-dialog {
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.note-link-dialog .field {
+  margin-bottom: 10px;
+}
+.rich-note-editor > textarea {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+@media (max-width: 600px) {
+  .rich-note-editor .milkdown .ProseMirror {
+    padding: 12px;
+  }
+  .rich-note-editor .milkdown .top-bar-item {
+    min-width: 32px;
+  }
+}
