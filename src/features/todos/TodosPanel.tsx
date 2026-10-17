@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { confirmAction } from "../../platform/desktop";
 import { useState } from "react";
-import { Flag, Plus } from "lucide-react";
+import { Flag } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
@@ -98,11 +98,11 @@ export function TodosPanel({
   }
   const addButton = (
     <button
-      className="button secondary"
+      className="button"
       disabled={busy || !projects.length}
       onClick={() => openNewItem("task", projectId)}
     >
-      <Plus size={14} aria-hidden="true" /> Add task
+      Add task
     </button>
   );
   function toggle(todo: Todo) {
@@ -115,7 +115,7 @@ export function TodosPanel({
     void onChange({ type: "todo.save", value });
   }
   return (
-    <section className="panel">
+    <section className="panel todos-panel">
       {!detailOnly && (
         <>
           <div

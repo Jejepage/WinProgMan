@@ -6,34 +6,79 @@ import { IndexedDbProjectStore } from "./IndexedDbProjectStore";
 import { validateData, validateImport } from "./validation";
 
 const legacyData = () => {
-  const { projectCategories: _categories, ...data } = demoData();
+  const {
+    projectCategories: _categories,
+    brainstorm: _brainstorm,
+    ...data
+  } = demoData();
   return {
     ...data,
     todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
     projects: data.projects.map(
-      ({ status: _status, categoryId: _category, ...project }) => project,
+      ({
+        status: _status,
+        categoryId: _category,
+        number: _number,
+        ...project
+      }) => project,
     ),
+  };
+};
+
+const oldFields = (data: ExportEnvelope) => {
+  const { brainstorm: _brainstorm, ...rest } = data;
+  return {
+    ...rest,
+    projects: rest.projects.map(({ number: _number, ...project }) => project),
   };
 };
 
 const envelope = (): ExportEnvelope => ({
   ...demoData(),
-  schemaVersion: 4,
+  schemaVersion: 5,
   exportedAt: new Date().toISOString(),
 });
 const store = () => new IndexedDbProjectStore(`test-${crypto.randomUUID()}`);
 
 describe("Sicherungsvalidierung", () => {
+  it("importiert Format 4 mit stabilen Nummern und leerem Brainstorm und validiert Format 5 vollständig", () => {
+    const data = envelope();
+    const old = { ...oldFields(data), schemaVersion: 4 };
+    const imported = validateImport(old);
+    expect(imported.projects.map((project) => project.number)).toEqual([1, 2]);
+    expect(imported.brainstorm).toEqual(emptyData().brainstorm);
+    const snapshot = JSON.stringify(data);
+    data.projects[1].number = data.projects[0].number;
+    expect(() => validateImport(data)).toThrow("bereits vergeben");
+    for (const mutate of [
+      (value: ExportEnvelope) => {
+        value.brainstorm.revision = -1;
+      },
+      (value: ExportEnvelope) => {
+        value.brainstorm.revision = 1.5;
+      },
+      (value: ExportEnvelope) => {
+        value.brainstorm.updatedAt = "gestern";
+      },
+      (value: ExportEnvelope) => {
+        delete (value as Partial<ExportEnvelope>).brainstorm;
+      },
+    ]) {
+      const value = JSON.parse(snapshot) as ExportEnvelope;
+      mutate(value);
+      expect(() => validateImport(value)).toThrow();
+    }
+  });
   it("erhält alte Klartextnotizen beim Import von Format 2 unverändert", () => {
     const data = envelope();
     const old = {
-      ...data,
+      ...oldFields(data),
       schemaVersion: 2,
       todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
     };
     old.events[0].note = "**kein Markdown**\n# Klartext";
     const imported = validateImport(old);
-    expect(imported.schemaVersion).toBe(4);
+    expect(imported.schemaVersion).toBe(5);
     expect(imported.events).toEqual(old.events);
     expect(imported.events[0]).not.toHaveProperty("noteFormat");
     expect(validateData(old).events).toEqual(old.events);
@@ -74,13 +119,18 @@ describe("Sicherungsvalidierung", () => {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
     });
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(5);
     expect(migrated.projectCategories).toEqual([]);
     expect(migrated.projects).toEqual(
-      legacy.projects.map((project) => ({ ...project, status: "Aktiv" })),
+      legacy.projects.map((project, index) => ({
+        ...project,
+        number: index + 1,
+        status: "Aktiv",
+      })),
     );
     expect(validateData(legacy)).toEqual({
       ...legacy,
+      brainstorm: emptyData().brainstorm,
       projectCategories: [],
       projects: migrated.projects,
     });
@@ -118,12 +168,12 @@ describe("Sicherungsvalidierung", () => {
       data.todos,
     );
     const old = {
-      ...data,
+      ...oldFields(data),
       schemaVersion: 3,
       todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
     };
     const migrated = validateImport(old);
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(5);
     expect(migrated.todos).toEqual(old.todos);
     expect(validateData(old).todos).toEqual(old.todos);
     expect(() => validateImport({ ...data, schemaVersion: 3 })).toThrow(
@@ -136,7 +186,7 @@ describe("Sicherungsvalidierung", () => {
     [
       "unbekannte Version",
       (data: ExportEnvelope) => {
-        (data as unknown as { schemaVersion: number }).schemaVersion = 5;
+        (data as unknown as { schemaVersion: number }).schemaVersion = 6;
       },
     ],
     [
@@ -198,7 +248,7 @@ describe("Sicherungsvalidierung", () => {
     expect(
       validateImport({
         ...emptyData(),
-        schemaVersion: 4,
+        schemaVersion: 5,
         exportedAt: new Date().toISOString(),
       }).projects,
     ).toEqual([]);
@@ -206,6 +256,129 @@ describe("Sicherungsvalidierung", () => {
 });
 
 describe("IndexedDB", () => {
+  it("lädt Beispiele atomar ohne Brainstorm zu ersetzen und schützt vorhandene Projekte", async () => {
+    const name = `samples-${crypto.randomUUID()}`;
+    const adapter = new IndexedDbProjectStore(name);
+    await adapter.apply({
+      type: "brainstorm.save",
+      text: "Meine Tagesideen",
+      expectedRevision: 0,
+    });
+    const brainstorm = (await adapter.load()).brainstorm;
+    await adapter.apply({ type: "samples.load", value: demoData() });
+    const loaded = await new IndexedDbProjectStore(name).load();
+    expect(loaded.brainstorm).toEqual(brainstorm);
+    expect(loaded.projects).toHaveLength(2);
+    expect(loaded.todos.length).toBeGreaterThan(0);
+    await expect(
+      adapter.apply({ type: "samples.load", value: demoData() }),
+    ).rejects.toThrow("no projects");
+    expect(await adapter.load()).toEqual(loaded);
+  });
+  it("vergibt Nummern auch über parallele Adapter atomar und erhält sie bei Änderungen und Löschung", async () => {
+    const name = `numbers-${crypto.randomUUID()}`;
+    const first = new IndexedDbProjectStore(name);
+    const second = new IndexedDbProjectStore(name);
+    const projects = Array.from({ length: 8 }, (_, index) => ({
+      ...metadata(),
+      number: 0,
+      name: `Projekt ${index}`,
+      description: "",
+      status: "Aktiv" as const,
+    }));
+    await Promise.all(
+      projects.map((value, index) =>
+        (index % 2 ? first : second).apply({ type: "project.save", value }),
+      ),
+    );
+    const before = await first.load();
+    expect(
+      before.projects.map((project) => project.number).sort((a, b) => a - b),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    const edited = { ...before.projects[0], number: 20 };
+    await first.apply({
+      type: "project.saveWithLinks",
+      value: edited,
+      links: [],
+    });
+    await second.apply({ type: "project.delete", id: before.projects[1].id });
+    await first.apply({
+      type: "project.save",
+      value: { ...projects[0], ...metadata() },
+    });
+    const reloaded = await new IndexedDbProjectStore(name).load();
+    expect(
+      reloaded.projects.find((project) => project.id === edited.id)?.number,
+    ).toBe(20);
+    expect(reloaded.projects.some((project) => project.number === 21)).toBe(
+      true,
+    );
+    for (const number of [
+      0,
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+      reloaded.projects[1].number,
+    ]) {
+      const snapshot = await first.load();
+      await expect(
+        first.apply({
+          type: "project.saveWithLinks",
+          value: { ...edited, number },
+          links: [],
+        }),
+      ).rejects.toThrow();
+      expect(await first.load()).toEqual(snapshot);
+    }
+  });
+  it("sichert Brainstorm mit CAS, erhält andere Daten und verhindert verlorene parallele Änderungen", async () => {
+    const name = `brainstorm-${crypto.randomUUID()}`;
+    const first = new IndexedDbProjectStore(name);
+    const second = new IndexedDbProjectStore(name);
+    await first.importData(envelope());
+    const before = await first.load();
+    const results = await Promise.allSettled([
+      first.apply({
+        type: "brainstorm.save",
+        text: "# Idee\r\n\r\nText",
+        expectedRevision: 0,
+      }),
+      second.apply({
+        type: "brainstorm.save",
+        text: "Andere Idee",
+        expectedRevision: 0,
+      }),
+    ]);
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const loaded = await second.load();
+    expect(loaded.brainstorm.revision).toBe(1);
+    expect(loaded.projects).toEqual(before.projects);
+    expect(loaded.events).toEqual(before.events);
+    await expect(
+      second.apply({
+        type: "brainstorm.save",
+        text: "Alt",
+        expectedRevision: 0,
+      }),
+    ).rejects.toThrow("another window");
+    expect(await first.load()).toEqual(loaded);
+    await first.apply({
+      type: "brainstorm.save",
+      text: "",
+      expectedRevision: 1,
+    });
+    expect((await second.load()).brainstorm).toMatchObject({
+      text: "",
+      revision: 2,
+    });
+    const exported = await first.exportData();
+    expect(exported.schemaVersion).toBe(5);
+    const restored = store();
+    await restored.importData(JSON.parse(JSON.stringify(exported)));
+    expect(await restored.load()).toEqual(await first.load());
+  });
   it("speichert Projekt und Linkentwurf gemeinsam und erhält bei Fehlern den gesamten alten Bestand", async () => {
     const adapter = store();
     const data = envelope();
@@ -335,7 +508,7 @@ describe("IndexedDB", () => {
     await adapter.apply({ type: "category.save", value: category });
     const reloaded = await new IndexedDbProjectStore(name).load();
     expect(reloaded).toEqual({ ...migrated, projectCategories: [category] });
-    expect((await adapter.exportData()).schemaVersion).toBe(4);
+    expect((await adapter.exportData()).schemaVersion).toBe(5);
   });
   it("löscht Kategorien atomar, erhält Projekte und aktualisiert deren Zeitstempel", async () => {
     const adapter = store();
@@ -357,6 +530,7 @@ describe("IndexedDB", () => {
       failure.mockRestore();
     }
     expect(await adapter.load()).toEqual({
+      brainstorm: data.brainstorm,
       projectCategories: data.projectCategories,
       projects: data.projects,
       links: data.links,
@@ -398,6 +572,7 @@ describe("IndexedDB", () => {
     expect(await first.load()).toEqual(emptyData());
     const project = {
       ...metadata(),
+      number: 0,
       name: "Projekt",
       description: "",
       status: "Aktiv" as const,
@@ -415,7 +590,7 @@ describe("IndexedDB", () => {
       value: { ...todo, completed: true },
     });
     const loaded = await new IndexedDbProjectStore(name).load();
-    expect(loaded.projects).toEqual([project]);
+    expect(loaded.projects).toEqual([{ ...project, number: 1 }]);
     expect(loaded.todos).toEqual([{ ...todo, completed: true }]);
     await first.apply({ type: "todo.delete", id: todo.id });
     expect((await first.load()).todos).toEqual([]);
@@ -443,7 +618,7 @@ describe("IndexedDB", () => {
     expect(await adapter.load()).toEqual(before);
     await adapter.importData({
       ...emptyData(),
-      schemaVersion: 4,
+      schemaVersion: 5,
       exportedAt: new Date().toISOString(),
     });
     expect(await adapter.load()).toEqual(emptyData());
@@ -500,6 +675,6 @@ describe("IndexedDB", () => {
     );
     const loaded = await adapter.load();
     expect(loaded.todos).toHaveLength(data.todos.length + todos.length);
-    expect((await adapter.exportData()).schemaVersion).toBe(4);
+    expect((await adapter.exportData()).schemaVersion).toBe(5);
   });
 });

@@ -1,5 +1,6 @@
 import {
   categories,
+  emptyBrainstorm,
   projectStatuses,
   type AppData,
   type ExportEnvelope,
@@ -52,6 +53,18 @@ function date(value: unknown, path: string) {
 export function validateImport(value: unknown): ExportEnvelope {
   const root = record(value, "Sicherung");
   const legacy = root.schemaVersion === 1;
+  const current = root.schemaVersion === 5;
+  if (
+    root.schemaVersion !== 1 &&
+    root.schemaVersion !== 2 &&
+    root.schemaVersion !== 3 &&
+    root.schemaVersion !== 4 &&
+    root.schemaVersion !== 5
+  )
+    fail(
+      "schemaVersion",
+      "Nur Sicherungsformat 1, 2, 3, 4 und 5 werden unterstützt.",
+    );
   fields(
     root,
     [
@@ -61,25 +74,28 @@ export function validateImport(value: unknown): ExportEnvelope {
       "links",
       "todos",
       "events",
+      ...(current ? ["brainstorm"] : []),
       ...(legacy ? [] : ["projectCategories"]),
     ],
     "Sicherung",
   );
-  if (
-    root.schemaVersion !== 1 &&
-    root.schemaVersion !== 2 &&
-    root.schemaVersion !== 3 &&
-    root.schemaVersion !== 4
-  )
-    fail(
-      "schemaVersion",
-      "Nur Sicherungsformat 1, 2, 3 und 4 werden unterstützt.",
-    );
   timestamp(root.exportedAt, "exportedAt");
+  if (current) {
+    const brainstorm = record(root.brainstorm, "brainstorm");
+    fields(brainstorm, ["text", "revision", "updatedAt"], "brainstorm");
+    string(brainstorm.text, "brainstorm.text");
+    if (
+      !Number.isSafeInteger(brainstorm.revision) ||
+      Number(brainstorm.revision) < 0
+    )
+      fail("brainstorm.revision", "Nichtnegative ganze Revision erwartet.");
+    timestamp(brainstorm.updatedAt, "brainstorm.updatedAt");
+  }
   const ids = new Set<string>();
   const projects = new Set<string>();
   const categoryIds = new Set<string>();
   const categoryNames = new Set<string>();
+  const projectNumbers = new Set<number>();
   for (const collection of [
     ...(legacy ? [] : ["projectCategories" as const]),
     "projects",
@@ -99,6 +115,7 @@ export function validateImport(value: unknown): ExportEnvelope {
             ? [
                 "name",
                 "description",
+                ...(current ? ["number"] : []),
                 ...(legacy ? [] : ["status", "categoryId"]),
               ]
             : collection === "links"
@@ -109,7 +126,7 @@ export function validateImport(value: unknown): ExportEnvelope {
                     "title",
                     "completed",
                     "dueDate",
-                    ...(root.schemaVersion === 4 ? ["doNext"] : []),
+                    ...(Number(root.schemaVersion) >= 4 ? ["doNext"] : []),
                   ]
                 : [
                     "projectId",
@@ -139,6 +156,14 @@ export function validateImport(value: unknown): ExportEnvelope {
         categoryNames.add(name);
         categoryIds.add(entry.id);
       } else if (collection === "projects") {
+        if (current) {
+          if (!Number.isSafeInteger(entry.number) || Number(entry.number) < 1)
+            fail(`${path}.number`, "Positive ganze Projektnummer erwartet.");
+          const number = entry.number as number;
+          if (projectNumbers.has(number))
+            fail(`${path}.number`, "Diese Projektnummer ist bereits vergeben.");
+          projectNumbers.add(number);
+        }
         if (!legacy) {
           if (
             !projectStatuses.includes(
@@ -210,7 +235,13 @@ export function validateImport(value: unknown): ExportEnvelope {
     });
   }
   const result = structuredClone(root);
-  result.schemaVersion = 4;
+  result.schemaVersion = 5;
+  if (!current) {
+    result.brainstorm = emptyBrainstorm();
+    result.projects = (result.projects as Record<string, unknown>[]).map(
+      (project, index) => ({ ...project, number: index + 1 }),
+    );
+  }
   if (legacy) {
     result.projectCategories = [];
     result.projects = (result.projects as Record<string, unknown>[]).map(
@@ -228,7 +259,17 @@ export function validateData(data: unknown): AppData {
     ...result
   } = validateImport({
     ...source,
-    schemaVersion: source.projectCategories === undefined ? 1 : 4,
+    schemaVersion:
+      source.brainstorm !== undefined ||
+      (Array.isArray(source.projects) &&
+        source.projects.some(
+          (project: unknown) =>
+            !!project && typeof project === "object" && "number" in project,
+        ))
+        ? 5
+        : source.projectCategories === undefined
+          ? 1
+          : 4,
     exportedAt: new Date().toISOString(),
   });
   return result;

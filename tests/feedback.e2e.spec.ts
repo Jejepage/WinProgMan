@@ -4,7 +4,8 @@ import { readFile } from "node:fs/promises";
 const timestamp = "2026-10-16T08:00:00.000Z";
 const base = { createdAt: timestamp, updatedAt: timestamp };
 const sample = () => ({
-  schemaVersion: 4,
+  schemaVersion: 5,
+  brainstorm: { text: "", revision: 0, updatedAt: timestamp },
   exportedAt: timestamp,
   projectCategories: [
     { ...base, id: "z", name: "Zulu" },
@@ -14,6 +15,7 @@ const sample = () => ({
     {
       ...base,
       id: "p1",
+      number: 1,
       name: "Zulu project",
       status: "Aktiv",
       description: "",
@@ -22,12 +24,20 @@ const sample = () => ({
     {
       ...base,
       id: "p2",
+      number: 2,
       name: "Alpha project",
       status: "Aktiv",
       description: "",
       categoryId: "a",
     },
-    { ...base, id: "p3", name: "Notes only", status: "Aktiv", description: "" },
+    {
+      ...base,
+      id: "p3",
+      number: 3,
+      name: "Notes only",
+      status: "Aktiv",
+      description: "",
+    },
   ],
   todos: [
     {
@@ -107,6 +117,262 @@ async function navigate(page: Page, name: string) {
     .click();
 }
 
+test("Design und Symbolnavigation bleiben gespeichert und alle Seiten erreichbar", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await navigate(page, "Settings");
+  const design = page.getByRole("group", {
+    name: "Design variant",
+    exact: true,
+  });
+  const sidebar = page.getByRole("group", { name: "Sidebar", exact: true });
+  await design.getByRole("button", { name: "Color", exact: true }).click();
+  await sidebar
+    .getByRole("button", { name: "Icons only", exact: true })
+    .click();
+  await expect(page.locator("html")).toHaveAttribute("data-design", "color");
+  await expect(page.locator(".app-shell")).toHaveClass(/sidebar-icons/);
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await page.reload();
+  await navigate(page, "Settings");
+  await expect(
+    design.getByRole("button", { name: "Color", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    sidebar.getByRole("button", { name: "Icons only", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("html")).toHaveAttribute("data-design", "color");
+  await expect(page.locator(".app-shell")).toHaveClass(/sidebar-icons/);
+  for (const view of [
+    "Dashboard",
+    "Projects",
+    "Tasks",
+    "Events",
+    "Notes",
+    "Brainstorm",
+    "Settings",
+  ]) {
+    await navigate(page, view);
+    await expect(
+      page.getByRole("heading", { name: view, exact: true }),
+    ).toBeVisible();
+  }
+  await page.screenshot({
+    path: "test-results/visual/color-icons-dark.png",
+    fullPage: true,
+  });
+  await design.getByRole("button", { name: "Classic", exact: true }).click();
+  await sidebar
+    .getByRole("button", { name: "Icons and labels", exact: true })
+    .click();
+  await expect(page.locator("html")).toHaveAttribute("data-design", "classic");
+  await expect(page.locator(".app-shell")).not.toHaveClass(/sidebar-icons/);
+});
+
+test("Projektnummern sind editierbar, eindeutig und unabhängig von Filtern dauerhaft", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await navigate(page, "Projects");
+  await page.getByRole("button", { name: "Zulu project", exact: true }).click();
+  const header = page.locator(".project-header");
+  await header
+    .getByRole("button", { name: "Edit project", exact: true })
+    .click();
+  const number = header.getByLabel("Project number", { exact: true });
+  await expect(number).toHaveValue("1");
+  await number.fill("2");
+  await header.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(number).toBeVisible();
+  await expect(header).toContainText(/number.*(already|used|unique|assigned)/i);
+  await expect(number).toHaveValue("2");
+  await number.fill("42");
+  await header.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(number).toHaveCount(0);
+  await page.reload();
+  await navigate(page, "Projects");
+  await page.getByLabel("Search projects").fill("Zulu");
+  await expect(page.locator(".project-topic-group")).toContainText("PRJ-042");
+  await page.getByLabel("Search projects").fill("");
+  await expect(
+    page.locator(".project-topic-group").filter({ hasText: "Alpha project" }),
+  ).toContainText("PRJ-002");
+  await page
+    .getByRole("button", { name: "+ New project", exact: true })
+    .click();
+  await page.getByLabel("Project name", { exact: true }).fill("Next number");
+  await page
+    .getByRole("button", { name: "Create project", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
+  await expect(
+    header.getByLabel("Project number", { exact: true }),
+  ).toHaveValue("43");
+});
+
+test("Brainstorm speichert beim sofortigen Seitenwechsel und ersetzt Sicherungen ohne alten Autosave", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await navigate(page, "Brainstorm");
+  const rich = page.locator(
+    '[contenteditable="true"][aria-label="Brainstorm text"]',
+  );
+  await expect(rich).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toHaveCount(0);
+  await rich.fill("Idea before navigation");
+  await navigate(page, "Dashboard");
+  await page.reload();
+  await navigate(page, "Brainstorm");
+  await expect(rich).toContainText("Idea before navigation");
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  const source = page.getByRole("textbox", {
+    name: "Brainstorm text",
+    exact: true,
+  });
+  await source.fill("# Daily ideas\n\n- Keep this thought\n");
+  const downloaded = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
+    .click();
+  const backup = JSON.parse(
+    await readFile((await (await downloaded).path())!, "utf8"),
+  );
+  expect(backup.schemaVersion).toBe(5);
+  expect(backup.brainstorm.text).toBe("# Daily ideas\n\n- Keep this thought\n");
+  await source.fill("Pending text that import must replace");
+  const restored = {
+    ...backup,
+    brainstorm: {
+      ...backup.brainstorm,
+      text: "Imported Brainstorm",
+      revision: backup.brainstorm.revision + 1,
+    },
+  };
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "brainstorm.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(restored)),
+  });
+  await expect(
+    page.getByRole("region", { name: "Import preview" }),
+  ).toContainText(/Brainstorm/i);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Replace data", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Backup imported");
+  await navigate(page, "Brainstorm");
+  await page.reload();
+  await navigate(page, "Brainstorm");
+  await expect(rich).toContainText("Imported Brainstorm");
+  await expect(rich).not.toContainText("Pending text");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(rich).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/visual/brainstorm-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("Brainstorm stellt letzte Eingabe nach direktem Reload wieder her und bleibt beim Laden der Beispiele erhalten", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await navigate(page, "Brainstorm");
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  const source = page.getByRole("textbox", {
+    name: "Brainstorm text",
+    exact: true,
+  });
+  await source.fill("Spontaneous thought with final word RECOVERED");
+  // Reload directly after the edit, without waiting for debounce or changing views.
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.reload();
+  await navigate(page, "Brainstorm");
+  const rich = page.locator(
+    '[contenteditable="true"][aria-label="Brainstorm text"]',
+  );
+  await expect(rich).toContainText("final word RECOVERED");
+  await expect(page.locator(".brainstorm-status")).toHaveText("Saved");
+  await navigate(page, "Dashboard");
+  await page
+    .getByRole("button", { name: "Load sample data", exact: true })
+    .click();
+  await navigate(page, "Projects");
+  await expect(
+    page.getByRole("button", { name: "Arbeitsplatz erneuern", exact: true }),
+  ).toBeVisible();
+  await navigate(page, "Brainstorm");
+  await expect(rich).toContainText(
+    "Spontaneous thought with final word RECOVERED",
+  );
+  await page.reload();
+  await navigate(page, "Brainstorm");
+  await expect(rich).toContainText("final word RECOVERED");
+});
+
+test("Brainstorm aktualisiert saubere zweite Tabs und erhält Entwürfe bei konkurrierendem Speichern", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await navigate(page, "Brainstorm");
+  const first = page.locator(
+    '[contenteditable="true"][aria-label="Brainstorm text"]',
+  );
+  await expect(first).toBeVisible();
+  const secondPage = await context.newPage();
+  await secondPage.goto("/");
+  await navigate(secondPage, "Brainstorm");
+  const second = secondPage.locator(
+    '[contenteditable="true"][aria-label="Brainstorm text"]',
+  );
+  await expect(second).toBeVisible();
+  await first.fill("Shared saved thought");
+  await expect(page.locator(".brainstorm-status")).toHaveText("Saved");
+  await expect(second).toContainText("Shared saved thought");
+
+  // Freeze only the second tab's debounce so the competing draft cannot win a timing race.
+  const frozenTime = new Date("2026-10-17T10:00:00Z");
+  await secondPage.clock.install({ time: frozenTime });
+  await secondPage.clock.pauseAt(new Date("2026-10-17T10:00:01Z"));
+  await second.fill("Second tab draft must survive");
+  await expect(secondPage.locator(".brainstorm-status")).toHaveText(
+    "Unsaved changes…",
+  );
+  await first.fill("First tab newer durable thought");
+  // Clock mocking affects both pages in this browser context; navigation flushes explicitly.
+  await navigate(page, "Dashboard");
+  await expect(page.locator(".brainstorm-status")).toHaveText("Saved");
+  await expect(secondPage.getByRole("alert")).toContainText(
+    /changed elsewhere.*draft is preserved/i,
+  );
+  await expect(second).toHaveText("Second tab draft must survive");
+  await secondPage.clock.runFor(1000);
+  await expect(secondPage.getByRole("alert")).toContainText(
+    /changed elsewhere.*draft is preserved/i,
+  );
+  await expect(second).toHaveText("Second tab draft must survive");
+  const downloaded = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export JSON ↓", exact: true })
+    .click();
+  const backup = JSON.parse(
+    await readFile((await (await downloaded).path())!, "utf8"),
+  );
+  expect(backup.brainstorm.text.trim()).toBe("First tab newer durable thought");
+  secondPage.on("dialog", (dialog) => dialog.accept());
+  await secondPage.close({ runBeforeUnload: true });
+});
+
 test("alte Notizadressen und vertauschte Detailrouten erhalten den gespeicherten Objekttyp", async ({
   page,
 }) => {
@@ -147,6 +413,10 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
 }) => {
   await loadSample(page);
   await navigate(page, "Projects");
+  await expect(page.locator(".table-wrap thead")).toHaveCount(1);
+  await expect(
+    page.getByRole("columnheader", { name: "Topic", exact: true }),
+  ).toHaveCount(0);
   await expect(page.locator(".topic-group-heading")).toHaveText([
     "Alpha 1",
     "Zulu 1",
