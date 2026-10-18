@@ -374,7 +374,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   const settings = page.getByRole("region", { name: "Project topics" });
   await settings.getByLabel("Topic name").fill("Privat");
   await settings.getByRole("button", { name: "Add topic" }).click();
@@ -434,7 +434,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .locator(".project-header")
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await settings.getByRole("button", { name: "Rename" }).click();
   await settings.getByLabel("Topic name").fill("Persönlich");
   await settings.getByRole("button", { name: "Save topic" }).click();
@@ -473,7 +473,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   expect(backup.projects[0].status).toBe("Pausiert");
   expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
 
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await settings.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(settings.locator("li")).toHaveCount(1);
@@ -1047,11 +1047,11 @@ test("Do next, event dates, project controls and theme work after reload", async
     page.getByRole("button", { name: "Delete project" }),
   ).toBeVisible();
 
-  await nav.getByRole("button", { name: "Settings" }).click();
+  await nav.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
-  await nav.getByRole("button", { name: "Settings" }).click();
+  await nav.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Dark", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");

@@ -13,6 +13,7 @@ import {
 import { classifyLinkTarget, normalizeLinkTarget } from "../../domain/links";
 import { confirmAction } from "../../platform/desktop";
 import { ProjectLink } from "../../ui/ProjectLink";
+import { StatusLabel } from "../../ui/components";
 interface Props {
   project: Project;
   projects: Project[];
@@ -129,7 +130,10 @@ export function ProjectHeader({
           </div>
           <h1>{project.name}</h1>
           <p className="muted">
-            {projectStatusLabels[project.status]} ·{" "}
+            <StatusLabel data-status={project.status}>
+              {projectStatusLabels[project.status]}
+            </StatusLabel>{" "}
+            ·{" "}
             {projectCategories.find(
               (category) => category.id === project.categoryId,
             )?.name || "No topic"}
@@ -273,7 +277,7 @@ export function ProjectHeader({
           </button>
         )}
       </div>
-      <ul className="links-list">
+      <ul className={`links-list ${editing ? "" : "project-links-display"}`}>
         {(editing ? draftLinks : links).map((l) => (
           <li key={l.id}>
             <div>

@@ -27,9 +27,14 @@ try {
     .click();
   await expect(page.locator(".dashboard-project-row").first()).toBeVisible();
   for (const design of ["classic", "split-compact"]) {
+    await nav("Settings");
     await page
-      .getByRole("combobox", { name: "Design", exact: true })
-      .selectOption(design);
+      .getByRole("group", { name: "Design variant", exact: true })
+      .getByRole("button", {
+        name: design === "classic" ? "Classic" : "Split Compact",
+        exact: true,
+      })
+      .click();
     for (const theme of ["Light", "Dark"]) {
       await nav("Settings");
       await page

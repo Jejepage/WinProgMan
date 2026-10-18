@@ -86,6 +86,7 @@ function readPreference(
   return fallback;
 }
 export function App() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
   const [data, setData] = useState<AppData>(emptyData);
   const [view, setView] = useState<View>(() => {
@@ -174,7 +175,10 @@ export function App() {
     setDetail(null);
   };
   useEffect(() => {
-    const update = () => setDetail(readDetail());
+    const update = () => {
+      setDetail(readDetail());
+      setSettingsOpen(false);
+    };
     window.addEventListener("hashchange", update);
     return () => window.removeEventListener("hashchange", update);
   }, []);
@@ -245,6 +249,11 @@ export function App() {
   async function navigate(next: View) {
     try {
       await brainstormPanel.current?.flush();
+      if (next === "Settings") {
+        setSettingsOpen(true);
+        return;
+      }
+      setSettingsOpen(false);
       closeDetail();
       if (next === "Brainstorm") setBrainstormOpened(true);
       setNewProject(false);
@@ -413,7 +422,7 @@ export function App() {
           : detail.id;
         const unavailable = detail.creating ? !data.projects.length : !item;
         return (
-          <section className="detail-page">
+          <section className="detail-page" hidden={settingsOpen}>
             <div className="page-heading">
               <h1>
                 {`${detail.creating ? "New" : "Edit"} ${detail.kind === "task" ? "task" : isNote ? "note" : "event"}`}
@@ -466,7 +475,7 @@ export function App() {
   return (
     <div
       className={`app-shell ${sidebar === "icons" ? "sidebar-icons" : ""} ${view === "Brainstorm" ? "brainstorm-view" : ""}`}
-      data-view={view}
+      data-view={settingsOpen ? "Settings" : view}
       data-navigation={navigation}
     >
       <aside className="sidebar">
@@ -501,8 +510,10 @@ export function App() {
               key={v}
               aria-label={v}
               title={v}
-              aria-current={view === v ? "page" : undefined}
-              className={`nav-button ${view === v ? "active" : ""}`}
+              aria-current={
+                (settingsOpen ? "Settings" : view) === v ? "page" : undefined
+              }
+              className={`nav-button ${(settingsOpen ? "Settings" : view) === v ? "active" : ""}`}
               data-kind={v.toLowerCase()}
               onClick={() => void navigate(v)}
             >
@@ -542,20 +553,6 @@ export function App() {
           accept=".json,application/json"
           onChange={(e) => void readFile(e.target.files?.[0])}
         />
-        <div className="design-switcher">
-          <label>
-            Design
-            <select
-              aria-label="Design"
-              value={design}
-              onChange={(event) => setDesign(event.target.value)}
-            >
-              <option value="classic">Classic</option>
-              <option value="color">Color</option>
-              <option value="split-compact">Split Compact</option>
-            </select>
-          </label>
-        </div>
         {error && (
           <div className="message error" role="alert">
             {error}
@@ -616,6 +613,9 @@ export function App() {
                       await store.importData(pending);
                     }).then((ok) => {
                       if (ok) {
+                        closeDetail();
+                        setNewProject(false);
+                        setSettingsOpen(false);
                         setBrainstormOpened(false);
                         setPending(null);
                         setView("Projects");
@@ -641,8 +641,150 @@ export function App() {
             </div>
           </section>
         )}
+        {settingsOpen && (
+          <section className="settings-page" aria-label="Settings">
+            <div className="page-heading">
+              <h1>Settings</h1>
+              <button
+                className="button secondary"
+                onClick={() => setSettingsOpen(false)}
+              >
+                Close settings
+              </button>
+            </div>
+            <>
+              <section className="panel appearance-settings">
+                <h2>Appearance</h2>
+                <h3>Design variant</h3>
+                <div
+                  className="actions"
+                  role="group"
+                  aria-label="Design variant"
+                >
+                  {(["classic", "color", "split-compact"] as const).map(
+                    (choice) => (
+                      <button
+                        key={choice}
+                        type="button"
+                        className={`button ${design === choice ? "" : "secondary"}`}
+                        aria-pressed={design === choice}
+                        onClick={() => setDesign(choice)}
+                      >
+                        {choice === "classic"
+                          ? "Classic"
+                          : choice === "color"
+                            ? "Color"
+                            : "Split Compact"}
+                      </button>
+                    ),
+                  )}
+                </div>
+                <p className="description">
+                  Classic uses monospace text. Color uses proportional text and
+                  a distinct accent for projects, tasks, events and notes. Split
+                  Compact offers sidebar or top navigation and a blue project
+                  file beside the workspace.
+                </p>
+                <div className="design-palette" aria-label="Item colors">
+                  <span data-kind="projects">Projects</span>
+                  <span data-kind="tasks">Tasks</span>
+                  <span data-kind="events">Events</span>
+                  <span data-kind="notes">Notes</span>
+                </div>
+                {design === "split-compact" && (
+                  <>
+                    <h3>Navigation placement</h3>
+                    <div
+                      className="actions"
+                      role="group"
+                      aria-label="Navigation placement"
+                    >
+                      {(["sidebar", "top"] as const).map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`button ${navigation === choice ? "" : "secondary"}`}
+                          aria-pressed={navigation === choice}
+                          onClick={() => setNavigation(choice)}
+                        >
+                          {choice === "sidebar" ? "Sidebar" : "Top navigation"}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <h3>Sidebar</h3>
+                <div className="actions" role="group" aria-label="Sidebar">
+                  {(["labels", "icons"] as const).map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`button ${sidebar === choice ? "" : "secondary"}`}
+                      aria-pressed={sidebar === choice}
+                      onClick={() => setSidebar(choice)}
+                    >
+                      {choice === "labels" ? "Icons and labels" : "Icons only"}
+                    </button>
+                  ))}
+                </div>
+                <h3>Color theme</h3>
+                <p className="description">
+                  Choose a theme or follow your system setting.
+                </p>
+                <div className="actions" role="group" aria-label="Color theme">
+                  {(["system", "light", "dark"] as ThemeChoice[]).map(
+                    (choice) => (
+                      <button
+                        key={choice}
+                        type="button"
+                        className={`button ${theme === choice ? "" : "secondary"}`}
+                        aria-pressed={theme === choice}
+                        onClick={() => setTheme(choice)}
+                      >
+                        {choice[0].toUpperCase() + choice.slice(1)}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </section>
+              <StorageSettings busy={busy} onBackup={download} />
+              <section className="panel backup-settings" aria-label="Backup">
+                <h2>Import &amp; export</h2>
+                <p className="description">
+                  Export a JSON backup of all projects, tasks, events, notes and
+                  Brainstorm. Import checks the file before asking you to
+                  replace the current data.
+                </p>
+                <div className="actions">
+                  <button
+                    className="button"
+                    aria-label="Export JSON ↓"
+                    disabled={busy || loading}
+                    onClick={() => void download()}
+                  >
+                    <Download size={16} aria-hidden="true" /> Export JSON ↓
+                  </button>
+                  <button
+                    className="button secondary"
+                    aria-label="Import JSON ↑"
+                    disabled={busy || loading}
+                    onClick={() => file.current?.click()}
+                  >
+                    <Upload size={16} aria-hidden="true" /> Import JSON ↑
+                  </button>
+                </div>
+              </section>
+              <CategorySettings
+                categories={data.projectCategories}
+                projects={data.projects}
+                busy={busy}
+                onChange={change}
+              />
+            </>
+          </section>
+        )}
         {detailContent}
-        <div hidden={Boolean(detail)}>
+        <div hidden={Boolean(detail) || settingsOpen}>
           {loading ? (
             <section className="panel">
               <p>Loading projects …</p>
@@ -744,7 +886,10 @@ export function App() {
                       className="button secondary"
                       disabled={busy}
                       onClick={() =>
-                        void change({ type: "samples.load", value: demoData() })
+                        void change({
+                          type: "samples.load",
+                          value: demoData(),
+                        })
                       }
                     >
                       Load sample data
@@ -807,7 +952,9 @@ export function App() {
                                   events
                                 </small>
                               </div>
-                              <StatusLabel>{statusLabel(p.status)}</StatusLabel>
+                              <StatusLabel data-status={p.status}>
+                                {statusLabel(p.status)}
+                              </StatusLabel>
                             </div>
                             <div className="overview-columns">
                               <div>
@@ -867,7 +1014,10 @@ export function App() {
                                     className="overview-event"
                                     key={event.id}
                                   >
-                                    <span className="category">
+                                    <span
+                                      className="category"
+                                      data-category={event.category}
+                                    >
                                       {categoryLabel(event.category)}
                                     </span>
                                     <button
@@ -949,148 +1099,6 @@ export function App() {
                       ))}
                     </section>
                   </div>
-                </>
-              )}
-              {view === "Settings" && (
-                <>
-                  <section className="panel appearance-settings">
-                    <h2>Appearance</h2>
-                    <h3>Design variant</h3>
-                    <div
-                      className="actions"
-                      role="group"
-                      aria-label="Design variant"
-                    >
-                      {(["classic", "color", "split-compact"] as const).map(
-                        (choice) => (
-                          <button
-                            key={choice}
-                            type="button"
-                            className={`button ${design === choice ? "" : "secondary"}`}
-                            aria-pressed={design === choice}
-                            onClick={() => setDesign(choice)}
-                          >
-                            {choice === "classic"
-                              ? "Classic"
-                              : choice === "color"
-                                ? "Color"
-                                : "Split Compact"}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                    <p className="description">
-                      Classic uses monospace text. Color uses proportional text
-                      and a distinct accent for projects, tasks, events and
-                      notes. Split Compact offers sidebar or top navigation and
-                      a blue project file beside the workspace.
-                    </p>
-                    <div className="design-palette" aria-label="Item colors">
-                      <span data-kind="projects">Projects</span>
-                      <span data-kind="tasks">Tasks</span>
-                      <span data-kind="events">Events</span>
-                      <span data-kind="notes">Notes</span>
-                    </div>
-                    {design === "split-compact" && (
-                      <>
-                        <h3>Navigation placement</h3>
-                        <div
-                          className="actions"
-                          role="group"
-                          aria-label="Navigation placement"
-                        >
-                          {(["sidebar", "top"] as const).map((choice) => (
-                            <button
-                              key={choice}
-                              type="button"
-                              className={`button ${navigation === choice ? "" : "secondary"}`}
-                              aria-pressed={navigation === choice}
-                              onClick={() => setNavigation(choice)}
-                            >
-                              {choice === "sidebar"
-                                ? "Sidebar"
-                                : "Top navigation"}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    <h3>Sidebar</h3>
-                    <div className="actions" role="group" aria-label="Sidebar">
-                      {(["labels", "icons"] as const).map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`button ${sidebar === choice ? "" : "secondary"}`}
-                          aria-pressed={sidebar === choice}
-                          onClick={() => setSidebar(choice)}
-                        >
-                          {choice === "labels"
-                            ? "Icons and labels"
-                            : "Icons only"}
-                        </button>
-                      ))}
-                    </div>
-                    <h3>Color theme</h3>
-                    <p className="description">
-                      Choose a theme or follow your system setting.
-                    </p>
-                    <div
-                      className="actions"
-                      role="group"
-                      aria-label="Color theme"
-                    >
-                      {(["system", "light", "dark"] as ThemeChoice[]).map(
-                        (choice) => (
-                          <button
-                            key={choice}
-                            type="button"
-                            className={`button ${theme === choice ? "" : "secondary"}`}
-                            aria-pressed={theme === choice}
-                            onClick={() => setTheme(choice)}
-                          >
-                            {choice[0].toUpperCase() + choice.slice(1)}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </section>
-                  <StorageSettings busy={busy} onBackup={download} />
-                  <section
-                    className="panel backup-settings"
-                    aria-label="Backup"
-                  >
-                    <h2>Import &amp; export</h2>
-                    <p className="description">
-                      Export a JSON backup of all projects, tasks, events, notes
-                      and Brainstorm. Import checks the file before asking you
-                      to replace the current data.
-                    </p>
-                    <div className="actions">
-                      <button
-                        className="button"
-                        aria-label="Export JSON ↓"
-                        disabled={busy || loading}
-                        onClick={() => void download()}
-                      >
-                        <Download size={16} aria-hidden="true" /> Export JSON ↓
-                      </button>
-                      <button
-                        className="button secondary"
-                        aria-label="Import JSON ↑"
-                        disabled={busy || loading}
-                        onClick={() => file.current?.click()}
-                      >
-                        <Upload size={16} aria-hidden="true" /> Import JSON ↑
-                      </button>
-                    </div>
-                  </section>
-                  <CategorySettings
-                    categories={data.projectCategories}
-                    projects={data.projects}
-                    busy={busy}
-                    onChange={change}
-                  />
                 </>
               )}
               {view === "Projects" && (
@@ -1175,7 +1183,7 @@ export function App() {
                                   </button>
                                 </td>
                                 <td>
-                                  <StatusLabel>
+                                  <StatusLabel data-status={p.status}>
                                     {statusLabel(p.status)}
                                   </StatusLabel>
                                 </td>
