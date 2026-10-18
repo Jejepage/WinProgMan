@@ -270,6 +270,10 @@ test("mixed-format links edit and remove their whole range and an open link dial
 });
 
 async function exportBackup(page: Page): Promise<ExportEnvelope> {
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })

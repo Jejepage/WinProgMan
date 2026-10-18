@@ -34,6 +34,7 @@ interface Props {
   onSearchChange?: (value: string) => void;
   initialMode?: "list" | "timeline";
   notesOnly?: boolean;
+  compactPreview?: boolean;
   today: string;
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
@@ -63,6 +64,7 @@ export function EventsPanel({
   onSearchChange,
   initialMode = "list",
   notesOnly = false,
+  compactPreview = false,
   today,
   busy,
   onChange,
@@ -78,6 +80,7 @@ export function EventsPanel({
   const itemKind = notesOnly ? "note" : "event";
   const itemLabel = notesOnly ? "note" : "event";
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showAll, setShowAll] = useState(false);
   const [editor, setEditor] = useState<{
     original?: ProjectEvent;
     draft: Draft;
@@ -106,7 +109,7 @@ export function EventsPanel({
       : null,
   );
   const [deleting, setDeleting] = useState<ProjectEvent | null>(null);
-  const visible = sortEvents(
+  const filtered = sortEvents(
     events.filter(
       (event) =>
         (!projectId || event.projectId === projectId) &&
@@ -120,7 +123,14 @@ export function EventsPanel({
         ),
     ),
   );
-  if (notesOnly) visible.reverse();
+  if (notesOnly) filtered.reverse();
+  const preview = compactPreview && !showAll && !timeline;
+  const visible = preview
+    ? (notesOnly
+        ? filtered
+        : filtered.filter((event) => event.date >= today)
+      ).slice(0, 3)
+    : filtered;
   const patch = (change: Partial<Draft>) =>
     setEditor((current) =>
       current
@@ -302,13 +312,29 @@ export function EventsPanel({
           >
             {showHeading ? (
               <h2>
-                {notesOnly ? "Notes" : "Events"}{" "}
+                {notesOnly ? "Notes" : preview ? "Upcoming events" : "Events"}{" "}
                 <span className="muted">({visible.length})</span>
               </h2>
             ) : null}
             {headerTarget ? createPortal(addButton, headerTarget) : addButton}
           </div>
           <div className="actions event-filters">
+            {compactPreview && (
+              <button
+                className="button secondary"
+                aria-pressed={showAll || timeline}
+                onClick={() => {
+                  setShowAll(!(showAll || timeline));
+                  setTimeline(false);
+                }}
+              >
+                {showAll || timeline
+                  ? notesOnly
+                    ? "Recent notes"
+                    : "Upcoming only"
+                  : `All ${notesOnly ? "notes" : "events"} (${filtered.length})`}
+              </button>
+            )}
             {!notesOnly && (
               <label className="field" htmlFor={`${prefix}-filter`}>
                 <span className="sr-only">Category</span>
@@ -529,11 +555,13 @@ export function EventsPanel({
             <p className="empty">
               {search.trim()
                 ? `No ${notesOnly ? "notes" : "events"} match this search and filter.`
-                : notesOnly
-                  ? "No notes yet."
-                  : category
-                    ? `No events in ${categoryLabels[category]}.`
-                    : "No events yet."}
+                : preview && !notesOnly
+                  ? "No upcoming events. Open All events to see past entries."
+                  : notesOnly
+                    ? "No notes yet."
+                    : category
+                      ? `No events in ${categoryLabels[category]}.`
+                      : "No events yet."}
             </p>
           )}
           <ul className={timeline ? "item-list timeline" : "item-list"}>

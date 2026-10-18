@@ -120,7 +120,13 @@ export function ProjectHeader({
     <section className="project-header panel">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">PROJECT</p>
+          <p className="eyebrow">
+            <span className="classic-only">PROJECT</span>
+            <span className="split-only">PROJECT FILE</span>
+          </p>
+          <div className="split-only project-file-number">
+            {String(project.number).padStart(3, "0")}
+          </div>
           <h1>{project.name}</h1>
           <p className="muted">
             {projectStatusLabels[project.status]} ·{" "}

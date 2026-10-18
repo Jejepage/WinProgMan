@@ -107,7 +107,9 @@ async function loadSample(page: Page) {
   ).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Replace data", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Backup imported");
+  await expect(page.locator('.message[role="status"]')).toContainText(
+    "Backup imported",
+  );
 }
 
 async function navigate(page: Page, name: string) {
@@ -235,6 +237,10 @@ test("Brainstorm speichert beim sofortigen Seitenwechsel und ersetzt Sicherungen
     exact: true,
   });
   await source.fill("# Daily ideas\n\n- Keep this thought\n");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
@@ -244,6 +250,7 @@ test("Brainstorm speichert beim sofortigen Seitenwechsel und ersetzt Sicherungen
   );
   expect(backup.schemaVersion).toBe(5);
   expect(backup.brainstorm.text).toBe("# Daily ideas\n\n- Keep this thought\n");
+  await navigate(page, "Brainstorm");
   await source.fill("Pending text that import must replace");
   const restored = {
     ...backup,
@@ -263,7 +270,9 @@ test("Brainstorm speichert beim sofortigen Seitenwechsel und ersetzt Sicherungen
   ).toContainText(/Brainstorm/i);
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Replace data", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Backup imported");
+  await expect(page.locator('.message[role="status"]')).toContainText(
+    "Backup imported",
+  );
   await navigate(page, "Brainstorm");
   await page.reload();
   await navigate(page, "Brainstorm");
@@ -361,6 +370,10 @@ test("Brainstorm aktualisiert saubere zweite Tabs und erhält Entwürfe bei konk
     /changed elsewhere.*draft is preserved/i,
   );
   await expect(second).toHaveText("Second tab draft must survive");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
@@ -555,6 +568,10 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
   await expect(page.locator(".note-item")).toHaveCount(1);
   await navigate(page, "Tasks");
   await expect(flag).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
