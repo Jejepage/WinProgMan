@@ -290,6 +290,11 @@
   --badge-ink: #fff;
   --badge-border: #12707a;
 }
+:root[data-design="slate"] [data-category="Mail"] {
+  --badge-bg: #b5502a;
+  --badge-ink: #fff;
+  --badge-border: #b5502a;
+}
 :root[data-design="slate"] [data-category="Notiz"] {
   --badge-bg: #b0346f;
   --badge-ink: #fff;

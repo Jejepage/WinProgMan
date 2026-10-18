@@ -3,6 +3,7 @@ export const categories = [
   "Telefonat",
   "Milestone",
   "Beschluss",
+  "Mail",
   "Notiz",
 ] as const;
 export type Category = (typeof categories)[number];

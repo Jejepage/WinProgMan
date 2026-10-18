@@ -12,6 +12,7 @@ export const eventCategoryLabels: Record<Category, string> = {
   Telefonat: "Phone call",
   Milestone: "Milestone",
   Beschluss: "Decision",
+  Mail: "Mail",
   Notiz: "Note",
 };
 
