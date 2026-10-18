@@ -2,6 +2,7 @@ import {
   categories,
   emptyBrainstorm,
   projectStatuses,
+  tombstoneKinds,
   type AppData,
   type ExportEnvelope,
 } from "../domain/types";
@@ -53,17 +54,19 @@ function date(value: unknown, path: string) {
 export function validateImport(value: unknown): ExportEnvelope {
   const root = record(value, "Sicherung");
   const legacy = root.schemaVersion === 1;
-  const current = root.schemaVersion === 5;
+  const current = root.schemaVersion === 5 || root.schemaVersion === 6;
+  const synced = root.schemaVersion === 6;
   if (
     root.schemaVersion !== 1 &&
     root.schemaVersion !== 2 &&
     root.schemaVersion !== 3 &&
     root.schemaVersion !== 4 &&
-    root.schemaVersion !== 5
+    root.schemaVersion !== 5 &&
+    root.schemaVersion !== 6
   )
     fail(
       "schemaVersion",
-      "Nur Sicherungsformat 1, 2, 3, 4 und 5 werden unterstützt.",
+      "Nur Sicherungsformat 1, 2, 3, 4, 5 und 6 werden unterstützt.",
     );
   fields(
     root,
@@ -75,6 +78,7 @@ export function validateImport(value: unknown): ExportEnvelope {
       "todos",
       "events",
       ...(current ? ["brainstorm"] : []),
+      ...(synced ? ["tombstones"] : []),
       ...(legacy ? [] : ["projectCategories"]),
     ],
     "Sicherung",
@@ -137,7 +141,16 @@ export function validateImport(value: unknown): ExportEnvelope {
                     "note",
                     ...(Number(root.schemaVersion) >= 3 ? ["noteFormat"] : []),
                   ];
-      fields(entry, ["id", "createdAt", "updatedAt", ...extras], path);
+      fields(
+        entry,
+        ["id", "createdAt", "updatedAt", ...(synced ? ["rev"] : []), ...extras],
+        path,
+      );
+      if (
+        entry.rev !== undefined &&
+        (!Number.isSafeInteger(entry.rev) || Number(entry.rev) < 1)
+      )
+        fail(`${path}.rev`, "Positive ganze Version erwartet.");
       string(entry.id, `${path}.id`, true);
       if (ids.has(entry.id)) fail(`${path}.id`, "Doppelte ID.");
       ids.add(entry.id);
@@ -235,7 +248,36 @@ export function validateImport(value: unknown): ExportEnvelope {
     });
   }
   const result = structuredClone(root);
-  result.schemaVersion = 5;
+  result.schemaVersion = 6;
+  if (synced) {
+    const list = root.tombstones;
+    if (!Array.isArray(list)) fail("tombstones", "Liste erwartet.");
+    const seen = new Set<string>();
+    (list as unknown[]).forEach((item, index) => {
+      const path = `tombstones[${index}]`;
+      const entry = record(item, path);
+      fields(
+        entry,
+        ["kind", "id", "rev", "deletedAt", "group", "record"],
+        path,
+      );
+      if (!tombstoneKinds.includes(entry.kind as never))
+        fail(`${path}.kind`, "Unbekannte Art.");
+      string(entry.id, `${path}.id`, true);
+      if (seen.has(entry.id) || ids.has(entry.id))
+        fail(`${path}.id`, "Doppelte ID.");
+      seen.add(entry.id);
+      if (!Number.isSafeInteger(entry.rev) || Number(entry.rev) < 0)
+        fail(`${path}.rev`, "Nichtnegative ganze Version erwartet.");
+      timestamp(entry.deletedAt, `${path}.deletedAt`);
+      if (entry.group !== undefined) string(entry.group, `${path}.group`, true);
+      const stored = record(entry.record, `${path}.record`);
+      if (stored.id !== entry.id)
+        fail(`${path}.record.id`, "Stimmt nicht mit der ID überein.");
+    });
+  } else {
+    result.tombstones = [];
+  }
   if (!current) {
     result.brainstorm = emptyBrainstorm();
     result.projects = (result.projects as Record<string, unknown>[]).map(
@@ -266,7 +308,9 @@ export function validateData(data: unknown): AppData {
           (project: unknown) =>
             !!project && typeof project === "object" && "number" in project,
         ))
-        ? 5
+        ? source.tombstones !== undefined
+          ? 6
+          : 5
         : source.projectCategories === undefined
           ? 1
           : 4,

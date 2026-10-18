@@ -18,9 +18,7 @@ export function MarkdownNote({ text }: { text: string }) {
           ),
           a: ({ href, children }) =>
             href ? (
-              <ExternalLink href={href}>
-                {children}
-              </ExternalLink>
+              <ExternalLink href={href}>{children}</ExternalLink>
             ) : (
               <span>{children}</span>
             ),

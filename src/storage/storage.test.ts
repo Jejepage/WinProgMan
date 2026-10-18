@@ -9,6 +9,7 @@ const legacyData = () => {
   const {
     projectCategories: _categories,
     brainstorm: _brainstorm,
+    tombstones: _tombstones,
     ...data
   } = demoData();
   return {
@@ -26,7 +27,7 @@ const legacyData = () => {
 };
 
 const oldFields = (data: ExportEnvelope) => {
-  const { brainstorm: _brainstorm, ...rest } = data;
+  const { brainstorm: _brainstorm, tombstones: _tombstones, ...rest } = data;
   return {
     ...rest,
     projects: rest.projects.map(({ number: _number, ...project }) => project),
@@ -35,9 +36,14 @@ const oldFields = (data: ExportEnvelope) => {
 
 const envelope = (): ExportEnvelope => ({
   ...demoData(),
-  schemaVersion: 5,
+  schemaVersion: 6,
   exportedAt: new Date().toISOString(),
 });
+/** Compares content only; sync version counters are checked separately. */
+const bare = <T>(value: T): T =>
+  JSON.parse(
+    JSON.stringify(value, (key, item) => (key === "rev" ? undefined : item)),
+  );
 const store = () => new IndexedDbProjectStore(`test-${crypto.randomUUID()}`);
 
 describe("Sicherungsvalidierung", () => {
@@ -78,7 +84,7 @@ describe("Sicherungsvalidierung", () => {
     };
     old.events[0].note = "**kein Markdown**\n# Klartext";
     const imported = validateImport(old);
-    expect(imported.schemaVersion).toBe(5);
+    expect(imported.schemaVersion).toBe(6);
     expect(imported.events).toEqual(old.events);
     expect(imported.events[0]).not.toHaveProperty("noteFormat");
     expect(validateData(old).events).toEqual(old.events);
@@ -119,7 +125,7 @@ describe("Sicherungsvalidierung", () => {
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
     });
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.projectCategories).toEqual([]);
     expect(migrated.projects).toEqual(
       legacy.projects.map((project, index) => ({
@@ -128,8 +134,9 @@ describe("Sicherungsvalidierung", () => {
         status: "Aktiv",
       })),
     );
-    expect(validateData(legacy)).toEqual({
+    expect(bare(validateData(legacy))).toEqual({
       ...legacy,
+      tombstones: [],
       brainstorm: emptyData().brainstorm,
       projectCategories: [],
       projects: migrated.projects,
@@ -173,7 +180,7 @@ describe("Sicherungsvalidierung", () => {
       todos: data.todos.map(({ doNext: _doNext, ...todo }) => todo),
     };
     const migrated = validateImport(old);
-    expect(migrated.schemaVersion).toBe(5);
+    expect(migrated.schemaVersion).toBe(6);
     expect(migrated.todos).toEqual(old.todos);
     expect(validateData(old).todos).toEqual(old.todos);
     expect(() => validateImport({ ...data, schemaVersion: 3 })).toThrow(
@@ -186,7 +193,7 @@ describe("Sicherungsvalidierung", () => {
     [
       "unbekannte Version",
       (data: ExportEnvelope) => {
-        (data as unknown as { schemaVersion: number }).schemaVersion = 6;
+        (data as unknown as { schemaVersion: number }).schemaVersion = 7;
       },
     ],
     [
@@ -248,7 +255,7 @@ describe("Sicherungsvalidierung", () => {
     expect(
       validateImport({
         ...emptyData(),
-        schemaVersion: 5,
+        schemaVersion: 6,
         exportedAt: new Date().toISOString(),
       }).projects,
     ).toEqual([]);
@@ -374,10 +381,10 @@ describe("IndexedDB", () => {
       revision: 2,
     });
     const exported = await first.exportData();
-    expect(exported.schemaVersion).toBe(5);
+    expect(exported.schemaVersion).toBe(6);
     const restored = store();
     await restored.importData(JSON.parse(JSON.stringify(exported)));
-    expect(await restored.load()).toEqual(await first.load());
+    expect(bare(await restored.load())).toEqual(bare(await first.load()));
   });
   it("speichert Projekt und Linkentwurf gemeinsam und erhält bei Fehlern den gesamten alten Bestand", async () => {
     const adapter = store();
@@ -426,9 +433,9 @@ describe("IndexedDB", () => {
       before.projects.map((item) => item.id),
     );
     expect(after.projects[0].name).toBe("Changed");
-    expect(after.links.filter((item) => item.projectId === project.id)).toEqual(
-      [link],
-    );
+    expect(
+      bare(after.links.filter((item) => item.projectId === project.id)),
+    ).toEqual([link]);
     expect(after.links.filter((item) => item.projectId !== project.id)).toEqual(
       before.links.filter((item) => item.projectId !== project.id),
     );
@@ -476,10 +483,12 @@ describe("IndexedDB", () => {
     data.events[0].noteFormat = "markdown";
     data.events[1].note = "**Alter Klartext**";
     await adapter.importData(data);
-    expect((await new IndexedDbProjectStore(name).load()).events).toEqual(
-      data.events,
+    expect(bare((await new IndexedDbProjectStore(name).load()).events)).toEqual(
+      bare(data.events),
     );
-    expect((await adapter.exportData()).events).toEqual(data.events);
+    expect(bare((await adapter.exportData()).events)).toEqual(
+      bare(data.events),
+    );
   });
   it("lädt persistierte Altdaten und migriert vor der ersten Kategorieänderung", async () => {
     const name = `legacy-${crypto.randomUUID()}`;
@@ -507,8 +516,10 @@ describe("IndexedDB", () => {
     const category = { ...metadata(), name: "Arbeit" };
     await adapter.apply({ type: "category.save", value: category });
     const reloaded = await new IndexedDbProjectStore(name).load();
-    expect(reloaded).toEqual({ ...migrated, projectCategories: [category] });
-    expect((await adapter.exportData()).schemaVersion).toBe(5);
+    expect(bare(reloaded)).toEqual(
+      bare({ ...migrated, projectCategories: [category] }),
+    );
+    expect((await adapter.exportData()).schemaVersion).toBe(6);
   });
   it("löscht Kategorien atomar, erhält Projekte und aktualisiert deren Zeitstempel", async () => {
     const adapter = store();
@@ -529,7 +540,8 @@ describe("IndexedDB", () => {
     } finally {
       failure.mockRestore();
     }
-    expect(await adapter.load()).toEqual({
+    expect(bare(await adapter.load())).toEqual({
+      tombstones: [],
       brainstorm: data.brainstorm,
       projectCategories: data.projectCategories,
       projects: data.projects,
@@ -544,8 +556,8 @@ describe("IndexedDB", () => {
     expect(Date.parse(loaded.projects[0].updatedAt)).toBeGreaterThanOrEqual(
       Date.parse(data.projects[0].updatedAt),
     );
-    expect(loaded.projects[1]).toEqual(data.projects[1]);
-    expect(loaded.todos).toEqual(data.todos);
+    expect(bare(loaded.projects[1])).toEqual(bare(data.projects[1]));
+    expect(bare(loaded.todos)).toEqual(bare(data.todos));
   });
   it("erhält Kategorien bei Projektlöschung und weist ungültige Kategorieänderungen atomar ab", async () => {
     const adapter = store();
@@ -558,12 +570,12 @@ describe("IndexedDB", () => {
         value: { ...metadata(), name: " privat " },
       }),
     ).rejects.toThrow();
-    expect((await adapter.load()).projectCategories).toEqual(
-      data.projectCategories,
+    expect(bare((await adapter.load()).projectCategories)).toEqual(
+      bare(data.projectCategories),
     );
     await adapter.apply({ type: "project.delete", id: data.projects[0].id });
-    expect((await adapter.load()).projectCategories).toEqual(
-      data.projectCategories,
+    expect(bare((await adapter.load()).projectCategories)).toEqual(
+      bare(data.projectCategories),
     );
   });
   it("startet leer, speichert CRUD und lädt aus einer neuen Adapterinstanz", async () => {
@@ -590,8 +602,8 @@ describe("IndexedDB", () => {
       value: { ...todo, completed: true },
     });
     const loaded = await new IndexedDbProjectStore(name).load();
-    expect(loaded.projects).toEqual([{ ...project, number: 1 }]);
-    expect(loaded.todos).toEqual([{ ...todo, completed: true }]);
+    expect(bare(loaded.projects)).toEqual([{ ...project, number: 1 }]);
+    expect(bare(loaded.todos)).toEqual([{ ...todo, completed: true }]);
     await first.apply({ type: "todo.delete", id: todo.id });
     expect((await first.load()).todos).toEqual([]);
   });
@@ -601,7 +613,7 @@ describe("IndexedDB", () => {
     await adapter.importData(data);
     await adapter.apply({ type: "project.delete", id: data.projects[0].id });
     const loaded = await adapter.load();
-    expect(loaded.projects).toEqual([data.projects[1]]);
+    expect(bare(loaded.projects)).toEqual(bare([data.projects[1]]));
     for (const collection of [loaded.links, loaded.todos, loaded.events])
       expect(
         collection.every((item) => item.projectId === data.projects[1].id),
@@ -618,10 +630,12 @@ describe("IndexedDB", () => {
     expect(await adapter.load()).toEqual(before);
     await adapter.importData({
       ...emptyData(),
-      schemaVersion: 5,
+      schemaVersion: 6,
       exportedAt: new Date().toISOString(),
     });
-    expect(await adapter.load()).toEqual(emptyData());
+    const emptied = await adapter.load();
+    expect({ ...emptied, tombstones: [] }).toEqual(emptyData());
+    expect(emptied.tombstones.length).toBeGreaterThan(0);
   });
   it("weist ungültige Änderungen zurück, ohne bestehende Daten anzutasten", async () => {
     const adapter = store();
@@ -675,6 +689,6 @@ describe("IndexedDB", () => {
     );
     const loaded = await adapter.load();
     expect(loaded.todos).toHaveLength(data.todos.length + todos.length);
-    expect((await adapter.exportData()).schemaVersion).toBe(5);
+    expect((await adapter.exportData()).schemaVersion).toBe(6);
   });
 });

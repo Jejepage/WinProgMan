@@ -468,7 +468,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   const backup = JSON.parse(
     await readFile((await (await downloadEvent).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(5);
+  expect(backup.schemaVersion).toBe(6);
   expect(backup.projectCategories[0].name).toBe("Persönlich");
   expect(backup.projects[0].status).toBe("Pausiert");
   expect(backup.projects[0].categoryId).toBe(backup.projectCategories[0].id);
@@ -636,7 +636,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   const backup = JSON.parse(
     await readFile((await (await downloaded).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(5);
+  expect(backup.schemaVersion).toBe(6);
   expect(backup.events[0].note).toBe(markdown);
   expect(backup.events[0].noteFormat).toBe("markdown");
   const legacyNote = "**Klartext bleibt Klartext**\n<script>kein HTML</script>";

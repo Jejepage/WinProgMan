@@ -10,6 +10,8 @@ export interface Base {
   id: string;
   createdAt: string;
   updatedAt: string;
+  /** Version counter for sync: raised on every change, absent in old data. */
+  rev?: number;
 }
 export const projectStatuses = [
   "Geplant",
@@ -49,7 +51,27 @@ export interface ProjectEvent extends Base {
   note?: string;
   noteFormat?: "markdown";
 }
+export const tombstoneKinds = [
+  "category",
+  "project",
+  "link",
+  "todo",
+  "event",
+] as const;
+export type TombstoneKind = (typeof tombstoneKinds)[number];
+/** Deleted record kept for the trash and for propagating deletions via sync. */
+export interface Tombstone {
+  kind: TombstoneKind;
+  id: string;
+  /** Version of the record at deletion; a later edit (higher rev) wins. */
+  rev: number;
+  deletedAt: string;
+  /** Project whose deletion removed this record as a dependent. */
+  group?: string;
+  record: Record<string, unknown>;
+}
 export interface AppData {
+  tombstones: Tombstone[];
   brainstorm: Brainstorm;
   projectCategories: ProjectCategory[];
   projects: Project[];
@@ -68,12 +90,16 @@ export const emptyBrainstorm = (): Brainstorm => ({
   updatedAt: "1970-01-01T00:00:00.000Z",
 });
 export interface ExportEnvelope extends AppData {
-  schemaVersion: 5;
+  schemaVersion: 6;
   exportedAt: string;
 }
 export type DomainChange =
   | { type: "samples.load"; value: AppData }
   | { type: "brainstorm.save"; text: string; expectedRevision: number }
+  | { type: "trash.restore"; id: string }
+  | { type: "trash.purge"; id: string }
+  | { type: "trash.empty" }
+  | { type: "sync.merge"; remotes: AppData[] }
   | { type: "project.save"; value: Project }
   | { type: "project.saveWithLinks"; value: Project; links: Link[] }
   | { type: "category.save"; value: ProjectCategory }
@@ -87,6 +113,7 @@ export type DomainChange =
       id: string;
     };
 export const emptyData = (): AppData => ({
+  tombstones: [],
   brainstorm: emptyBrainstorm(),
   projectCategories: [],
   projects: [],

@@ -4,6 +4,8 @@ import {
   type DomainChange,
   type ExportEnvelope,
 } from "../domain/types";
+import { restore, stamp } from "../domain/history";
+import { mergeData } from "../sync/merge";
 import type { ProjectStore } from "./ProjectStore";
 import { validateData, validateImport } from "./validation";
 
@@ -29,6 +31,27 @@ function applyChange(data: AppData, change: DomainChange): AppData {
       },
     };
   }
+  if (change.type === "sync.merge") return data;
+  if (change.type === "trash.restore")
+    return restore(data, change.id, new Date());
+  if (change.type === "trash.purge") {
+    const found = data.tombstones.some((item) => item.id === change.id);
+    if (!found) throw new Error("This item is no longer in the trash.");
+    return {
+      ...data,
+      tombstones: data.tombstones.map((item) =>
+        item.id === change.id ? { ...item, record: { id: item.id } } : item,
+      ),
+    };
+  }
+  if (change.type === "trash.empty")
+    return {
+      ...data,
+      tombstones: data.tombstones.map((item) => ({
+        ...item,
+        record: { id: item.id },
+      })),
+    };
   if (
     change.type === "project.save" &&
     !data.projects.some((project) => project.id === change.value.id)
@@ -213,12 +236,17 @@ export class IndexedDbProjectStore implements ProjectStore {
   }
 
   apply(change: DomainChange): Promise<void> {
-    return this.write((data) => applyChange(data, change));
+    return this.write((data) => {
+      const now = new Date();
+      if (change.type === "sync.merge")
+        return mergeData(data, change.remotes, now);
+      return stamp(data, applyChange(data, change), now);
+    });
   }
   async exportData(): Promise<ExportEnvelope> {
     return {
       ...(await this.load()),
-      schemaVersion: 5,
+      schemaVersion: 6,
       exportedAt: new Date().toISOString(),
     };
   }
@@ -228,6 +256,6 @@ export class IndexedDbProjectStore implements ProjectStore {
       exportedAt: _at,
       ...validated
     } = validateImport(data);
-    return this.write(() => validated);
+    return this.write((current) => stamp(current, validated, new Date()));
   }
 }

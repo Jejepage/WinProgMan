@@ -4,7 +4,8 @@ import { readFile } from "node:fs/promises";
 const timestamp = "2026-10-16T08:00:00.000Z";
 const base = { createdAt: timestamp, updatedAt: timestamp };
 const sample = () => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
+  tombstones: [],
   brainstorm: { text: "", revision: 0, updatedAt: timestamp },
   exportedAt: timestamp,
   projectCategories: [
@@ -248,7 +249,7 @@ test("Brainstorm speichert beim sofortigen Seitenwechsel und ersetzt Sicherungen
   const backup = JSON.parse(
     await readFile((await (await downloaded).path())!, "utf8"),
   );
-  expect(backup.schemaVersion).toBe(5);
+  expect(backup.schemaVersion).toBe(6);
   expect(backup.brainstorm.text).toBe("# Daily ideas\n\n- Keep this thought\n");
   await navigate(page, "Brainstorm");
   await source.fill("Pending text that import must replace");

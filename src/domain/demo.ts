@@ -24,6 +24,7 @@ export function demoData(): AppData {
       "Abgeschlossenes Beispielprojekt – bleibt in der Projektliste erreichbar.",
   };
   return {
+    tombstones: [],
     brainstorm: emptyBrainstorm(),
     projectCategories: [],
     projects: [active, resting],

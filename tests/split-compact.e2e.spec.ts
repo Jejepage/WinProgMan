@@ -89,7 +89,8 @@ test("backup actions appear exclusively in Settings in every design and export c
 
 async function load(page: Page, appearanceFixture = false) {
   const backup: ExportEnvelope = {
-    schemaVersion: 5,
+    schemaVersion: 6,
+    tombstones: [],
     exportedAt: timestamp,
     brainstorm: { text: "", revision: 0, updatedAt: timestamp },
     projectCategories: [{ ...base, id: "topic", name: "Delivery" }],
