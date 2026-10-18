@@ -2100,3 +2100,37 @@ button.project-resource {
     display: none;
   }
 }
+
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent, inherit);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sidebar-icons .sync-conflict-note {
+  display: none;
+}
+.conflict-compare {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.conflict-compare th,
+.conflict-compare td {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border, #8884);
+  vertical-align: top;
+  text-align: left;
+}
+.conflict-compare pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+}

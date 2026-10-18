@@ -258,7 +258,7 @@ export function validateImport(value: unknown): ExportEnvelope {
       const entry = record(item, path);
       fields(
         entry,
-        ["kind", "id", "rev", "deletedAt", "group", "record"],
+        ["kind", "id", "rev", "deletedAt", "group", "conflict", "record"],
         path,
       );
       if (!tombstoneKinds.includes(entry.kind as never))
@@ -271,6 +271,13 @@ export function validateImport(value: unknown): ExportEnvelope {
         fail(`${path}.rev`, "Nichtnegative ganze Version erwartet.");
       timestamp(entry.deletedAt, `${path}.deletedAt`);
       if (entry.group !== undefined) string(entry.group, `${path}.group`, true);
+      if (entry.conflict !== undefined) {
+        const info = record(entry.conflict, `${path}.conflict`);
+        fields(info, ["of", "by", "device"], `${path}.conflict`);
+        string(info.of, `${path}.conflict.of`, true);
+        string(info.by, `${path}.conflict.by`, true);
+        string(info.device, `${path}.conflict.device`, true);
+      }
       const stored = record(entry.record, `${path}.record`);
       if (stored.id !== entry.id)
         fail(`${path}.record.id`, "Stimmt nicht mit der ID überein.");

@@ -1,6 +1,7 @@
 import type { AppData } from "../domain/types";
 import type { ProjectStore } from "../storage/ProjectStore";
 import { validateData } from "../storage/validation";
+import { findConflicts } from "./conflicts";
 import { mergeData, sameData } from "./merge";
 
 export interface SyncTransport {
@@ -26,6 +27,8 @@ export interface SyncResult {
   skipped: string[];
   /** Local data changed because of the merge. */
   changed: boolean;
+  /** Local versions replaced by newer ones from another computer (now in the trash). */
+  conflicts: number;
   /** This device's file was (re)written. */
   published: boolean;
   syncedAt: string;
@@ -85,6 +88,7 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
     }
   }
   let changed = false;
+  let conflicts = 0;
   if (remotes.length) {
     const local = await store.load();
     const preview = mergeData(
@@ -93,11 +97,30 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
       now(),
     );
     if (!sameData(local, preview)) {
+      let base: AppData | undefined;
+      try {
+        const text = await transport.read(own);
+        if (text) base = (await parse(text)).data;
+      } catch {
+        base = undefined; // No reliable published state: report no conflicts.
+      }
+      const found = findConflicts(
+        local,
+        base,
+        remotes.map((file) => ({
+          deviceName: file.deviceName,
+          data: file.data,
+        })),
+        now(),
+        deviceId,
+      );
       await options.backup?.(local);
       await store.apply({
         type: "sync.merge",
         remotes: remotes.map((file) => file.data),
+        conflicts: found,
       });
+      conflicts = found.length;
       changed = true;
     }
   }
@@ -128,6 +151,7 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
     devices: remotes.map((file) => file.deviceName),
     skipped,
     changed,
+    conflicts,
     published,
     syncedAt: now().toISOString(),
   };

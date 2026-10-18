@@ -10,6 +10,7 @@ import type {
   Base,
   Brainstorm,
   Project,
+  RecordKind,
   Tombstone,
 } from "../domain/types";
 
@@ -99,7 +100,7 @@ export function mergeData(
       .filter((entry) => entry.kind === kind)
       .map((entry) => entry.row)
       .sort((a, b) => (a.id < b.id ? -1 : 1));
-  const stone = (row: Row, kind: Tombstone["kind"], rev: number) =>
+  const stone = (row: Row, kind: RecordKind, rev: number) =>
     tombstones.set(row.id, {
       kind,
       id: row.id,
@@ -174,7 +175,7 @@ export function mergeData(
   );
 
   const projectIds = new Set(projects.map((p) => p.id));
-  const dependants = (kind: Tombstone["kind"]) =>
+  const dependants = (kind: RecordKind) =>
     rows(kindOrder.indexOf(kind)).filter((row) => {
       if (projectIds.has(row.projectId as string)) return true;
       stone(row, kind, row.rev ?? 0);

@@ -1,4 +1,4 @@
-import type { AppData, Base, Tombstone, TombstoneKind } from "./types";
+import type { AppData, Base, RecordKind, Tombstone } from "./types";
 
 /** Deletions are kept this long so they can be restored and reach other devices. */
 export const TOMBSTONE_RETENTION_DAYS = 60;
@@ -6,14 +6,14 @@ const DAY = 24 * 60 * 60 * 1000;
 
 type Collection =
   "projectCategories" | "projects" | "links" | "todos" | "events";
-export const collectionByKind: Record<TombstoneKind, Collection> = {
+export const collectionByKind: Record<RecordKind, Collection> = {
   category: "projectCategories",
   project: "projects",
   link: "links",
   todo: "todos",
   event: "events",
 };
-export const kindOrder: TombstoneKind[] = [
+export const kindOrder: RecordKind[] = [
   "category",
   "project",
   "link",
@@ -112,6 +112,8 @@ export function restore(data: AppData, id: string, now: Date): AppData {
   if (!dead) throw new Error("This item is no longer in the trash.");
   if (!isRestorable(dead))
     throw new Error("This item was permanently deleted.");
+  if (dead.conflict) return restoreConflict(data, dead, now);
+  if (dead.kind === "brainstorm") throw new Error("Unknown trash entry.");
   const group =
     dead.kind === "project"
       ? data.tombstones.filter(
@@ -141,7 +143,7 @@ export function restore(data: AppData, id: string, now: Date): AppData {
     ),
   };
   for (const item of back) {
-    const name = collectionByKind[item.kind];
+    const name = collectionByKind[item.kind as RecordKind];
     const record: Record<string, unknown> = {
       ...item.record,
       updatedAt: now.toISOString(),
@@ -162,4 +164,53 @@ export function restore(data: AppData, id: string, now: Date): AppData {
     ];
   }
   return result;
+}
+
+/** Label of the field that names a record, used for copies and the trash list. */
+const nameField = ["title", "name", "label"] as const;
+
+/**
+ * Brings a replaced local version back as a copy next to the version that won:
+ * records get a new id, the brainstorm text is appended to the current one.
+ */
+function restoreConflict(data: AppData, dead: Tombstone, now: Date): AppData {
+  const tombstones = data.tombstones.filter((item) => item.id !== dead.id);
+  const stamp = now.toISOString();
+  if (dead.kind === "brainstorm") {
+    const lost = String(dead.record.text ?? "");
+    const text = data.brainstorm.text.trim()
+      ? `${data.brainstorm.text.replace(/\s+$/, "")}\n\n---\n\n${lost}`
+      : lost;
+    return {
+      ...data,
+      tombstones,
+      brainstorm: {
+        text,
+        revision: data.brainstorm.revision + 1,
+        updatedAt: stamp,
+      },
+    };
+  }
+  const projectId = dead.record.projectId;
+  if (dead.kind !== "project" && dead.kind !== "category") {
+    if (!data.projects.some((p) => p.id === projectId))
+      throw new Error("The project of this item no longer exists.");
+  }
+  const record: Record<string, unknown> = {
+    ...dead.record,
+    id: crypto.randomUUID(),
+    createdAt: stamp,
+    updatedAt: stamp,
+  };
+  delete record.rev;
+  const field = nameField.find((key) => typeof record[key] === "string");
+  if (field) record[field] = `${record[field]} (other version)`;
+  if (dead.kind === "project")
+    record.number = Math.max(0, ...data.projects.map((p) => p.number)) + 1;
+  const name = collectionByKind[dead.kind];
+  return {
+    ...data,
+    tombstones,
+    [name]: [...(data[name] as unknown[]), record],
+  };
 }

@@ -38,7 +38,8 @@ import { CategorySettings } from "../features/projects/CategorySettings";
 import { StorageSettings } from "../features/settings/StorageSettings";
 import { SyncSettings, syncSummary } from "../features/settings/SyncSettings";
 import { TrashSettings } from "../features/settings/TrashSettings";
-import { useDailyBackup, useSync } from "../sync/useSync";
+import { ownConflicts } from "../sync/conflicts";
+import { deviceId, useDailyBackup, useSync } from "../sync/useSync";
 import {
   BrainstormPanel,
   type BrainstormPanelHandle,
@@ -164,6 +165,7 @@ export function App() {
     updates.current?.postMessage("changed");
   });
   useDailyBackup(store, !loading);
+  const replaced = ownConflicts(data.tombstones, deviceId()).length;
   useEffect(() => {
     if (!undo) return;
     const timer = setTimeout(() => setUndo(null), 15000);
@@ -673,6 +675,26 @@ export function App() {
             <span className="local-dot" />{" "}
             {syncSummary(sync.state) || "Stored locally"}
           </span>
+          {replaced > 0 && (
+            <button
+              className="link-button sync-conflict-note"
+              onClick={() =>
+                void navigate("Settings").then(() =>
+                  setTimeout(
+                    () =>
+                      document
+                        .getElementById("trash-settings")
+                        ?.scrollIntoView({ block: "start" }),
+                    0,
+                  ),
+                )
+              }
+            >
+              {replaced === 1
+                ? "Changed on another computer – your version is in the trash"
+                : `${replaced} items changed on another computer – your versions are in the trash`}
+            </button>
+          )}
           <small>
             {isDesktop()
               ? "Your data stays on this computer."
@@ -925,6 +947,7 @@ export function App() {
               <SyncSettings sync={sync} busy={busy} />
               <TrashSettings
                 tombstones={data.tombstones}
+                data={data}
                 busy={busy}
                 onChange={change}
               />

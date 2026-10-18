@@ -57,8 +57,20 @@ export const tombstoneKinds = [
   "link",
   "todo",
   "event",
+  "brainstorm",
 ] as const;
 export type TombstoneKind = (typeof tombstoneKinds)[number];
+/** Kinds that live in their own collection (the brainstorm is a single text). */
+export type RecordKind = Exclude<TombstoneKind, "brainstorm">;
+/** Local version that lost against a newer one from another computer. */
+export interface ConflictInfo {
+  /** Id of the record that won; for the brainstorm the fixed id "brainstorm". */
+  of: string;
+  /** Id of the computer whose local version was replaced. */
+  by: string;
+  /** Name of the computer whose version replaced this one. */
+  device: string;
+}
 /** Deleted record kept for the trash and for propagating deletions via sync. */
 export interface Tombstone {
   kind: TombstoneKind;
@@ -68,6 +80,8 @@ export interface Tombstone {
   deletedAt: string;
   /** Project whose deletion removed this record as a dependent. */
   group?: string;
+  /** Set when this is a replaced local version, not a deletion. */
+  conflict?: ConflictInfo;
   record: Record<string, unknown>;
 }
 export interface AppData {
@@ -99,7 +113,7 @@ export type DomainChange =
   | { type: "trash.restore"; id: string }
   | { type: "trash.purge"; id: string }
   | { type: "trash.empty" }
-  | { type: "sync.merge"; remotes: AppData[] }
+  | { type: "sync.merge"; remotes: AppData[]; conflicts?: Tombstone[] }
   | { type: "project.save"; value: Project }
   | { type: "project.saveWithLinks"; value: Project; links: Link[] }
   | { type: "category.save"; value: ProjectCategory }

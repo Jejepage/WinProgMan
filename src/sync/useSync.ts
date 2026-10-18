@@ -26,7 +26,7 @@ function stored(key: string, create: () => string): string {
     return create();
   }
 }
-const deviceId = () =>
+export const deviceId = () =>
   stored("winprogman-device-id", () => crypto.randomUUID());
 const defaultName = () => `PC ${deviceId().slice(0, 4)}`;
 export const getDeviceName = () =>

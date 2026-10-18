@@ -155,7 +155,7 @@ export class IndexedDbProjectStore implements ProjectStore {
         request.onerror = () =>
           reject(
             request.error ??
-              new Error("Lokaler Speicher konnte nicht geöffnet werden."),
+              new Error("Lokaler Speicher konnte nicht geÃ¶ffnet werden."),
           );
         request.onblocked = () =>
           reject(
@@ -230,7 +230,7 @@ export class IndexedDbProjectStore implements ProjectStore {
         reject(
           failure ??
             transaction.error ??
-            new Error("Änderung wurde nicht gespeichert."),
+            new Error("Ã„nderung wurde nicht gespeichert."),
         );
       transaction.onerror = () =>
         reject(failure ?? transaction.error ?? request.error);
@@ -240,8 +240,17 @@ export class IndexedDbProjectStore implements ProjectStore {
   apply(change: DomainChange): Promise<void> {
     return this.write((data) => {
       const now = new Date();
-      if (change.type === "sync.merge")
-        return mergeData(data, change.remotes, now);
+      if (change.type === "sync.merge") {
+        const merged = mergeData(data, change.remotes, now);
+        const ids = new Set(merged.tombstones.map((item) => item.id));
+        return {
+          ...merged,
+          tombstones: [
+            ...merged.tombstones,
+            ...(change.conflicts ?? []).filter((item) => !ids.has(item.id)),
+          ],
+        };
+      }
       return stamp(data, applyChange(data, change), now);
     });
   }

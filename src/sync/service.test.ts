@@ -97,6 +97,123 @@ describe("Synchronisierung über einen Ordner", () => {
     expect((await a.store.load()).projects).toEqual(before.projects);
   });
 
+  async function twoSynced() {
+    const transport = memory();
+    const a = device("aaaa");
+    const b = device("bbbb");
+    await a.store.importData({
+      ...demoData(),
+      schemaVersion: 6,
+      exportedAt: new Date().toISOString(),
+    });
+    await runSync({ ...a, transport });
+    await runSync({ ...b, transport });
+    await runSync({ ...a, transport });
+    return { transport, a, b };
+  }
+
+  it("legt eine ersetzte lokale Notiz im Papierkorb ab und stellt sie als Kopie wieder her", async () => {
+    const { transport, a, b } = await twoSynced();
+    const event = (await a.store.load()).events[0];
+    // B bearbeitet zuerst, A danach (später gewinnt); B synchronisiert zuletzt.
+    await b.store.apply({
+      type: "event.save",
+      value: {
+        ...event,
+        title: "Von B",
+        updatedAt: "2030-01-01T10:00:00.000Z",
+      },
+    });
+    await a.store.apply({
+      type: "event.save",
+      value: {
+        ...event,
+        title: "Von A",
+        updatedAt: "2030-01-01T11:00:00.000Z",
+      },
+    });
+    await runSync({ ...a, transport });
+    const result = await runSync({ ...b, transport });
+    expect(result.conflicts).toBe(1);
+    const data = await b.store.load();
+    expect(data.events.find((e) => e.id === event.id)?.title).toBe("Von A");
+    const lost = data.tombstones.find((t) => t.conflict);
+    expect(lost?.conflict).toEqual({
+      of: event.id,
+      by: b.deviceId,
+      device: "aaaa",
+    });
+    expect(lost?.record.title).toBe("Von B");
+
+    await b.store.apply({ type: "trash.restore", id: lost!.id });
+    const after = await b.store.load();
+    expect(after.events.map((e) => e.title)).toContain("Von A");
+    expect(after.events.map((e) => e.title)).toContain("Von B (other version)");
+    expect(after.tombstones.some((t) => t.conflict)).toBe(false);
+  });
+
+  it("meldet keinen Konflikt, wenn die lokale Fassung nur älter ist", async () => {
+    const { transport, a, b } = await twoSynced();
+    const todo = (await a.store.load()).todos[0];
+    await a.store.apply({
+      type: "todo.save",
+      value: { ...todo, title: "Neu von A" },
+    });
+    await runSync({ ...a, transport });
+    const result = await runSync({ ...b, transport });
+    expect(result.changed).toBe(true);
+    expect(result.conflicts).toBe(0);
+    expect((await b.store.load()).tombstones.some((t) => t.conflict)).toBe(
+      false,
+    );
+  });
+
+  it("sichert den unterlegenen Brainstorm-Text", async () => {
+    const { transport, a, b } = await twoSynced();
+    const first = await b.store.load();
+    await b.store.apply({
+      type: "brainstorm.save",
+      text: "Text von B",
+      expectedRevision: first.brainstorm.revision,
+    });
+    const second = await a.store.load();
+    await a.store.apply({
+      type: "brainstorm.save",
+      text: "Text von A",
+      expectedRevision: second.brainstorm.revision,
+    });
+    await a.store.apply({
+      type: "brainstorm.save",
+      text: "Text von A, ergänzt",
+      expectedRevision: second.brainstorm.revision + 1,
+    });
+    await runSync({ ...a, transport });
+    const result = await runSync({ ...b, transport });
+    expect(result.conflicts).toBe(1);
+    const data = await b.store.load();
+    expect(data.brainstorm.text).toBe("Text von A, ergänzt");
+    const lost = data.tombstones.find((t) => t.kind === "brainstorm");
+    expect(lost?.record.text).toBe("Text von B");
+
+    await b.store.apply({ type: "trash.restore", id: lost!.id });
+    const text = (await b.store.load()).brainstorm.text;
+    expect(text).toContain("Text von A, ergänzt");
+    expect(text).toContain("Text von B");
+  });
+
+  it("übernimmt den Ordnerstand ohne eigene Veröffentlichung ohne Konfliktmeldung", async () => {
+    const { transport, a } = await twoSynced();
+    const fresh = device("cccc");
+    await fresh.store.apply({
+      type: "brainstorm.save",
+      text: "Lokal",
+      expectedRevision: 0,
+    });
+    const result = await runSync({ ...fresh, transport });
+    expect(result.conflicts).toBe(0);
+    expect((await a.store.load()).projects.length).toBeGreaterThan(0);
+  });
+
   it("übernimmt auf Wunsch den Ordnerstand vollständig", async () => {
     const transport = memory();
     const a = device("aaaa");
