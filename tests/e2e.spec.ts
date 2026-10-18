@@ -29,7 +29,7 @@ async function saveEditor(page: Page, detail: Page) {
 
 async function createProject(page: Page, name = "Browserprojekt") {
   await page
-    .getByRole("button", { name: "+ New project", exact: true })
+    .getByRole("button", { name: "New project", exact: true })
     .click();
   await page.getByLabel("Project name", { exact: true }).fill(name);
   await page
@@ -398,7 +398,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .getByRole("button", { name: /Projects/ })
     .click();
   await page
-    .getByRole("button", { name: "+ New project", exact: true })
+    .getByRole("button", { name: "New project", exact: true })
     .click();
   await page
     .getByLabel("Project name", { exact: true })

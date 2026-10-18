@@ -80,10 +80,10 @@ export function ProjectsPage({
           <Table className="projects-table">
             <thead>
               <tr>
-                <th>Project #</th>
+                <th className="col-fit">Project #</th>
                 <th>Title</th>
-                <th>Status</th>
-                <th>Open tasks</th>
+                <th className="col-fit">Status</th>
+                <th className="col-fit">Open tasks</th>
               </tr>
             </thead>
             {groups.map((group) => (
@@ -98,7 +98,7 @@ export function ProjectsPage({
                 </tr>
                 {group.projects.map((p) => (
                   <tr key={p.id}>
-                    <td>
+                    <td className="col-fit">
                       PRJ-
                       {String(p.number).padStart(3, "0")}
                     </td>
@@ -110,12 +110,12 @@ export function ProjectsPage({
                         {p.name}
                       </button>
                     </td>
-                    <td>
+                    <td className="col-fit">
                       <StatusLabel data-status={p.status}>
                         {statusLabel(p.status)}
                       </StatusLabel>
                     </td>
-                    <td>
+                    <td className="col-fit">
                       {
                         data.todos.filter(
                           (t) => t.projectId === p.id && !t.completed,

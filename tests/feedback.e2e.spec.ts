@@ -203,7 +203,7 @@ test("Projektnummern sind editierbar, eindeutig und unabhängig von Filtern daue
     page.locator(".project-topic-group").filter({ hasText: "Alpha project" }),
   ).toContainText("PRJ-002");
   await page
-    .getByRole("button", { name: "+ New project", exact: true })
+    .getByRole("button", { name: "New project", exact: true })
     .click();
   await page.getByLabel("Project name", { exact: true }).fill("Next number");
   await page

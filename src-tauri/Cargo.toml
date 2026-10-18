@@ -1,6 +1,6 @@
 [package]
 name = "winprogman"
-version = "0.7.0"
+version = "0.7.1"
 description = "Personal project management"
 authors = ["WinProgMan"]
 edition = "2021"

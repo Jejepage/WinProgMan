@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { Fragment, useState } from "react";
-import { Flag } from "lucide-react";
+import { Flag, Plus } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
@@ -102,9 +102,11 @@ export function TodosPanel({
     <button
       className="button"
       disabled={busy || !projects.length}
+      aria-label="Add task"
+      title="Add task"
       onClick={() => openNewItem("task", projectId)}
     >
-      Add task
+      <Plus size={16} aria-hidden="true" />
     </button>
   );
   function toggle(todo: Todo) {

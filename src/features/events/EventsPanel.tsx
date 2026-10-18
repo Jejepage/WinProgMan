@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { Plus } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { useId, useRef, useState, type FormEvent } from "react";
 import {
@@ -297,9 +298,11 @@ export function EventsPanel({
     <button
       className="button"
       disabled={busy || projects.length === 0}
+      aria-label={notesOnly ? "Add note" : "Add event"}
+      title={notesOnly ? "Add note" : "Add event"}
       onClick={() => openNewItem(itemKind, projectId)}
     >
-      {notesOnly ? "Add note" : "Add event"}
+      <Plus size={16} aria-hidden="true" />
     </button>
   );
   return (

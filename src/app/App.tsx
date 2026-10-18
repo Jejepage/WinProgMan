@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import {
   metadata,
   projectStatuses,
@@ -498,9 +499,11 @@ export function App() {
                       <button
                         className="button"
                         disabled={busy}
+                        aria-label="New project"
+                        title="New project"
                         onClick={() => setNewProject(!newProject)}
                       >
-                        + New project
+                        <Plus size={16} aria-hidden="true" />
                       </button>
                     )}
                   </div>

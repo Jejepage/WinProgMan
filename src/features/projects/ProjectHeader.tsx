@@ -271,9 +271,11 @@ export function ProjectHeader({
           <button
             className="text-button"
             disabled={busy}
+            aria-label="Add link"
+            title="Add link"
             onClick={() => editLink()}
           >
-            <Plus size={14} aria-hidden="true" /> Add link
+            <Plus size={14} aria-hidden="true" />
           </button>
         )}
       </div>
