@@ -43,7 +43,12 @@ import {
   BrainstormPanel,
   type BrainstormPanelHandle,
 } from "../features/brainstorm/BrainstormPanel";
-import { openItem } from "../ui/itemNavigation";
+import { openItem, openNewItem } from "../ui/itemNavigation";
+import {
+  CommandPalette,
+  type PaletteAction,
+} from "../features/search/CommandPalette";
+import type { SearchResult } from "../domain/search";
 import { confirmAction, isDesktop, saveBackup } from "../platform/desktop";
 const store = new IndexedDbProjectStore();
 import {
@@ -56,6 +61,7 @@ import {
   Lightbulb,
   Download,
   Upload,
+  Search,
 } from "lucide-react";
 import { statusLabel, categoryLabel, errorLabel } from "../ui/labels";
 type View =
@@ -69,7 +75,7 @@ type View =
   | "Settings";
 type ThemeChoice = "system" | "light" | "dark";
 function readPreference(
-  key: "design" | "sidebar" | "navigation",
+  key: "design" | "sidebar" | "navigation" | "density",
   fallback: string,
 ) {
   try {
@@ -82,6 +88,8 @@ function readPreference(
     if (key === "sidebar" && (saved === "labels" || saved === "icons"))
       return saved;
     if (key === "navigation" && (saved === "sidebar" || saved === "top"))
+      return saved;
+    if (key === "density" && (saved === "comfortable" || saved === "compact"))
       return saved;
   } catch {
     /* Session only. */
@@ -123,6 +131,7 @@ export function App() {
   const [noteSearch, setNoteSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [undo, setUndo] = useState<{ id: string; label: string } | null>(null);
   const [design, setDesign] = useState(() =>
     readPreference("design", "classic"),
@@ -132,6 +141,9 @@ export function App() {
   );
   const [navigation, setNavigation] = useState(() =>
     readPreference("navigation", "sidebar"),
+  );
+  const [density, setDensity] = useState(() =>
+    readPreference("density", "comfortable"),
   );
   const brainstormPanel = useRef<BrainstormPanelHandle>(null);
   const [brainstormOpened, setBrainstormOpened] = useState(false);
@@ -247,6 +259,14 @@ export function App() {
     }
   }, [design]);
   useEffect(() => {
+    document.documentElement.dataset.density = density;
+    try {
+      localStorage.setItem("winprogman-density", density);
+    } catch {
+      /* Session only. */
+    }
+  }, [density]);
+  useEffect(() => {
     try {
       localStorage.setItem("winprogman-sidebar", sidebar);
     } catch {
@@ -276,6 +296,76 @@ export function App() {
       setError(errorLabel(e));
     }
   }
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        // Ctrl+K inside the note editor inserts a link.
+        const target = event.target instanceof Element ? event.target : null;
+        if (
+          event.defaultPrevented ||
+          target?.closest('.rich-note-editor, [contenteditable="true"]')
+        )
+          return;
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  async function openResult(result: SearchResult) {
+    try {
+      await brainstormPanel.current?.flush();
+    } catch (e) {
+      setError(errorLabel(e));
+      return;
+    }
+    if (
+      result.kind === "task" ||
+      result.kind === "event" ||
+      result.kind === "note"
+    ) {
+      openItem(result.kind, result.id);
+    } else if (result.kind === "project") {
+      setSettingsOpen(false);
+      closeDetail();
+      setNewProject(false);
+      goProject(result.id);
+    } else {
+      void navigate("Brainstorm");
+    }
+  }
+  const paletteActions: PaletteAction[] = [
+    ...(
+      [
+        "Dashboard",
+        "Projects",
+        "Tasks",
+        "Events",
+        "Notes",
+        "Brainstorm",
+        "Settings",
+      ] as View[]
+    ).map((v) => ({
+      id: `go-${v}`,
+      label: `Go to ${v}`,
+      run: () => void navigate(v),
+    })),
+    { id: "new-task", label: "New task", run: () => openNewItem("task") },
+    { id: "new-event", label: "New event", run: () => openNewItem("event") },
+    {
+      id: "new-note",
+      label: "New note",
+      run: () => openNewItem("note", undefined, true),
+    },
+    {
+      id: "new-project",
+      label: "New project",
+      run: () => {
+        void navigate("Projects").then(() => setNewProject(true));
+      },
+    },
+  ];
   async function saveBrainstorm(text: string, expectedRevision: number) {
     await store.apply({ type: "brainstorm.save", text, expectedRevision });
     const latest = await store.load();
@@ -527,6 +617,17 @@ export function App() {
             WinProgMan<small>Personal workspace</small>
           </span>
         </a>
+        <button
+          type="button"
+          className="search-button"
+          aria-label="Search"
+          title="Search (Ctrl+K)"
+          onClick={() => setPaletteOpen(true)}
+        >
+          <Search size={16} aria-hidden="true" />
+          <span className="nav-text">Search</span>
+          <kbd className="nav-text">Ctrl+K</kbd>
+        </button>
         <nav aria-label="Main navigation">
           {(
             [
@@ -580,6 +681,14 @@ export function App() {
         </div>
       </aside>
       <main>
+        {paletteOpen && (
+          <CommandPalette
+            data={data}
+            actions={paletteActions}
+            onResult={(result) => void openResult(result)}
+            onClose={() => setPaletteOpen(false)}
+          />
+        )}
         <input
           hidden
           ref={file}
@@ -765,6 +874,20 @@ export function App() {
                     </div>
                   </>
                 )}
+                <h3>Density</h3>
+                <div className="actions" role="group" aria-label="Density">
+                  {(["comfortable", "compact"] as const).map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      className={`button ${density === choice ? "" : "secondary"}`}
+                      aria-pressed={density === choice}
+                      onClick={() => setDensity(choice)}
+                    >
+                      {choice === "comfortable" ? "Comfortable" : "Compact"}
+                    </button>
+                  ))}
+                </div>
                 <h3>Sidebar</h3>
                 <div className="actions" role="group" aria-label="Sidebar">
                   {(["labels", "icons"] as const).map((choice) => (

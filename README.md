@@ -2,6 +2,21 @@
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
+## Version 0.7.0 – Ordner-Sync, Papierkorb, Suche – 18. Oktober 2026
+
+Auf Branch `claude/compassionate-ramanujan-2a15h0` umgesetzt (kein Installer gebaut, nicht gemergt, nicht auf einem zweiten Rechner praktisch geprüft):
+
+- **Ordner-Sync über OneDrive (Windows-App).** Unter Settings → *Sync between computers* einen Ordner innerhalb von OneDrive wählen (auf beiden Rechnern denselben). Jeder Rechner schreibt nur seine eigene Datei `device-<Gerätekennung>.json` (kompletter Stand mit SHA-256-Prüfsumme, atomar über Temp-Datei und Umbenennen) und führt die Dateien der anderen zusammen. Abgleich beim Start, bei Fensterfokus, alle 2 Minuten und etwa 8 s nach einer lokalen Änderung; „Sync now“, Pausieren und Beenden in Settings. Unvollständige oder noch nicht fertig synchronisierte Dateien werden übersprungen und beim nächsten Lauf gelesen. Die lokale Datenbank (WebView-Profil) liegt weiterhin lokal, nicht in OneDrive. Vor jedem Zusammenführen, das lokale Daten ändert, entsteht eine lokale Sicherung. Kein Microsoft-Login, keine Graph-App-Registrierung im Tenant nötig; benötigt wird nur der installierte OneDrive-Client. iPhone/iPad sind damit nicht abgedeckt.
+- **Konfliktregeln** (`src/sync/merge.ts`, deterministisch, Reihenfolge-unabhängig): Jeder Datensatz hat einen Versionszähler `rev`; höhere Version gewinnt, bei Gleichstand die spätere Änderung. **Bearbeitung schlägt Löschung**: Wurde ein Datensatz auf einem Rechner nach der gelöschten Version bearbeitet, bleibt er; hängt ein bearbeiteter Eintrag an einem gelöschten Projekt, wird das Projekt wiederbelebt. Doppelte Projektnummern werden neu vergeben (das ältere Projekt behält seine Nummer), gleichnamige Themen zusammengeführt. Brainstorm: höhere Revision, dann spätere Änderung gewinnt; der unterlegene Text steht nur in der automatischen lokalen Sicherung (kein Textmerge). Einzelne Felder werden nicht gemischt: bearbeiten zwei Rechner denselben Datensatz parallel, gewinnt dessen neuere Fassung.
+- **Schema/Sicherungsformat 6.** Datensätze tragen optional `rev`; `tombstones` halten gelöschte Datensätze (60 Tage) samt Inhalt. v1–v5 bleiben importierbar. Importe ersetzen den Bestand wie bisher, hinterlassen aber Löschvermerke, damit der Import nicht durch Sync rückgängig gemacht wird.
+- **Papierkorb** (Settings → Trash): wiederherstellen, endgültig löschen (die Löschung bleibt für den Sync erhalten), Papierkorb leeren. Projekte kommen mit Aufgaben, Events, Notes und Links zurück. Tasks/Events/Projekte/Links/Topics zeigen nach dem Löschen „Moved to trash – Undo“. Das Löschen von Aufgaben fragt nicht mehr nach; Events und Notes behalten den Schritt „Move to trash“.
+- **Lokale Sicherungen** (Windows): täglich beim Start und vor Sync-Änderungen als `backup-YYYYMMDD-HHMMSS.json` unter `%LOCALAPPDATA%/io.github.jejepage.winprogman/backups`, die letzten 14 bleiben.
+- **Globale Suche und Befehlspalette:** `Strg+K` (oder Search in der Navigation) durchsucht Projekte (auch nach Nummer, z. B. `#12`), Aufgaben, Events, Notes und Brainstorm ohne Beachtung von Groß-/Kleinschreibung und Akzenten und bietet Befehle (Go to …, New task/event/note/project). In den Markdown-Editoren bleibt `Strg+K` das Linkkommando.
+- **Weitere Bedienung:** Sync-Status in der Navigation, Dichte *Comfortable/Compact* (Settings → Appearance, lokal gespeichert), „Add your first …“-Hinweise in leeren Listen.
+- **Rust:** neues Modul `src-tauri/src/sync_folder.rs` (Ordnerwahl, Listen/Lesen/Schreiben fester Dateinamenmuster `device-*.json`, Sicherungen). Die Rust-Logik ist ohne Tauri-Abhängigkeit getestet (fünf Tests, in Windows-CI mit `cargo test`); die Tauri-Anbindung wurde in dieser Linux-Umgebung nicht kompiliert und ist durch die Windows-CI zu prüfen.
+
+**Prüfstand:** Typprüfung, Webbuild, 141 Unit-/Speicher-/Sync-Tests und Formatprüfung erfolgreich; 39 von 40 Browserabläufen (Chromium) erfolgreich, eine bekannte umgebungsbedingte Abweichung (`feedback.e2e` Brainstorm-Zweitfenster, schlägt auch ohne diese Änderungen mit Chromium fehl; früher mit Edge grün). Ein Zwei-Rechner-Test mit echtem OneDrive steht aus. Verbleibend: Vergleichsansicht für überschriebene Fassungen, Feldweises Zusammenführen, Aufräumen der Datei `App.tsx` (weiterhin ein großes Modul), Signierung bewusst nicht vorgesehen.
+
 ## Windows-Installer 0.6.1 – geprüft am 18. Oktober 2026
 
 Auf Benutzerauftrag sind die aktuellen Status-/Eventfarben, Settings-only-Designwahl, kompakten Topics und horizontalen Projektlinks als Windows-Installer 0.6.1 paketiert. npm, Tauri und Cargo verwenden 0.6.1; Produktionskennung, Datenpfade und Sicherungsformat bleiben unverändert. Quellcommit `2d97774899dda8a8f7171d9311535ff191a70697` liegt auf `codex/status-layout-refinements` in [PR #10](https://github.com/Jejepage/WinProgMan/pull/10), weiterhin Entwurf und nicht gemergt.
@@ -178,7 +193,7 @@ HTTP(S)-Links öffnen direkt. Eindeutige Webadressen wie `www.example.com` erhal
 
 ## Architektur
 
-React/TypeScript/Vite; reine Domänenabfragen in `src/domain`, asynchrone `ProjectStore`-Schnittstelle in `src/storage`, IndexedDB-Adapter mit Transaktionen. Die Oberfläche benutzt ausschließlich den Adapter. IDs und Schema-Version sind für spätere Erweiterung vorgesehen; Microsoft-Login und Sync sind noch nicht implementiert.
+React/TypeScript/Vite; reine Domänenabfragen in `src/domain`, asynchrone `ProjectStore`-Schnittstelle in `src/storage`, IndexedDB-Adapter mit Transaktionen. Die Oberfläche benutzt ausschließlich den Adapter. IDs und Schema-Version sind für spätere Erweiterung vorgesehen; Ordner-Sync über OneDrive (ab 0.7.0) liegt in `src/sync`; Microsoft-Login/Graph ist nicht implementiert.
 
 ## Weiterarbeit in neuen Chats
 

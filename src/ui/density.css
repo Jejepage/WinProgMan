@@ -1,0 +1,37 @@
+/* Density: "comfortable" is the existing look; "compact" shows more per screen.
+   Imported last so it wins over the design-specific spacing in every design. */
+:root[data-density="compact"] .panel,
+:root[data-density="compact"][data-design] .panel {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+:root[data-density="compact"] .data-table :is(th, td),
+:root[data-density="compact"][data-design] .data-table :is(th, td) {
+  padding: 4px 8px;
+}
+:root[data-density="compact"][data-design] .tasks-table td {
+  height: auto;
+}
+:root[data-density="compact"] .todo-item,
+:root[data-density="compact"] .event-item,
+:root[data-density="compact"] .note-item {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+:root[data-density="compact"] .button,
+:root[data-density="compact"][data-design] .button {
+  padding: 4px 10px;
+}
+:root[data-density="compact"] .nav-button,
+:root[data-density="compact"][data-design] .nav-button {
+  min-height: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+:root[data-density="compact"] .page-heading {
+  margin-bottom: 8px;
+}
+:root[data-density="compact"] .palette li {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}

@@ -251,6 +251,17 @@ export function TodosPanel({
                 : openOnly && todos.length
                   ? "No open tasks."
                   : "No tasks yet. Add the next step."}
+              {!search.trim() && !todos.length && projects.length > 0 && (
+                <>
+                  {" "}
+                  <button
+                    className="button secondary"
+                    onClick={() => openNewItem("task", projectId)}
+                  >
+                    Add your first task
+                  </button>
+                </>
+              )}
             </p>
           )}
           <div className="table-scroll">

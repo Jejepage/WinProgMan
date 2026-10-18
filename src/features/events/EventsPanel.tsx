@@ -564,6 +564,23 @@ export function EventsPanel({
                     : category
                       ? `No events in ${categoryLabels[category]}.`
                       : "No events yet."}
+              {!search.trim() &&
+                !events.some(
+                  (e) => (e.category === "Notiz") === Boolean(notesOnly),
+                ) &&
+                projects.length > 0 && (
+                  <>
+                    {" "}
+                    <button
+                      className="button secondary"
+                      onClick={() => openNewItem(itemKind, projectId)}
+                    >
+                      {notesOnly
+                        ? "Add your first note"
+                        : "Add your first event"}
+                    </button>
+                  </>
+                )}
             </p>
           )}
           <ul className={timeline ? "item-list timeline" : "item-list"}>

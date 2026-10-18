@@ -720,3 +720,31 @@
     color: var(--muted);
   }
 }
+
+/* Global search sits in the top bar next to the storage label. */
+:root[data-design="split-compact"] .app-shell[data-navigation="top"] .sidebar {
+  grid-template-columns: 1fr auto auto;
+}
+:root[data-design="split-compact"]
+  .app-shell[data-navigation="top"]
+  .search-button {
+  grid-row: 1;
+  grid-column: 2;
+  width: 240px;
+  margin: 8px 0;
+  border-radius: 0;
+  align-self: center;
+}
+:root[data-design="split-compact"]
+  .app-shell[data-navigation="top"]
+  .sidebar-bottom {
+  grid-column: 3;
+}
+@media (max-width: 760px) {
+  :root[data-design="split-compact"] .app-shell .search-button {
+    grid-row: auto;
+    grid-column: 1 / -1;
+    width: auto;
+    margin: 8px 12px;
+  }
+}
