@@ -4,6 +4,8 @@
 
 Folgeauftrag 18. Oktober 2026: Import/Export ausschließlich nach Settings verschieben und den gesamten UI-Stand als Windows-App 0.6.0 paketieren. Nötigen Quellstand für bestehende Windows-CI übertragen, Installer herunterladen/verifizieren; keine Installation und kein Merge. Dieser Auftrag hebt die frühere Einschränkung zu Verpackung/Push für diesen Stand auf.
 
+Abgeschlossen: Quellcommit `dd0294a`, PR #9, 122 Tests/35 Edge-Abläufe sowie Windows-CI mit neun Rust-Tests erfolgreich. Installer 0.6.0 heruntergeladen und ZIP-Digest, EXE-Version/SHA256 geprüft; Pfad und vollständige Nachweise im README. Keine automatische Installation oder Änderung am Produktionsprofil.
+
 Nach Benutzerfeedback vom 18. Oktober 2026: Navigation im Split-Compact-Design wahlweise links in der Sidebar (Standard) oder oben. Die bestehende Symbol-/Textauswahl bleibt in beiden Positionen unabhängig bedienbar und gespeichert. Unter 761 px responsive Navigation oben. Abnahme siehe README.
 
 Die verbindliche Ergänzung hat Vorrang vor dem ursprünglichen Designprompt: Classic bleibt Standard und vollständig verfügbar; Split Compact ist zusätzlich auswählbar und unabhängig von Light/Dark/System. Vorhandenes Color bleibt erhalten. Branch: `codex/split-compact-ui`.

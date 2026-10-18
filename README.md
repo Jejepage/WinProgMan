@@ -2,11 +2,15 @@
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
-## Verpackung 0.6.0 – 18. Oktober 2026
+## Windows-Installer 0.6.0 – geprüft am 18. Oktober 2026
 
 Auf Benutzerauftrag enthält Version 0.6.0 das optionale Split-Compact-Design mit Sidebar/Top-Navigation und Symbolansicht. Import/Export stehen jetzt ausschließlich unter Settings → Import & export; die Navigation enthält nur die Ansichten und den lokalen Speicherhinweis. Die Sicherung bleibt vollständig einschließlich Brainstorm; Importprüfung, Vorschau, vorherige Sicherungsmöglichkeit und atomarer Ersatz bleiben unverändert. npm-, Tauri- und Cargo-Version sind auf 0.6.0 gesetzt; Produktionskennung und Datenpfade bleiben erhalten.
 
-Typprüfung, 122 Unit-/Speicher-/Plattformtests und Produktions-Webbuild erfolgreich. Alle 35 Edge-Browserabläufe einschließlich Settings-Sicherung, Dateiauswahl, Vorschau/Abbruch und vollständiger Import-/Exportregression erfolgreich. Windows-Paketierung wird für diesen Stand durchgeführt; ein alter Installer darf nicht als Version 0.6.0 verteilt werden. Keine automatische Installation, kein Merge und keine Änderung am Produktionsprofil oder an Windows-Sicherheitsrichtlinien. Verifizierter Downloadpfad und endgültige CI-/Artefaktnachweise werden nach Abschluss ergänzt.
+Typprüfung, 122 Unit-/Speicher-/Plattformtests und Produktions-Webbuild erfolgreich. Alle 35 Edge-Browserabläufe einschließlich Settings-Sicherung, Dateiauswahl, Vorschau/Abbruch und vollständiger Import-/Exportregression erfolgreich. [Allgemeine CI 39101501080](https://github.com/Jejepage/WinProgMan/actions/runs/39101501080) und [Windows-CI 39101501096](https://github.com/Jejepage/WinProgMan/actions/runs/39101501096) für Quellcommit `dd0294ad0e60e988b5d292cc52f46cd8488fe3b2` sind erfolgreich; Windows umfasst zusätzlich neun erfolgreiche Rust-Tests und die NSIS-Paketierung. [PR #9](https://github.com/Jejepage/WinProgMan/pull/9) ist als Entwurf auf PR #8 aufgebaut; kein Merge.
+
+Verifizierter Installer: `src-tauri/target/windows-ci/0.6.0/dd0294a/installer/WinProgMan_0.6.0_x64-setup.exe`. Produkt-/Dateiversion `0.6.0`, Größe 3.064.404 Bytes, EXE-SHA256 `1f10974e07df546aba240194ec5f464c35dc12c7af5fdc5a4b278e0f4a5ee2c1`. Artefakt `12126837353`: ZIP-SHA256 gegen GitHubs Digest `68e045540ad6dc05de487030c17e308efbd0f214bc7fd459a8ff69b1d9112235` geprüft. Vollständiger lokaler Nachweis: `src-tauri/target/windows-ci/0.6.0/dd0294a/verification.json`.
+
+Die Datei ist unsigniert und wurde nicht ausgeführt oder installiert. Zum Aktualisieren die App schließen und diesen Installer regulär aus dem Windows-Explorer starten; vorher bei Bedarf die vorhandenen Daten als JSON sichern. Keine Änderung am Produktionsprofil oder an Windows-Sicherheitsrichtlinien. Neue native Funktionsabnahme steht aus; Safari/iOS weiterhin ungeprüft. Nachfolgende reine Dokumentationscommits verändern den geprüften Installer-Quellstand nicht.
 
 ## Split Compact – optionales Design, 17. Oktober 2026
 
