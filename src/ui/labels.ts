@@ -27,8 +27,8 @@ const errorTranslations: Record<string, string> = {
   "UTC-Zeitstempel erwartet.": "Expected a UTC timestamp.",
   "Ungültiger Zeitstempel.": "Invalid timestamp.",
   "Gültiges Datum YYYY-MM-DD erwartet.": "Expected a valid YYYY-MM-DD date.",
-  "Nur Sicherungsformat 1, 2, 3, 4 und 5 werden unterstützt.":
-    "Only backup formats 1, 2, 3, 4 and 5 are supported.",
+  "Nur Sicherungsformat 1, 2, 3, 4, 5 und 6 werden unterstützt.":
+    "Only backup formats 1, 2, 3, 4, 5 and 6 are supported.",
   "Positive ganze Projektnummer erwartet.":
     "Expected a positive whole project number.",
   "Diese Projektnummer ist bereits vergeben.":

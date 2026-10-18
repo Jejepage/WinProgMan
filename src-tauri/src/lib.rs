@@ -1,6 +1,7 @@
 use tauri::Manager;
 mod local_paths;
 mod storage_location;
+mod sync_folder;
 
 pub fn run() {
     tauri::Builder::default()
@@ -21,6 +22,14 @@ pub fn run() {
             storage_location::cancel_storage_location,
             storage_location::restart_for_storage_location,
             local_paths::open_local_folder,
+            sync_folder::sync_folder_info,
+            sync_folder::choose_sync_folder,
+            sync_folder::clear_sync_folder,
+            sync_folder::sync_list,
+            sync_folder::sync_read,
+            sync_folder::sync_write,
+            sync_folder::backup_write,
+            sync_folder::backup_list,
         ])
         .setup(|app| {
             // Keep the WebView profile outside the installation directory.

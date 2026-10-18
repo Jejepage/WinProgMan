@@ -564,7 +564,7 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
     .getByRole("button", { name: "Delete note Saved note", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Delete permanently", exact: true })
+    .getByRole("button", { name: "Move to trash", exact: true })
     .click();
   await expect(page.locator(".note-item")).toHaveCount(1);
   await navigate(page, "Tasks");

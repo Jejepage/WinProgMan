@@ -539,7 +539,7 @@ export function EventsPanel({
                 }
               }}
             >
-              Delete permanently
+              Move to trash
             </button>
             <button
               className="button secondary"

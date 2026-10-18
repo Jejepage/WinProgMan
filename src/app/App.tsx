@@ -36,6 +36,9 @@ import { EventsPanel } from "../features/events/EventsPanel";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { CategorySettings } from "../features/projects/CategorySettings";
 import { StorageSettings } from "../features/settings/StorageSettings";
+import { SyncSettings, syncSummary } from "../features/settings/SyncSettings";
+import { TrashSettings } from "../features/settings/TrashSettings";
+import { useDailyBackup, useSync } from "../sync/useSync";
 import {
   BrainstormPanel,
   type BrainstormPanelHandle,
@@ -120,6 +123,7 @@ export function App() {
   const [noteSearch, setNoteSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
+  const [undo, setUndo] = useState<{ id: string; label: string } | null>(null);
   const [design, setDesign] = useState(() =>
     readPreference("design", "classic"),
   );
@@ -143,6 +147,16 @@ export function App() {
   const file = useRef<HTMLInputElement>(null);
   const lock = useRef(false);
   const updates = useRef<BroadcastChannel | null>(null);
+  const sync = useSync(store, async () => {
+    setData(await store.load());
+    updates.current?.postMessage("changed");
+  });
+  useDailyBackup(store, !loading);
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), 15000);
+    return () => clearTimeout(timer);
+  }, [undo]);
   const readDetail = () => {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const kind = params.get("detail");
@@ -267,6 +281,7 @@ export function App() {
     const latest = await store.load();
     setData(latest);
     updates.current?.postMessage("changed");
+    sync.notifyChanged();
     return latest.brainstorm;
   }
   async function transact(action: () => Promise<void>) {
@@ -278,6 +293,7 @@ export function App() {
       await action();
       setData(await store.load());
       updates.current?.postMessage("changed");
+      sync.notifyChanged();
       return true;
     } catch (e) {
       setError(errorLabel(e));
@@ -287,7 +303,24 @@ export function App() {
       setBusy(false);
     }
   }
-  const change = (value: DomainChange) => transact(() => store.apply(value));
+  const change = async (value: DomainChange) => {
+    const done = await transact(() => store.apply(value));
+    if (!done) return false;
+    if (
+      value.type === "todo.delete" ||
+      value.type === "event.delete" ||
+      value.type === "project.delete" ||
+      value.type === "link.delete" ||
+      value.type === "category.delete"
+    ) {
+      setUndo({ id: value.id, label: "Moved to trash." });
+      setNotice("");
+    } else if (value.type === "trash.restore") {
+      setUndo(null);
+      setNotice("Restored.");
+    }
+    return true;
+  };
   const completeTodo = (todo: Todo) => {
     const { doNext: _marker, ...rest } = todo;
     return change({
@@ -536,7 +569,8 @@ export function App() {
         </nav>
         <div className="sidebar-bottom">
           <span className="storage-label">
-            <span className="local-dot" /> Stored locally
+            <span className="local-dot" />{" "}
+            {syncSummary(sync.state) || "Stored locally"}
           </span>
           <small>
             {isDesktop()
@@ -557,6 +591,23 @@ export function App() {
           <div className="message error" role="alert">
             {error}
             <button className="icon-button" onClick={() => setError("")}>
+              Close
+            </button>
+          </div>
+        )}
+        {undo && (
+          <div className="message" role="status">
+            {undo.label}
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={() =>
+                void change({ type: "trash.restore", id: undo.id })
+              }
+            >
+              Undo
+            </button>
+            <button className="icon-button" onClick={() => setUndo(null)}>
               Close
             </button>
           </div>
@@ -625,6 +676,7 @@ export function App() {
                         setProjectSearch("");
                         setTaskSearch("");
                         setEventSearch("");
+                        setUndo(null);
                         setNotice("Backup imported.");
                       }
                     });
@@ -747,6 +799,12 @@ export function App() {
                   )}
                 </div>
               </section>
+              <SyncSettings sync={sync} busy={busy} />
+              <TrashSettings
+                tombstones={data.tombstones}
+                busy={busy}
+                onChange={change}
+              />
               <StorageSettings busy={busy} onBackup={download} />
               <section className="panel backup-settings" aria-label="Backup">
                 <h2>Import &amp; export</h2>

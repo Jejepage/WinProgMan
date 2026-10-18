@@ -40,7 +40,9 @@ function applyChange(data: AppData, change: DomainChange): AppData {
     return {
       ...data,
       tombstones: data.tombstones.map((item) =>
-        item.id === change.id ? { ...item, record: { id: item.id } } : item,
+        item.id === change.id || item.group === change.id
+          ? { ...item, record: { id: item.id } }
+          : item,
       ),
     };
   }

@@ -235,7 +235,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     buffer: Buffer.from(JSON.stringify({ ...backup, schemaVersion: 999 })),
   });
   await expect(page.getByRole("alert")).toContainText(
-    "Only backup formats 1, 2, 3, 4 and 5 are supported.",
+    "Only backup formats 1, 2, 3, 4, 5 and 6 are supported.",
   );
   await expect(
     page.getByRole("heading", { name: "Geprüftes Projekt", exact: true }),
@@ -286,7 +286,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     .getByRole("button", { name: "Delete event Meeting prüfen", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Delete permanently", exact: true })
+    .getByRole("button", { name: "Move to trash", exact: true })
     .click();
   await expect(page.locator(".event-item")).toHaveCount(1);
   const deleteTaskEditor = await openEditor(
@@ -296,7 +296,6 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
       exact: true,
     }),
   );
-  deleteTaskEditor.once("dialog", (dialog) => dialog.accept());
   await deleteTaskEditor
     .getByRole("button", { name: "Aufgabe fertig prüfen delete", exact: true })
     .click();
@@ -653,6 +652,14 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     events: [legacyEvent],
   };
   delete legacy.brainstorm;
+  delete legacy.tombstones;
+  for (const list of [
+    legacy.projects,
+    legacy.links,
+    legacy.todos,
+    legacy.events,
+  ])
+    for (const item of list) delete item.rev;
   for (const project of legacy.projects) delete project.number;
   for (const value of [backup, legacy]) {
     await page.locator('input[type="file"]').setInputFiles({
