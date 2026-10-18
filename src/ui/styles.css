@@ -570,6 +570,33 @@ input[type="checkbox"] {
   font-weight: 600;
   text-decoration: none;
 }
+.project-header .project-links-display {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+}
+.project-header .project-links-display > li {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 0;
+}
+.project-header .project-links-display .project-resource,
+.project-header .project-links-display .project-resource > a {
+  flex-wrap: wrap;
+}
+.project-header
+  .project-links-display
+  .project-resource
+  > a
+  > span:first-of-type {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.project-header .project-links-display .project-resource-type {
+  flex-shrink: 0;
+}
 .event-item {
   padding: 18px 0;
   border-bottom: 1px solid #e8edf4;

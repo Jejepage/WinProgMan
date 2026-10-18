@@ -1,0 +1,79 @@
+/* Semantic badge colors are shared by all designs. Labels remain visible. */
+[data-status="Geplant"],
+[data-category="Meeting"] {
+  --badge-bg: #dceaff;
+  --badge-ink: #183c7c;
+  --badge-border: #9fb9e8;
+}
+[data-status="Aktiv"] {
+  --badge-bg: #dff4e7;
+  --badge-ink: #185233;
+  --badge-border: #90c5a4;
+}
+[data-status="Pausiert"],
+[data-category="Milestone"] {
+  --badge-bg: #ffedcc;
+  --badge-ink: #714000;
+  --badge-border: #d5aa5f;
+}
+[data-status="Abgeschlossen"],
+[data-category="Telefonat"] {
+  --badge-bg: #eee5ff;
+  --badge-ink: #512a83;
+  --badge-border: #b8a0db;
+}
+[data-category="Beschluss"] {
+  --badge-bg: #d8f1f1;
+  --badge-ink: #164f56;
+  --badge-border: #83b6bc;
+}
+[data-category="Notiz"] {
+  --badge-bg: #fce0ef;
+  --badge-ink: #762449;
+  --badge-border: #d39ab6;
+}
+:root[data-theme="dark"]
+  :is([data-status="Geplant"], [data-category="Meeting"]) {
+  --badge-bg: #203b68;
+  --badge-ink: #dce9ff;
+  --badge-border: #7695cb;
+}
+:root[data-theme="dark"] [data-status="Aktiv"] {
+  --badge-bg: #173d2a;
+  --badge-ink: #ccf5db;
+  --badge-border: #70ac86;
+}
+:root[data-theme="dark"]
+  :is([data-status="Pausiert"], [data-category="Milestone"]) {
+  --badge-bg: #503518;
+  --badge-ink: #ffe4b8;
+  --badge-border: #c89d5b;
+}
+:root[data-theme="dark"]
+  :is([data-status="Abgeschlossen"], [data-category="Telefonat"]) {
+  --badge-bg: #3b2854;
+  --badge-ink: #edddff;
+  --badge-border: #af8bd4;
+}
+:root[data-theme="dark"] [data-category="Beschluss"] {
+  --badge-bg: #153d43;
+  --badge-ink: #c5f5fa;
+  --badge-border: #76aeb5;
+}
+:root[data-theme="dark"] [data-category="Notiz"] {
+  --badge-bg: #49243d;
+  --badge-ink: #ffd8ed;
+  --badge-border: #ca8aaf;
+}
+:root .status-pill[data-status],
+:root .category[data-category] {
+  background: var(--badge-bg);
+  color: var(--badge-ink);
+  border: 1px solid var(--badge-border);
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}

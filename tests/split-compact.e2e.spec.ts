@@ -12,10 +12,7 @@ test("backup actions appear exclusively in Settings in every design and export c
 }) => {
   await load(page);
   for (const variant of ["classic", "color", "split-compact"]) {
-    await page
-      .getByRole("combobox", { name: "Design", exact: true })
-      .first()
-      .selectOption(variant);
+    await design(page, variant as "classic" | "color" | "split-compact");
     for (const view of [
       "Dashboard",
       "Projects",
@@ -90,7 +87,7 @@ test("backup actions appear exclusively in Settings in every design and export c
   ).toBeVisible();
 });
 
-async function load(page: Page) {
+async function load(page: Page, appearanceFixture = false) {
   const backup: ExportEnvelope = {
     schemaVersion: 5,
     exportedAt: timestamp,
@@ -180,6 +177,48 @@ async function load(page: Page) {
       })),
     ],
   };
+  if (appearanceFixture) {
+    for (const [index, status] of (
+      ["Geplant", "Pausiert", "Abgeschlossen"] as const
+    ).entries()) {
+      const id = `status-${index}`;
+      backup.projects.push({
+        ...base,
+        id,
+        number: 100 + index,
+        name: `Status project ${status}`,
+        description: "",
+        status,
+        categoryId: "topic",
+      });
+      backup.todos.push({
+        ...base,
+        id: `work-${index}`,
+        projectId: id,
+        title: `Open work ${status}`,
+        completed: false,
+      });
+    }
+    for (const [index, category] of (
+      ["Telefonat", "Milestone", "Beschluss"] as const
+    ).entries()) {
+      backup.events.push({
+        ...base,
+        id: `type-${index}`,
+        projectId: "p1",
+        title: `Typed event ${category}`,
+        category,
+        date: "2099-10-18",
+      });
+    }
+    backup.links = ["Docs", "Website", "Folder"].map((label, index) => ({
+      ...base,
+      id: `short-link-${index}`,
+      projectId: "p1",
+      label,
+      target: `https://example.com/${index}`,
+    }));
+  }
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "Load sample data" }),
@@ -197,6 +236,112 @@ async function load(page: Page) {
   await expect(page.getByRole("status")).toContainText("Backup imported");
 }
 
+test("statuses and event types use distinct readable badges; compact topics and project links stay compact", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await load(page, true);
+  const statuses = ["Geplant", "Aktiv", "Pausiert", "Abgeschlossen"];
+  const categories = ["Meeting", "Telefonat", "Milestone", "Beschluss"];
+  async function badges(selector: string, attribute: string, values: string[]) {
+    const backgrounds = [];
+    for (const value of values) {
+      const badge = page
+        .locator(`${selector}[${attribute}="${value}"]:visible`)
+        .first();
+      await expect(badge).toBeVisible();
+      await expect(badge).not.toHaveText("");
+      const colors = await badge.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const luminance = (color: string) => {
+          const channels = (color.match(/[\d.]+/g) || [])
+            .slice(0, 3)
+            .map(Number)
+            .map((channel) => {
+              const normalized = channel / 255;
+              return normalized <= 0.04045
+                ? normalized / 12.92
+                : Math.pow((normalized + 0.055) / 1.055, 2.4);
+            });
+          return (
+            channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
+          );
+        };
+        const background = luminance(style.backgroundColor);
+        const foreground = luminance(style.color);
+        return {
+          background: style.backgroundColor,
+          contrast:
+            (Math.max(background, foreground) + 0.05) /
+            (Math.min(background, foreground) + 0.05),
+        };
+      });
+      expect(colors.contrast, `${value} contrast`).toBeGreaterThanOrEqual(4.5);
+      backgrounds.push(colors.background);
+    }
+    expect(new Set(backgrounds).size).toBe(values.length);
+  }
+  for (const variant of ["classic", "color", "split-compact"] as const) {
+    await design(page, variant);
+    for (const theme of ["Light", "Dark"]) {
+      await navigate(page, "Settings");
+      await page
+        .getByRole("group", { name: "Color theme", exact: true })
+        .getByRole("button", { name: theme, exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Close settings", exact: true })
+        .click();
+      await navigate(page, "Projects");
+      await badges(".status-pill", "data-status", statuses);
+      if (variant === "split-compact") {
+        const heading = page.locator(".topic-group-heading").first();
+        expect(
+          await heading.evaluate((element) =>
+            parseFloat(getComputedStyle(element).fontSize),
+          ),
+        ).toBeLessThanOrEqual(14);
+        expect(
+          (await page.locator(".topic-group-row").first().boundingBox())!
+            .height,
+        ).toBeLessThanOrEqual(36);
+        await expect(heading.locator(".count")).toHaveCSS(
+          "color",
+          await heading.evaluate((element) => getComputedStyle(element).color),
+        );
+      }
+      await navigate(page, "Dashboard");
+      await badges(".status-pill", "data-status", statuses);
+      await badges(".category", "data-category", categories);
+      await navigate(page, "Events");
+      await badges(".category", "data-category", categories);
+    }
+  }
+  await navigate(page, "Projects");
+  await page.getByRole("button", { name: projectName, exact: true }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Design", exact: true }),
+  ).toHaveCount(0);
+  const links = page.locator(".project-header .project-links-display");
+  await expect(links).toHaveCSS("display", "flex");
+  await expect(links).toHaveCSS("flex-wrap", "wrap");
+  const first = (await links.locator("li").nth(0).boundingBox())!;
+  const second = (await links.locator("li").nth(1).boundingBox())!;
+  expect(second.x).toBeGreaterThan(first.x);
+  expect(Math.abs(second.y - first.y)).toBeLessThan(2);
+  await page.getByRole("button", { name: "Edit project", exact: true }).click();
+  await expect(
+    page.locator(".project-header .project-links-display"),
+  ).toHaveCount(0);
+  await expect(page.locator(".project-header .links-list li")).toHaveCount(3);
+  await expect(
+    page
+      .locator(".project-header .links-list li")
+      .first()
+      .getByRole("button", { name: "Edit", exact: true }),
+  ).toBeVisible();
+});
+
 async function navigate(page: Page, name: string) {
   await page
     .getByRole("navigation")
@@ -204,12 +349,34 @@ async function navigate(page: Page, name: string) {
     .click();
 }
 
-async function design(page: Page, value: "classic" | "split-compact") {
+async function design(
+  page: Page,
+  value: "classic" | "color" | "split-compact",
+) {
+  const alreadyOpen = await page
+    .getByRole("heading", { name: "Settings", exact: true })
+    .isVisible();
+  if (!alreadyOpen) await navigate(page, "Settings");
   await page
-    .getByRole("combobox", { name: "Design", exact: true })
-    .first()
-    .selectOption(value);
+    .getByRole("group", { name: "Design variant", exact: true })
+    .getByRole("button", {
+      name:
+        value === "classic"
+          ? "Classic"
+          : value === "color"
+            ? "Color"
+            : "Split Compact",
+      exact: true,
+    })
+    .click();
   await expect(page.locator("html")).toHaveAttribute("data-design", value);
+  await expect(
+    page.getByRole("combobox", { name: "Design", exact: true }),
+  ).toHaveCount(0);
+  if (!alreadyOpen)
+    await page
+      .getByRole("button", { name: "Close settings", exact: true })
+      .click();
 }
 
 test("Split Compact restores sidebar placement and supports icons independently of placement and theme", async ({

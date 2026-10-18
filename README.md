@@ -2,6 +2,30 @@
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
+## Windows-Installer 0.6.1 – geprüft am 18. Oktober 2026
+
+Auf Benutzerauftrag sind die aktuellen Status-/Eventfarben, Settings-only-Designwahl, kompakten Topics und horizontalen Projektlinks als Windows-Installer 0.6.1 paketiert. npm, Tauri und Cargo verwenden 0.6.1; Produktionskennung, Datenpfade und Sicherungsformat bleiben unverändert. Quellcommit `2d97774899dda8a8f7171d9311535ff191a70697` liegt auf `codex/status-layout-refinements` in [PR #10](https://github.com/Jejepage/WinProgMan/pull/10), weiterhin Entwurf und nicht gemergt.
+
+[Allgemeine CI 39104600816](https://github.com/Jejepage/WinProgMan/actions/runs/39104600816) und [Windows-CI 39104600794](https://github.com/Jejepage/WinProgMan/actions/runs/39104600794) erfolgreich: Typprüfung, 122 Tests, Webbuild sowie neun Rust-Tests und NSIS-Paketierung. Die UI-Abnahme umfasst zusätzlich 36 erfolgreiche Edge-Abläufe; Details unten.
+
+Verifizierter Installer: `src-tauri/target/windows-ci/0.6.1/2d97774/installer/WinProgMan_0.6.1_x64-setup.exe`. Produkt-/Dateiversion `0.6.1`, Größe 3.062.500 Bytes, EXE-SHA256 `6556acf2f74d1786fa7e33678e7641b66449ba6920ea87638a45fa22533d6141`. Artefakt `12127219478`: ZIP-SHA256 gegen GitHubs Digest `495e68f4eb538cea0823c6c719661e69c353f32dbb7bf004bde1ad497e083c12` geprüft. Lokaler Nachweis: `src-tauri/target/windows-ci/0.6.1/2d97774/verification.json`.
+
+Die Datei ist unsigniert und wurde nicht ausgeführt oder installiert. Zum Aktualisieren die App schließen und den Installer regulär aus dem Windows-Explorer starten. Keine Änderung am Produktionsprofil oder an Windows-Sicherheitsrichtlinien; neue native Funktionsabnahme steht aus. Nachfolgende reine Dokumentationscommits verändern den geprüften Installer-Quellstand nicht.
+
+## Farben und kompakte Projektansicht – 18. Oktober 2026
+
+Auf Branch `codex/status-layout-refinements` nach Benutzerfeedback umgesetzt: Projektstatus werden in Projektliste, Dashboard und Projektkopf farbig unterschieden (Planned blau, In progress grün, Paused orange, Completed violett). Ereignistypen haben dieselben gut lesbaren Markierungen in Dashboard, Listen und Timeline: Meeting blau, Phone call violett, Milestone goldfarben, Decision türkis. Beschriftungen bleiben zusätzlich sichtbar. Gemeinsame Tokens in `src/ui/badges.css` enthalten helle und dunkle Varianten für Classic, Color und Split Compact; keine Änderung an Projektdaten oder Sicherungsformat.
+
+Die zusätzliche Designauswahl oben rechts ist entfernt. Designwechsel erfolgen ausschließlich in Settings. Settings blendet die aktuelle Ansicht vorübergehend aus und erhält dabei Projekt, Filter und ungespeicherte Entwürfe; Close settings kehrt zurück. Direkte Detail-Links öffnen weiterhin den jeweiligen Editor. Ein bestätigter vollständiger Import verwirft den vorherigen Ansichtsentwurf wie vorgesehen.
+
+Split Compact zeigt die Topic-Gruppen mit 13 px statt der großen Bereichsüberschrift. Projektlinks stehen in der normalen Projektansicht nebeneinander und umbrechen bei Platzmangel; Ziele bleiben lesbar. Die Linkbearbeitung bleibt eine Liste mit denselben Edit-/Copy-/Delete-Aktionen und gemeinsamem Save/Cancel.
+
+Die Topic-Zeilen sind einschließlich Zähler höchstens 36 px hoch; redundante Zellinnenabstände sind entfernt und die Anzahl bleibt auf dem blauen Balken weiß lesbar. Die abschließende Höhen-/Kontrastprüfung bestand nach dieser Feinanpassung erneut.
+
+**Abnahme:** Typprüfung, 122 Tests und Produktionsbuild erfolgreich; alle 36 Edge-Abläufe im abschließenden Gesamtlauf erfolgreich. Die neue Sichtbarkeits-/Farbprüfung umfasst alle vier Projektstatus und Ereignistypen in Projects, Dashboard und Events über Classic/Color/Split Compact in Light/Dark, jeweils mit Textkontrast mindestens 4,5:1. Topic-Größe, horizontale Linkanordnung, unveränderte Linkbearbeitung, Settings-only-Designwahl und erhaltene Projekt-/Link-/Aufgaben-/Markdown-Entwürfe geprüft. Ein vorhandener Mehrfenstertest überschritt einmal das Zeitlimit während parallel laufender Builds; einzeln und im Schlusslauf ohne parallelen Build erfolgreich. Geänderte Quellen und Tests sind formatiert. Aktuelle Screenshots lassen sich mit `node scripts/split-compact-review.mjs` erzeugen (Testserver Port 5174); Ausgabe unter `test-results/split-review`.
+
+Die Ausgangsbasis `main` enthält inzwischen die gemergten PRs #8/#9 (Merge `e91b411`). Die neuen UI-Nachbesserungen sind als 0.6.1 paketiert und in PR #10 verfügbar; der ältere Installer 0.6.0 enthält sie noch nicht. Reguläre Installation und Produktionsprofil bleiben unverändert. Safari/iOS bleiben ungeprüft.
+
 ## Windows-Installer 0.6.0 – geprüft am 18. Oktober 2026
 
 Auf Benutzerauftrag enthält Version 0.6.0 das optionale Split-Compact-Design mit Sidebar/Top-Navigation und Symbolansicht. Import/Export stehen jetzt ausschließlich unter Settings → Import & export; die Navigation enthält nur die Ansichten und den lokalen Speicherhinweis. Die Sicherung bleibt vollständig einschließlich Brainstorm; Importprüfung, Vorschau, vorherige Sicherungsmöglichkeit und atomarer Ersatz bleiben unverändert. npm-, Tauri- und Cargo-Version sind auf 0.6.0 gesetzt; Produktionskennung und Datenpfade bleiben erhalten.

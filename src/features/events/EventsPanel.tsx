@@ -250,7 +250,9 @@ export function EventsPanel({
             ) : null}
           </div>
           {!notesOnly && (
-            <span className="category">{categoryLabels[event.category]}</span>
+            <span className="category" data-category={event.category}>
+              {categoryLabels[event.category]}
+            </span>
           )}
           {!projectId && project && (
             <button

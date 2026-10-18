@@ -2,6 +2,10 @@
 
 ## Aktueller Folgeauftrag: optionales Split Compact (17. Oktober 2026)
 
+Folgeauftrag Verpackung 0.6.1 abgeschlossen am 18. Oktober: Quellcommit `2d97774` auf `codex/status-layout-refinements`, PR #10 als Entwurf. Allgemeine CI `39104600816` und Windows-CI `39104600794` erfolgreich; Installer heruntergeladen, Artefakt-ZIP-Digest, EXE-Version 0.6.1 und SHA256 geprüft. Lokaler Pfad und vollständiger Nachweis im README. Kein Merge oder automatische Installation; Produktionsprofil unverändert.
+
+Neuestes Feedback 18. Oktober: farbige Projektstatus/Eventtypen in allen Designs, kleinere Split-Compact-Topic-Gruppen und nebeneinander angeordnete Projektlinks (mit Umbruch). Die zusätzliche Designauswahl oben rechts entfällt auf ausdrücklichen Wunsch; Auswahl ausschließlich in Settings. Settings erhält die bisherige Ansicht samt Entwürfen im Hintergrund und bietet Close settings für die Rückkehr. Keine Datenmigration. Aktueller Stand und Prüfergebnisse im neuesten README-Abschnitt.
+
 Folgeauftrag 18. Oktober 2026: Import/Export ausschließlich nach Settings verschieben und den gesamten UI-Stand als Windows-App 0.6.0 paketieren. Nötigen Quellstand für bestehende Windows-CI übertragen, Installer herunterladen/verifizieren; keine Installation und kein Merge. Dieser Auftrag hebt die frühere Einschränkung zu Verpackung/Push für diesen Stand auf.
 
 Abgeschlossen: Quellcommit `dd0294a`, PR #9, 122 Tests/35 Edge-Abläufe sowie Windows-CI mit neun Rust-Tests erfolgreich. Installer 0.6.0 heruntergeladen und ZIP-Digest, EXE-Version/SHA256 geprüft; Pfad und vollständige Nachweise im README. Keine automatische Installation oder Änderung am Produktionsprofil.
