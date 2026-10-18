@@ -23,7 +23,8 @@ import {
 } from "@milkdown/kit/preset/commonmark";
 import { insertTableCommand, setAlignCommand } from "@milkdown/kit/preset/gfm";
 import { Slice, type Node as ProseNode } from "@milkdown/kit/prose/model";
-import { TextSelection } from "@milkdown/kit/prose/state";
+import { Plugin, TextSelection } from "@milkdown/kit/prose/state";
+import { $prose } from "@milkdown/kit/utils";
 import {
   addColumnAfter,
   addColumnBefore,
@@ -89,12 +90,14 @@ export async function createRichEditor(
     plainPaste: () => boolean;
     notice: (message: string) => void;
     editLink: () => void;
+    onDocumentChange?: () => void;
   },
 ): Promise<{ editor: RichEditor; reason?: string }> {
   const inspected = inspectMarkdown(source);
   const initialReason = inspected.reason;
   let origin = source;
   let baseline: ProseNode;
+  let notifyChanges = false;
   const builder = new CrepeBuilder({
     root,
     defaultValue: initialReason ? "" : source,
@@ -302,6 +305,21 @@ export async function createRichEditor(
   await builder.editor.remove(uploadPlugin);
   // No Markdown subscribers: avoid the base listener's initial full serialization.
   await builder.editor.remove(listener);
+  builder.editor.use(
+    $prose(
+      () =>
+        new Plugin({
+          state: {
+            init: () => null,
+            apply(transaction, value) {
+              if (notifyChanges && transaction.docChanged)
+                options.onDocumentChange?.();
+              return value;
+            },
+          },
+        }),
+    ),
+  );
   // Empty paragraphs use ordinary Markdown blank lines, never generated raw HTML placeholders.
   await builder.editor.remove(remarkPreserveEmptyLinePlugin);
   await builder.editor.remove(imageSchema);
@@ -451,6 +469,7 @@ export async function createRichEditor(
   // Milkdown's generic class collides with WinProgMan's full-page form styles.
   view.dom.classList.remove("editor");
   baseline = view.state.doc;
+  notifyChanges = true;
   const reason =
     initialReason || roundTripReason(source, builder.getMarkdown(), inspected);
   let blocked = reason;
@@ -553,6 +572,7 @@ export async function createRichEditor(
         if (problem) return problem;
         const newState = view.state
           .constructor as typeof import("@milkdown/kit/prose/state").EditorState;
+        notifyChanges = false;
         view.updateState(
           newState.create({
             schema: view.state.schema,
@@ -565,6 +585,7 @@ export async function createRichEditor(
         view.dispatch(view.state.tr.setMeta("addToHistory", false));
         origin = next;
         baseline = view.state.doc;
+        notifyChanges = true;
         blocked = undefined;
         return undefined;
       },

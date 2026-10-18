@@ -22,6 +22,7 @@ export interface ProjectCategory extends Base {
   name: string;
 }
 export interface Project extends Base {
+  number: number;
   status: ProjectStatus;
   categoryId?: string;
   name: string;
@@ -49,17 +50,30 @@ export interface ProjectEvent extends Base {
   noteFormat?: "markdown";
 }
 export interface AppData {
+  brainstorm: Brainstorm;
   projectCategories: ProjectCategory[];
   projects: Project[];
   links: Link[];
   todos: Todo[];
   events: ProjectEvent[];
 }
+export interface Brainstorm {
+  text: string;
+  revision: number;
+  updatedAt: string;
+}
+export const emptyBrainstorm = (): Brainstorm => ({
+  text: "",
+  revision: 0,
+  updatedAt: "1970-01-01T00:00:00.000Z",
+});
 export interface ExportEnvelope extends AppData {
-  schemaVersion: 4;
+  schemaVersion: 5;
   exportedAt: string;
 }
 export type DomainChange =
+  | { type: "samples.load"; value: AppData }
+  | { type: "brainstorm.save"; text: string; expectedRevision: number }
   | { type: "project.save"; value: Project }
   | { type: "project.saveWithLinks"; value: Project; links: Link[] }
   | { type: "category.save"; value: ProjectCategory }
@@ -73,6 +87,7 @@ export type DomainChange =
       id: string;
     };
 export const emptyData = (): AppData => ({
+  brainstorm: emptyBrainstorm(),
   projectCategories: [],
   projects: [],
   links: [],

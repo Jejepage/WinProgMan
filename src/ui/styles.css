@@ -1,5 +1,10 @@
 :root {
-  font-family: "IBM Plex Mono", monospace;
+  --font-ui: "IBM Plex Mono", monospace;
+  --project-color: #1769e8;
+  --task-color: #187544;
+  --event-color: #aa500b;
+  --note-color: #7d3bb1;
+  font-family: var(--font-ui);
   color: #172338;
   background: #f6f8fb;
   font-synthesis: none;
@@ -66,7 +71,7 @@ a {
   gap: 12px;
   color: inherit;
   text-decoration: none;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-weight: 800;
   font-size: 18px;
 }
@@ -82,7 +87,7 @@ a {
 }
 .brand small {
   display: block;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 400;
   color: #778398;
@@ -187,14 +192,14 @@ p {
   margin-top: 0;
 }
 h1 {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   letter-spacing: -1.4px;
   font-size: 36px;
   margin-bottom: 10px;
   line-height: 1.2;
 }
 h2 {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 17px;
   font-weight: 700;
   margin-bottom: 0;
@@ -279,7 +284,7 @@ h3 {
   gap: 14px;
 }
 .stats strong {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 31px;
   font-weight: 600;
 }
@@ -325,7 +330,7 @@ h3 {
   background: none;
   border: 0;
   padding: 0;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-weight: 700;
   font-size: 19px;
   color: #172338;
@@ -478,7 +483,7 @@ input[type="checkbox"] {
   align-items: start;
 }
 .count {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 10px;
   color: var(--muted);
   font-weight: 400;
@@ -817,7 +822,7 @@ h2 {
   border-radius: 6px;
   background: #fff;
   color: #172338;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -1597,8 +1602,13 @@ button.event-title:hover {
   border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
-.project-topic-group + .project-topic-group {
-  margin-top: 18px;
+.projects-table .topic-group-row th {
+  padding: 0;
+  background: var(--canvas);
+}
+.projects-table .topic-group-heading {
+  border-bottom: 0;
+  padding: 10px 12px;
 }
 .detail-columns > .notes-panel {
   grid-column: 1 / -1;
@@ -1708,22 +1718,6 @@ button.project-resource {
 }
 .event-item.is-past .event-date-button {
   color: var(--muted);
-}
-.event-phase {
-  display: inline-block;
-  flex: 0 0 calc(8ch + 12px);
-  width: calc(8ch + 12px);
-  text-align: left;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 10px;
-  white-space: nowrap;
-}
-.event-item.is-past .event-phase {
-  background: #edf2f8;
-  color: #58677d;
 }
 .event-item.is-upcoming {
   border-left: 3px solid var(--accent);
@@ -1865,7 +1859,6 @@ button.project-resource {
 :root[data-theme="dark"] .category,
 :root[data-theme="dark"] .status-label,
 :root[data-theme="dark"] .do-next-badge,
-:root[data-theme="dark"] .event-phase,
 :root[data-theme="dark"] .today-marker {
   background: var(--accent-soft);
   border-color: #3a5e8b;
@@ -1874,10 +1867,6 @@ button.project-resource {
 :root[data-theme="dark"] .status-done {
   background: #204d3c;
   color: #a4e8bd;
-}
-:root[data-theme="dark"] .event-item.is-past .event-phase {
-  background: #293649;
-  color: var(--muted);
 }
 :root[data-theme="dark"] .message {
   background: #204238;
@@ -1917,4 +1906,170 @@ button.project-resource {
 :root[data-theme="dark"] .danger,
 :root[data-theme="dark"] .icon-button.danger {
   color: #ff9da7 !important;
+}
+
+/* Shared list widths and optional appearance settings. */
+.appearance-settings h3 {
+  margin: 22px 0 10px;
+  font-size: 12px;
+}
+.nav-button > .nav-text {
+  font-size: inherit;
+  width: auto;
+}
+.sidebar-bottom .text-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.events-panel .event-row > .project-link {
+  flex: 0 0 clamp(180px, 22vw, 300px);
+  width: clamp(180px, 22vw, 300px);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.5;
+}
+.design-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 16px 0 24px;
+}
+.design-palette span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.design-palette span::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--kind-color);
+}
+[data-kind="projects"] {
+  --kind-color: var(--project-color);
+}
+[data-kind="tasks"] {
+  --kind-color: var(--task-color);
+}
+[data-kind="events"] {
+  --kind-color: var(--event-color);
+}
+[data-kind="notes"] {
+  --kind-color: var(--note-color);
+}
+:root[data-design="color"] {
+  --font-ui: "Segoe UI", system-ui, sans-serif;
+}
+:root[data-design="color"] .rich-note-editor .milkdown {
+  --crepe-font-title: var(--font-ui);
+  --crepe-font-default: var(--font-ui);
+}
+:root[data-design="color"] .nav-button[data-kind] svg {
+  color: var(--kind-color);
+}
+:root[data-design="color"] .nav-button.active[data-kind] {
+  color: var(--kind-color);
+  box-shadow: inset 3px 0 var(--kind-color);
+}
+:root[data-design="color"] .projects-panel {
+  border-top: 3px solid var(--project-color);
+}
+:root[data-design="color"] .todos-panel {
+  border-top: 3px solid var(--task-color);
+}
+:root[data-design="color"] .events-panel:not(.notes-panel) {
+  border-top: 3px solid var(--event-color);
+}
+:root[data-design="color"] .notes-panel {
+  border-top: 3px solid var(--note-color);
+}
+:root[data-design="color"] .project-header .eyebrow {
+  color: var(--project-color);
+}
+:root[data-design="color"] .task-title {
+  color: var(--task-color);
+}
+:root[data-design="color"] .event-title {
+  color: var(--event-color);
+}
+:root[data-design="color"] .note-item .event-title {
+  color: var(--note-color);
+}
+:root[data-design="color"] .page-heading h1 {
+  letter-spacing: -0.3px;
+}
+:root[data-theme="dark"] {
+  --project-color: #91bbff;
+  --task-color: #80d7a3;
+  --event-color: #ffc085;
+  --note-color: #d5a5ff;
+}
+.sidebar-icons {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+.sidebar-icons .sidebar {
+  padding: 24px 10px;
+  align-items: center;
+}
+.sidebar-icons .brand-label,
+.sidebar-icons .nav-text,
+.sidebar-icons .nav-button small,
+.sidebar-icons .storage-label,
+.sidebar-icons .sidebar-bottom > small,
+.sidebar-icons .sidebar-action-label {
+  display: none;
+}
+.sidebar-icons .brand {
+  justify-content: center;
+}
+.sidebar-icons .sidebar nav {
+  width: 100%;
+}
+.sidebar-icons .nav-button {
+  justify-content: center;
+  padding: 12px;
+}
+.sidebar-icons .sidebar-bottom {
+  width: 100%;
+  padding: 14px 0 0;
+}
+.sidebar-icons .sidebar-bottom .text-button {
+  justify-content: center;
+  padding: 12px;
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .sidebar-icons .sidebar {
+    align-items: stretch;
+    padding: 12px;
+  }
+  .sidebar-icons .brand {
+    justify-content: flex-start;
+  }
+  .sidebar-icons .sidebar nav {
+    gap: 2px;
+  }
+  .sidebar-icons .nav-button {
+    padding: 10px;
+  }
+  .sidebar-icons .sidebar-bottom {
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .sidebar-icons .sidebar-bottom .text-button {
+    width: auto;
+  }
+  .events-panel .event-row > .project-link {
+    flex-basis: 100%;
+    width: auto;
+  }
+  .nav-button > .nav-text {
+    display: inline;
+  }
+  .sidebar-icons .nav-button > .nav-text {
+    display: none;
+  }
 }

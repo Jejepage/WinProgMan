@@ -36,6 +36,10 @@ import { EventsPanel } from "../features/events/EventsPanel";
 import { ProjectHeader } from "../features/projects/ProjectHeader";
 import { CategorySettings } from "../features/projects/CategorySettings";
 import { StorageSettings } from "../features/settings/StorageSettings";
+import {
+  BrainstormPanel,
+  type BrainstormPanelHandle,
+} from "../features/brainstorm/BrainstormPanel";
 import { openItem } from "../ui/itemNavigation";
 import { confirmAction, isDesktop, saveBackup } from "../platform/desktop";
 const store = new IndexedDbProjectStore();
@@ -46,6 +50,9 @@ import {
   CalendarDays,
   NotebookPen,
   Settings,
+  Lightbulb,
+  Download,
+  Upload,
 } from "lucide-react";
 import { statusLabel, categoryLabel, errorLabel } from "../ui/labels";
 type View =
@@ -54,9 +61,22 @@ type View =
   | "Tasks"
   | "Events"
   | "Notes"
+  | "Brainstorm"
   | "Project"
   | "Settings";
 type ThemeChoice = "system" | "light" | "dark";
+function readPreference(key: "design" | "sidebar", fallback: string) {
+  try {
+    const saved = localStorage.getItem(`winprogman-${key}`);
+    if (key === "design" && (saved === "classic" || saved === "color"))
+      return saved;
+    if (key === "sidebar" && (saved === "labels" || saved === "icons"))
+      return saved;
+  } catch {
+    /* Session only. */
+  }
+  return fallback;
+}
 export function App() {
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
   const [data, setData] = useState<AppData>(emptyData);
@@ -91,6 +111,14 @@ export function App() {
   const [noteSearch, setNoteSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
+  const [design, setDesign] = useState(() =>
+    readPreference("design", "classic"),
+  );
+  const [sidebar, setSidebar] = useState(() =>
+    readPreference("sidebar", "labels"),
+  );
+  const brainstormPanel = useRef<BrainstormPanelHandle>(null);
+  const [brainstormOpened, setBrainstormOpened] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(() => {
     try {
       const saved = localStorage.getItem("winprogman-theme");
@@ -181,6 +209,39 @@ export function App() {
     }
     return () => system.removeEventListener("change", apply);
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.design = design;
+    try {
+      localStorage.setItem("winprogman-design", design);
+    } catch {
+      /* Session only. */
+    }
+  }, [design]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("winprogman-sidebar", sidebar);
+    } catch {
+      /* Session only. */
+    }
+  }, [sidebar]);
+  async function navigate(next: View) {
+    try {
+      await brainstormPanel.current?.flush();
+      closeDetail();
+      if (next === "Brainstorm") setBrainstormOpened(true);
+      setNewProject(false);
+      setView(next);
+    } catch (e) {
+      setError(errorLabel(e));
+    }
+  }
+  async function saveBrainstorm(text: string, expectedRevision: number) {
+    await store.apply({ type: "brainstorm.save", text, expectedRevision });
+    const latest = await store.load();
+    setData(latest);
+    updates.current?.postMessage("changed");
+    return latest.brainstorm;
+  }
   async function transact(action: () => Promise<void>) {
     if (lock.current) return false;
     lock.current = true;
@@ -220,6 +281,7 @@ export function App() {
     e.preventDefault();
     const value = {
       ...metadata(),
+      number: 0,
       name: name.trim() || "New project",
       description: "",
       status,
@@ -261,6 +323,7 @@ export function App() {
   }
   async function download() {
     try {
+      await brainstormPanel.current?.flush();
       const value = await store.exportData();
       if (
         await saveBackup(
@@ -279,6 +342,7 @@ export function App() {
   async function readFile(value: File | undefined) {
     if (!value) return;
     try {
+      await brainstormPanel.current?.flush();
       setPending(validateImport(JSON.parse(await value.text())));
       setError("");
     } catch (e) {
@@ -381,19 +445,23 @@ export function App() {
       })()
     : null;
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${sidebar === "icons" ? "sidebar-icons" : ""} ${view === "Brainstorm" ? "brainstorm-view" : ""}`}
+      data-view={view}
+    >
       <aside className="sidebar">
         <a
           className="brand"
+          aria-label="WinProgMan — Dashboard"
+          title="WinProgMan — Dashboard"
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setView("Dashboard");
-            closeDetail();
+            void navigate("Dashboard");
           }}
         >
           <span className="brand-mark">W</span>
-          <span>
+          <span className="brand-label">
             WinProgMan<small>Personal workspace</small>
           </span>
         </a>
@@ -405,17 +473,18 @@ export function App() {
               "Tasks",
               "Events",
               "Notes",
+              "Brainstorm",
               "Settings",
             ] as View[]
           ).map((v, i) => (
             <button
               key={v}
+              aria-label={v}
+              title={v}
               aria-current={view === v ? "page" : undefined}
               className={`nav-button ${view === v ? "active" : ""}`}
-              onClick={() => {
-                closeDetail();
-                setView(v);
-              }}
+              data-kind={v.toLowerCase()}
+              onClick={() => void navigate(v)}
             >
               {(() => {
                 const Icon = [
@@ -424,17 +493,20 @@ export function App() {
                   CheckSquare,
                   CalendarDays,
                   NotebookPen,
+                  Lightbulb,
                   Settings,
                 ][i];
                 return <Icon size={18} aria-hidden="true" />;
               })()}
-              {v}
+              <span className="nav-text">{v}</span>
               {v === "Projects" && <small>{data.projects.length}</small>}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <span className="local-dot" /> Stored locally
+          <span className="storage-label">
+            <span className="local-dot" /> Stored locally
+          </span>
           <small>
             {isDesktop()
               ? "Your data stays on this computer."
@@ -442,17 +514,23 @@ export function App() {
           </small>
           <button
             className="text-button"
+            aria-label="Export JSON ↓"
+            title="Export JSON"
             disabled={busy || loading}
             onClick={() => void download()}
           >
-            Export JSON ↓
+            <Download size={16} aria-hidden="true" />
+            <span className="sidebar-action-label">Export JSON ↓</span>
           </button>
           <button
             className="text-button"
+            aria-label="Import JSON ↑"
+            title="Import JSON"
             disabled={busy || loading}
             onClick={() => file.current?.click()}
           >
-            Import JSON ↑
+            <Upload size={16} aria-hidden="true" />
+            <span className="sidebar-action-label">Import JSON ↑</span>
           </button>
           <input
             hidden
@@ -498,7 +576,11 @@ export function App() {
               Notes · {pending.links.length} Links ·{" "}
               {pending.projectCategories.length} project topics
             </p>
-            <p>All current data will be replaced. Back it up first as JSON.</p>
+            <p>Brainstorm: {pending.brainstorm.text.length} characters.</p>
+            <p>
+              All current data, including Brainstorm, will be replaced. Back it
+              up first as JSON.
+            </p>
             <div className="actions">
               <button
                 className="button secondary"
@@ -515,21 +597,23 @@ export function App() {
                       "Replace all current data with this backup?",
                     )
                   )
-                    void transact(() => store.importData(pending)).then(
-                      (ok) => {
-                        if (ok) {
-                          setPending(null);
-                          setView("Projects");
-                          setSelectedStatuses(new Set(projectStatuses));
-                          setCategoryFilter("");
-                          setNoteSearch("");
-                          setProjectSearch("");
-                          setTaskSearch("");
-                          setEventSearch("");
-                          setNotice("Backup imported.");
-                        }
-                      },
-                    );
+                    void transact(async () => {
+                      await brainstormPanel.current?.flush();
+                      await store.importData(pending);
+                    }).then((ok) => {
+                      if (ok) {
+                        setBrainstormOpened(false);
+                        setPending(null);
+                        setView("Projects");
+                        setSelectedStatuses(new Set(projectStatuses));
+                        setCategoryFilter("");
+                        setNoteSearch("");
+                        setProjectSearch("");
+                        setTaskSearch("");
+                        setEventSearch("");
+                        setNotice("Backup imported.");
+                      }
+                    });
                 }}
               >
                 Replace data
@@ -557,9 +641,13 @@ export function App() {
                     <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
                   </div>
                   <div className="page-actions" ref={setHeaderTarget}>
-                    {!["Settings", "Tasks", "Events", "Notes"].includes(
-                      view,
-                    ) && (
+                    {![
+                      "Settings",
+                      "Tasks",
+                      "Events",
+                      "Notes",
+                      "Brainstorm",
+                    ].includes(view) && (
                       <button
                         className="button"
                         disabled={busy}
@@ -631,28 +719,24 @@ export function App() {
                   </div>
                 </form>
               )}
-              {!data.projects.length && view !== "Settings" && (
-                <section className="panel welcome">
-                  <p className="eyebrow">GET STARTED</p>
-                  <h2>Your next project starts here.</h2>
-                  <p>Create a project or explore the app with sample data.</p>
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={() =>
-                      void transact(() =>
-                        store.importData({
-                          ...demoData(),
-                          schemaVersion: 4,
-                          exportedAt: new Date().toISOString(),
-                        }),
-                      )
-                    }
-                  >
-                    Load sample data
-                  </button>
-                </section>
-              )}
+              {!data.projects.length &&
+                view !== "Settings" &&
+                view !== "Brainstorm" && (
+                  <section className="panel welcome">
+                    <p className="eyebrow">GET STARTED</p>
+                    <h2>Your next project starts here.</h2>
+                    <p>Create a project or explore the app with sample data.</p>
+                    <button
+                      className="button secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        void change({ type: "samples.load", value: demoData() })
+                      }
+                    >
+                      Load sample data
+                    </button>
+                  </section>
+                )}
               {view === "Dashboard" && (
                 <>
                   <div className="stats">
@@ -857,6 +941,52 @@ export function App() {
                 <>
                   <section className="panel appearance-settings">
                     <h2>Appearance</h2>
+                    <h3>Design variant</h3>
+                    <div
+                      className="actions"
+                      role="group"
+                      aria-label="Design variant"
+                    >
+                      {(["classic", "color"] as const).map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`button ${design === choice ? "" : "secondary"}`}
+                          aria-pressed={design === choice}
+                          onClick={() => setDesign(choice)}
+                        >
+                          {choice === "classic" ? "Classic" : "Color"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="description">
+                      Classic uses monospace text. Color uses proportional text
+                      and a distinct accent for projects, tasks, events and
+                      notes.
+                    </p>
+                    <div className="design-palette" aria-label="Item colors">
+                      <span data-kind="projects">Projects</span>
+                      <span data-kind="tasks">Tasks</span>
+                      <span data-kind="events">Events</span>
+                      <span data-kind="notes">Notes</span>
+                    </div>
+                    <h3>Sidebar</h3>
+                    <div className="actions" role="group" aria-label="Sidebar">
+                      {(["labels", "icons"] as const).map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`button ${sidebar === choice ? "" : "secondary"}`}
+                          aria-pressed={sidebar === choice}
+                          onClick={() => setSidebar(choice)}
+                        >
+                          {choice === "labels"
+                            ? "Icons and labels"
+                            : "Icons only"}
+                        </button>
+                      ))}
+                    </div>
+                    <h3>Color theme</h3>
                     <p className="description">
                       Choose a theme or follow your system setting.
                     </p>
@@ -933,66 +1063,63 @@ export function App() {
                       No projects match the current search or filters.
                     </p>
                   )}
-                  {projectGroups.map((group) => (
-                    <Card
-                      className="table-wrap project-topic-group"
-                      key={group.id}
-                    >
-                      <h2 className="topic-group-heading">
-                        {group.name}{" "}
-                        <span className="count">{group.projects.length}</span>
-                      </h2>
-                      <Table>
+                  {!!projectGroups.length && (
+                    <Card className="table-wrap projects-panel">
+                      <Table className="projects-table">
                         <thead>
                           <tr>
                             <th>Project #</th>
                             <th>Title</th>
-                            <th>Topic</th>
                             <th>Status</th>
                             <th>Open tasks</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {group.projects.map((p) => (
-                            <tr key={p.id}>
-                              <td>
-                                PRJ-
-                                {String(data.projects.indexOf(p) + 1).padStart(
-                                  3,
-                                  "0",
-                                )}
-                              </td>
-                              <td>
-                                <button
-                                  className="project-title"
-                                  onClick={() => goProject(p.id)}
-                                >
-                                  {p.name}
-                                </button>
-                              </td>
-                              <td>
-                                {data.projectCategories.find(
-                                  (c) => c.id === p.categoryId,
-                                )?.name || "No topic"}
-                              </td>
-                              <td>
-                                <StatusLabel>
-                                  {statusLabel(p.status)}
-                                </StatusLabel>
-                              </td>
-                              <td>
-                                {
-                                  data.todos.filter(
-                                    (t) => t.projectId === p.id && !t.completed,
-                                  ).length
-                                }
-                              </td>
+                        {projectGroups.map((group) => (
+                          <tbody key={group.id} className="project-topic-group">
+                            <tr className="topic-group-row">
+                              <th colSpan={4} scope="rowgroup">
+                                <h2 className="topic-group-heading">
+                                  {group.name}{" "}
+                                  <span className="count">
+                                    {group.projects.length}
+                                  </span>
+                                </h2>
+                              </th>
                             </tr>
-                          ))}
-                        </tbody>
+                            {group.projects.map((p) => (
+                              <tr key={p.id}>
+                                <td>
+                                  PRJ-
+                                  {String(p.number).padStart(3, "0")}
+                                </td>
+                                <td>
+                                  <button
+                                    className="project-title"
+                                    onClick={() => goProject(p.id)}
+                                  >
+                                    {p.name}
+                                  </button>
+                                </td>
+                                <td>
+                                  <StatusLabel>
+                                    {statusLabel(p.status)}
+                                  </StatusLabel>
+                                </td>
+                                <td>
+                                  {
+                                    data.todos.filter(
+                                      (t) =>
+                                        t.projectId === p.id && !t.completed,
+                                    ).length
+                                  }
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        ))}
                       </Table>
                     </Card>
-                  ))}
+                  )}
                 </>
               )}
               {view === "Tasks" && (
@@ -1028,6 +1155,16 @@ export function App() {
                   onSearchChange={setNoteSearch}
                 />
               )}
+              {brainstormOpened && (
+                <div hidden={view !== "Brainstorm"}>
+                  <BrainstormPanel
+                    ref={brainstormPanel}
+                    brainstorm={data.brainstorm}
+                    onSave={saveBrainstorm}
+                    disabled={busy}
+                  />
+                </div>
+              )}
               {view === "Project" &&
                 (project ? (
                   <>
@@ -1040,6 +1177,7 @@ export function App() {
                     <ProjectHeader
                       key={project.id}
                       project={project}
+                      projects={data.projects}
                       projectCategories={data.projectCategories}
                       links={data.links.filter(
                         (l) => l.projectId === project.id,
@@ -1051,10 +1189,7 @@ export function App() {
                     <div className="project-metadata">
                       <span>
                         PRJ-
-                        {String(data.projects.indexOf(project) + 1).padStart(
-                          3,
-                          "0",
-                        )}
+                        {String(project.number).padStart(3, "0")}
                       </span>
                       <span>
                         Created {formatDate(project.createdAt.slice(0, 10))}

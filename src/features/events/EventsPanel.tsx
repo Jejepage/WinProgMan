@@ -186,8 +186,6 @@ export function EventsPanel({
     const project = projects.find((item) => item.id === event.projectId);
     const isExpanded = expanded.has(event.id);
     const noteId = `${prefix}-note-${event.id}`;
-    const phase =
-      event.date < today ? "Past" : event.date === today ? "Today" : "Upcoming";
     return (
       <li
         key={event.id}
@@ -241,7 +239,6 @@ export function EventsPanel({
               </>
             ) : null}
           </div>
-          {!notesOnly && <span className="event-phase">{phase}</span>}
           {!notesOnly && (
             <span className="category">{categoryLabels[event.category]}</span>
           )}

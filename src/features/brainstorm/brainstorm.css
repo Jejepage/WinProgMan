@@ -1,0 +1,34 @@
+.brainstorm-panel {
+  min-width: 0;
+  min-height: calc(100dvh - 150px);
+  position: relative;
+}
+.brainstorm-status {
+  min-height: 25px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.brainstorm-status[role="alert"] {
+  color: var(--danger);
+}
+.brainstorm-panel .rich-note-editor > .field {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.brainstorm-panel .rich-note-editor .ProseMirror {
+  min-height: calc(100dvh - 300px);
+}
+.brainstorm-panel .rich-note-editor textarea {
+  min-height: calc(100dvh - 245px);
+  resize: vertical;
+}
+.brainstorm-panel .crepe-host {
+  margin-top: 4px;
+}
+.brainstorm-panel .editor-modes .button {
+  padding: 5px 9px;
+}
