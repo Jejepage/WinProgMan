@@ -205,6 +205,10 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   await expect(page.locator(".event-item")).toHaveCount(2);
   await expect(linkRow).toContainText("C:\\Projekte\\Dokumentation");
 
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloadEvent = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
@@ -216,6 +220,14 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   expect(backup.todos).toHaveLength(1);
   expect(backup.events).toHaveLength(2);
   expect(backup.links).toHaveLength(1);
+
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Projects", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Geprüftes Projekt", exact: true })
+    .click();
 
   await page.locator('input[type="file"]').setInputFiles({
     name: "bad.json",
@@ -445,6 +457,10 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     page.locator(".table-wrap tbody tr:has(.project-title)"),
   ).toHaveCount(1);
 
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloadEvent = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })
@@ -608,6 +624,10 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   );
   await markdownEditor
     .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
     .click();
   const downloaded = page.waitForEvent("download");
   await page
@@ -849,6 +869,10 @@ test("Add task and Add event use detail pages, preserve filters and only save co
   }
   expect(page.context().pages()).toHaveLength(pageCount);
 
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export JSON ↓", exact: true })

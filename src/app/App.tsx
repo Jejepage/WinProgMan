@@ -65,12 +65,20 @@ type View =
   | "Project"
   | "Settings";
 type ThemeChoice = "system" | "light" | "dark";
-function readPreference(key: "design" | "sidebar", fallback: string) {
+function readPreference(
+  key: "design" | "sidebar" | "navigation",
+  fallback: string,
+) {
   try {
     const saved = localStorage.getItem(`winprogman-${key}`);
-    if (key === "design" && (saved === "classic" || saved === "color"))
+    if (
+      key === "design" &&
+      (saved === "classic" || saved === "color" || saved === "split-compact")
+    )
       return saved;
     if (key === "sidebar" && (saved === "labels" || saved === "icons"))
+      return saved;
+    if (key === "navigation" && (saved === "sidebar" || saved === "top"))
       return saved;
   } catch {
     /* Session only. */
@@ -116,6 +124,9 @@ export function App() {
   );
   const [sidebar, setSidebar] = useState(() =>
     readPreference("sidebar", "labels"),
+  );
+  const [navigation, setNavigation] = useState(() =>
+    readPreference("navigation", "sidebar"),
   );
   const brainstormPanel = useRef<BrainstormPanelHandle>(null);
   const [brainstormOpened, setBrainstormOpened] = useState(false);
@@ -224,6 +235,13 @@ export function App() {
       /* Session only. */
     }
   }, [sidebar]);
+  useEffect(() => {
+    try {
+      localStorage.setItem("winprogman-navigation", navigation);
+    } catch {
+      /* Session only. */
+    }
+  }, [navigation]);
   async function navigate(next: View) {
     try {
       await brainstormPanel.current?.flush();
@@ -351,6 +369,7 @@ export function App() {
     if (file.current) file.current.value = "";
   }
   const common = {
+    compactSections: design === "split-compact",
     projects: data.projects,
     today,
     busy,
@@ -448,6 +467,7 @@ export function App() {
     <div
       className={`app-shell ${sidebar === "icons" ? "sidebar-icons" : ""} ${view === "Brainstorm" ? "brainstorm-view" : ""}`}
       data-view={view}
+      data-navigation={navigation}
     >
       <aside className="sidebar">
         <a
@@ -512,36 +532,30 @@ export function App() {
               ? "Your data stays on this computer."
               : "Your data stays in this browser."}
           </small>
-          <button
-            className="text-button"
-            aria-label="Export JSON ↓"
-            title="Export JSON"
-            disabled={busy || loading}
-            onClick={() => void download()}
-          >
-            <Download size={16} aria-hidden="true" />
-            <span className="sidebar-action-label">Export JSON ↓</span>
-          </button>
-          <button
-            className="text-button"
-            aria-label="Import JSON ↑"
-            title="Import JSON"
-            disabled={busy || loading}
-            onClick={() => file.current?.click()}
-          >
-            <Upload size={16} aria-hidden="true" />
-            <span className="sidebar-action-label">Import JSON ↑</span>
-          </button>
-          <input
-            hidden
-            ref={file}
-            type="file"
-            accept=".json,application/json"
-            onChange={(e) => void readFile(e.target.files?.[0])}
-          />
         </div>
       </aside>
       <main>
+        <input
+          hidden
+          ref={file}
+          type="file"
+          accept=".json,application/json"
+          onChange={(e) => void readFile(e.target.files?.[0])}
+        />
+        <div className="design-switcher">
+          <label>
+            Design
+            <select
+              aria-label="Design"
+              value={design}
+              onChange={(event) => setDesign(event.target.value)}
+            >
+              <option value="classic">Classic</option>
+              <option value="color">Color</option>
+              <option value="split-compact">Split Compact</option>
+            </select>
+          </label>
+        </div>
         {error && (
           <div className="message error" role="alert">
             {error}
@@ -947,22 +961,29 @@ export function App() {
                       role="group"
                       aria-label="Design variant"
                     >
-                      {(["classic", "color"] as const).map((choice) => (
-                        <button
-                          key={choice}
-                          type="button"
-                          className={`button ${design === choice ? "" : "secondary"}`}
-                          aria-pressed={design === choice}
-                          onClick={() => setDesign(choice)}
-                        >
-                          {choice === "classic" ? "Classic" : "Color"}
-                        </button>
-                      ))}
+                      {(["classic", "color", "split-compact"] as const).map(
+                        (choice) => (
+                          <button
+                            key={choice}
+                            type="button"
+                            className={`button ${design === choice ? "" : "secondary"}`}
+                            aria-pressed={design === choice}
+                            onClick={() => setDesign(choice)}
+                          >
+                            {choice === "classic"
+                              ? "Classic"
+                              : choice === "color"
+                                ? "Color"
+                                : "Split Compact"}
+                          </button>
+                        ),
+                      )}
                     </div>
                     <p className="description">
                       Classic uses monospace text. Color uses proportional text
                       and a distinct accent for projects, tasks, events and
-                      notes.
+                      notes. Split Compact offers sidebar or top navigation and
+                      a blue project file beside the workspace.
                     </p>
                     <div className="design-palette" aria-label="Item colors">
                       <span data-kind="projects">Projects</span>
@@ -970,6 +991,30 @@ export function App() {
                       <span data-kind="events">Events</span>
                       <span data-kind="notes">Notes</span>
                     </div>
+                    {design === "split-compact" && (
+                      <>
+                        <h3>Navigation placement</h3>
+                        <div
+                          className="actions"
+                          role="group"
+                          aria-label="Navigation placement"
+                        >
+                          {(["sidebar", "top"] as const).map((choice) => (
+                            <button
+                              key={choice}
+                              type="button"
+                              className={`button ${navigation === choice ? "" : "secondary"}`}
+                              aria-pressed={navigation === choice}
+                              onClick={() => setNavigation(choice)}
+                            >
+                              {choice === "sidebar"
+                                ? "Sidebar"
+                                : "Top navigation"}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                     <h3>Sidebar</h3>
                     <div className="actions" role="group" aria-label="Sidebar">
                       {(["labels", "icons"] as const).map((choice) => (
@@ -1011,6 +1056,35 @@ export function App() {
                     </div>
                   </section>
                   <StorageSettings busy={busy} onBackup={download} />
+                  <section
+                    className="panel backup-settings"
+                    aria-label="Backup"
+                  >
+                    <h2>Import &amp; export</h2>
+                    <p className="description">
+                      Export a JSON backup of all projects, tasks, events, notes
+                      and Brainstorm. Import checks the file before asking you
+                      to replace the current data.
+                    </p>
+                    <div className="actions">
+                      <button
+                        className="button"
+                        aria-label="Export JSON ↓"
+                        disabled={busy || loading}
+                        onClick={() => void download()}
+                      >
+                        <Download size={16} aria-hidden="true" /> Export JSON ↓
+                      </button>
+                      <button
+                        className="button secondary"
+                        aria-label="Import JSON ↑"
+                        disabled={busy || loading}
+                        onClick={() => file.current?.click()}
+                      >
+                        <Upload size={16} aria-hidden="true" /> Import JSON ↑
+                      </button>
+                    </div>
+                  </section>
                   <CategorySettings
                     categories={data.projectCategories}
                     projects={data.projects}
@@ -1174,69 +1248,73 @@ export function App() {
                     >
                       ← All projects
                     </button>
-                    <ProjectHeader
-                      key={project.id}
-                      project={project}
-                      projects={data.projects}
-                      projectCategories={data.projectCategories}
-                      links={data.links.filter(
-                        (l) => l.projectId === project.id,
-                      )}
-                      busy={busy}
-                      onChange={change}
-                      onDelete={deleteProject}
-                    />
-                    <div className="project-metadata">
-                      <span>
-                        PRJ-
-                        {String(project.number).padStart(3, "0")}
-                      </span>
-                      <span>
-                        Created {formatDate(project.createdAt.slice(0, 10))}
-                      </span>
-                      <span>
-                        Updated {formatDate(project.updatedAt.slice(0, 10))}
-                      </span>
-                      <span>
-                        {
-                          data.todos.filter(
-                            (t) => t.projectId === project.id && t.completed,
-                          ).length
-                        }{" "}
-                        /{" "}
-                        {
-                          data.todos.filter((t) => t.projectId === project.id)
-                            .length
-                        }{" "}
-                        tasks completed
-                      </span>
-                    </div>
-                    <div className="detail-columns">
-                      <TodosPanel
-                        key={`todo-${project.id}`}
-                        {...common}
-                        projectId={project.id}
-                        todos={data.todos.filter(
-                          (t) => t.projectId === project.id,
+                    <div className="project-workspace">
+                      <ProjectHeader
+                        key={project.id}
+                        project={project}
+                        projects={data.projects}
+                        projectCategories={data.projectCategories}
+                        links={data.links.filter(
+                          (l) => l.projectId === project.id,
                         )}
+                        busy={busy}
+                        onChange={change}
+                        onDelete={deleteProject}
                       />
-                      <EventsPanel
-                        key={`event-${project.id}`}
-                        {...common}
-                        projectId={project.id}
-                        events={data.events.filter(
-                          (e) => e.projectId === project.id,
-                        )}
-                      />
-                      <EventsPanel
-                        key={`notes-${project.id}`}
-                        {...common}
-                        notesOnly
-                        projectId={project.id}
-                        events={data.events.filter(
-                          (event) => event.projectId === project.id,
-                        )}
-                      />
+                      <div className="project-metadata">
+                        <span>
+                          PRJ-
+                          {String(project.number).padStart(3, "0")}
+                        </span>
+                        <span>
+                          Created {formatDate(project.createdAt.slice(0, 10))}
+                        </span>
+                        <span>
+                          Updated {formatDate(project.updatedAt.slice(0, 10))}
+                        </span>
+                        <span>
+                          {
+                            data.todos.filter(
+                              (t) => t.projectId === project.id && t.completed,
+                            ).length
+                          }{" "}
+                          /{" "}
+                          {
+                            data.todos.filter((t) => t.projectId === project.id)
+                              .length
+                          }{" "}
+                          tasks completed
+                        </span>
+                      </div>
+                      <div className="detail-columns">
+                        <TodosPanel
+                          key={`todo-${project.id}`}
+                          {...common}
+                          projectId={project.id}
+                          todos={data.todos.filter(
+                            (t) => t.projectId === project.id,
+                          )}
+                        />
+                        <EventsPanel
+                          key={`event-${project.id}`}
+                          {...common}
+                          compactPreview={design === "split-compact"}
+                          projectId={project.id}
+                          events={data.events.filter(
+                            (e) => e.projectId === project.id,
+                          )}
+                        />
+                        <EventsPanel
+                          key={`notes-${project.id}`}
+                          {...common}
+                          compactPreview={design === "split-compact"}
+                          notesOnly
+                          projectId={project.id}
+                          events={data.events.filter(
+                            (event) => event.projectId === project.id,
+                          )}
+                        />
+                      </div>
                     </div>
                   </>
                 ) : (

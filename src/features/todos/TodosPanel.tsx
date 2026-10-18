@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { confirmAction } from "../../platform/desktop";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Flag } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
@@ -26,6 +26,7 @@ interface Props {
   projects: Project[];
   projectId?: string;
   showHeading?: boolean;
+  compactSections?: boolean;
   headerTarget?: HTMLElement | null;
   search?: string;
   onSearchChange?: (value: string) => void;
@@ -43,6 +44,7 @@ export function TodosPanel({
   projects,
   projectId,
   showHeading = true,
+  compactSections = false,
   headerTarget,
   search = "",
   onSearchChange,
@@ -62,6 +64,7 @@ export function TodosPanel({
       ),
   );
   const editing = initialTodo || null;
+  const sortedVisible = sortTodos(visible);
   const [adding, setAdding] = useState(detailOnly || Boolean(initialTodo));
   const [title, setTitle] = useState(initialTodo?.title || "");
   const [date, setDate] = useState(initialTodo?.dueDate || "");
@@ -281,82 +284,107 @@ export function TodosPanel({
                 </tr>
               </thead>
               <tbody>
-                {sortTodos(visible).map((todo) => (
-                  <tr
-                    key={todo.id}
-                    className={`todo-item ${todo.completed ? "completed" : ""} ${todo.doNext && !todo.completed ? "is-do-next" : ""}`}
-                  >
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`${todo.title} completed`}
-                        checked={todo.completed}
-                        disabled={busy}
-                        onChange={() => toggle(todo)}
-                      />
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className={`icon-button task-next-toggle ${todo.doNext ? "marked" : ""}`}
-                        aria-label={`${todo.title} Do next`}
-                        aria-pressed={Boolean(todo.doNext)}
-                        title={
-                          todo.completed
-                            ? "Reopen task to mark as Do next"
-                            : "Do next"
-                        }
-                        disabled={busy || todo.completed}
-                        onClick={() =>
-                          void onChange({
-                            type: "todo.setDoNext",
-                            id: todo.id,
-                            doNext: !todo.doNext,
-                          })
-                        }
-                      >
-                        <Flag
-                          size={15}
-                          fill={todo.doNext ? "currentColor" : "none"}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </td>
-                    <td className="task-title">
-                      <button
-                        className="task-title-button"
-                        aria-label={`${todo.title} edit`}
-                        disabled={busy}
-                        onClick={() => openItem("task", todo.id)}
-                      >
-                        {todo.title}
-                      </button>
-                      {todo.doNext && !todo.completed && (
-                        <span className="do-next-badge">Do next</span>
+                {sortedVisible.map((todo, index) => (
+                  <Fragment key={todo.id}>
+                    {compactSections &&
+                      (index === 0 ||
+                        todo.completed !== sortedVisible[index - 1].completed ||
+                        (!todo.completed &&
+                          Boolean(todo.doNext) !==
+                            Boolean(sortedVisible[index - 1].doNext))) && (
+                        <tr
+                          className={`split-only task-section ${!todo.completed && todo.doNext ? "next-section" : ""}`}
+                        >
+                          <th colSpan={projectId ? 5 : 6} scope="colgroup">
+                            {todo.completed
+                              ? "Completed"
+                              : todo.doNext
+                                ? "Do next"
+                                : "Open tasks"}
+                          </th>
+                        </tr>
                       )}
-                    </td>
-                    {!projectId && (
+                    <tr
+                      key={todo.id}
+                      className={`todo-item ${todo.completed ? "completed" : ""} ${todo.doNext && !todo.completed ? "is-do-next" : ""}`}
+                    >
+                      <td>
+                        <input
+                          type="checkbox"
+                          aria-label={`${todo.title} completed`}
+                          checked={todo.completed}
+                          disabled={busy}
+                          onChange={() => toggle(todo)}
+                        />
+                      </td>
                       <td>
                         <button
-                          className="text-button"
-                          onClick={() => onProject(todo.projectId)}
+                          type="button"
+                          className={`icon-button task-next-toggle ${todo.doNext ? "marked" : ""}`}
+                          aria-label={`${todo.title} Do next`}
+                          aria-pressed={Boolean(todo.doNext)}
+                          title={
+                            todo.completed
+                              ? "Reopen task to mark as Do next"
+                              : "Do next"
+                          }
+                          disabled={busy || todo.completed}
+                          onClick={() =>
+                            void onChange({
+                              type: "todo.setDoNext",
+                              id: todo.id,
+                              doNext: !todo.doNext,
+                            })
+                          }
                         >
-                          {projects.find((p) => p.id === todo.projectId)?.name}
+                          <Flag
+                            size={15}
+                            fill={todo.doNext ? "currentColor" : "none"}
+                            aria-hidden="true"
+                          />
                         </button>
                       </td>
-                    )}
-                    <td>
-                      {todo.dueDate ? (
-                        <span className={overdue(todo, today) ? "overdue" : ""}>
-                          {overdue(todo, today) ? "Overdue · " : ""}
-                          {formatDate(todo.dueDate)}
-                        </span>
-                      ) : (
-                        <span className="muted">—</span>
+                      <td className="task-title">
+                        <button
+                          className="task-title-button"
+                          aria-label={`${todo.title} edit`}
+                          disabled={busy}
+                          onClick={() => openItem("task", todo.id)}
+                        >
+                          {todo.title}
+                        </button>
+                        {todo.doNext && !todo.completed && (
+                          <span className="do-next-badge">Do next</span>
+                        )}
+                      </td>
+                      {!projectId && (
+                        <td>
+                          <button
+                            className="text-button"
+                            onClick={() => onProject(todo.projectId)}
+                          >
+                            {
+                              projects.find((p) => p.id === todo.projectId)
+                                ?.name
+                            }
+                          </button>
+                        </td>
                       )}
-                    </td>
-                    <td>{formatTimestampDate(todo.createdAt)}</td>
-                  </tr>
+                      <td>
+                        {todo.dueDate ? (
+                          <span
+                            className={overdue(todo, today) ? "overdue" : ""}
+                          >
+                            {overdue(todo, today) ? "Overdue · " : ""}
+                            {formatDate(todo.dueDate)}
+                          </span>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td>{formatTimestampDate(todo.createdAt)}</td>
+                    </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

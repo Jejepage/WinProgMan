@@ -1,5 +1,19 @@
 # WinProgMan – Umsetzungsplan
 
+## Aktueller Folgeauftrag: optionales Split Compact (17. Oktober 2026)
+
+Folgeauftrag 18. Oktober 2026: Import/Export ausschließlich nach Settings verschieben und den gesamten UI-Stand als Windows-App 0.6.0 paketieren. Nötigen Quellstand für bestehende Windows-CI übertragen, Installer herunterladen/verifizieren; keine Installation und kein Merge. Dieser Auftrag hebt die frühere Einschränkung zu Verpackung/Push für diesen Stand auf.
+
+Nach Benutzerfeedback vom 18. Oktober 2026: Navigation im Split-Compact-Design wahlweise links in der Sidebar (Standard) oder oben. Die bestehende Symbol-/Textauswahl bleibt in beiden Positionen unabhängig bedienbar und gespeichert. Unter 761 px responsive Navigation oben. Abnahme siehe README.
+
+Die verbindliche Ergänzung hat Vorrang vor dem ursprünglichen Designprompt: Classic bleibt Standard und vollständig verfügbar; Split Compact ist zusätzlich auswählbar und unabhängig von Light/Dark/System. Vorhandenes Color bleibt erhalten. Branch: `codex/split-compact-ui`.
+
+Gemeinsame Fachlogik, Datenquellen und Editoren erhalten. Layout über stabile gemeinsame Markup-Struktur und ausschließlich für Split Compact geltende Styles/Tokens trennen; keine Design-Keys oder Austausch von Editor-Komponenten. Lokale Designpräferenz ohne Datenmigration. Globale Designauswahl ermöglicht Umschalten bei offenem Entwurf, ohne Navigation auszulösen.
+
+Referenz: weiße Arbeitsfläche, Text #11140F, Metadaten #394034, Linien #161B12, Projektfläche #1B32B4 mit Weiß, Do next/Notes #D5FF3F, kommende Events #FF874D mit #11170B. Arial und kräftige Projekttitel, kurze Metadaten/Nummern in Consolas, ausschließlich rechteckige Elemente. Dark-Variante mit dunklen Arbeitsflächen und lesbaren Akzenten. Projektdatei links ca. 30 %, Aufgaben rechts, darunter Ereignis-/Notizvorschauen mit Zugriff auf vollständige Listen und Timeline. Mobil gestapelt, intern scrollende Editortabellen. Bestehende englische Beschriftungen, Suche/Filter/CRUD/Import/Export/Save/Cancel erhalten.
+
+Abnahme und verbleibende Grenzen stehen im neuesten README-Abschnitt. Keine Verpackung, kein Push, keine Installation in diesem UI-Auftrag.
+
 Stand: 13. Oktober 2026. Grundlage: `Projekt-App – Spezifikation.md`.
 
 ## 1. Ausgangslage und Ziel
