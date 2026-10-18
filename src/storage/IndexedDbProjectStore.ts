@@ -1,4 +1,5 @@
 import {
+  AUTO_PROJECT_NUMBER,
   emptyData,
   type AppData,
   type DomainChange,
@@ -59,8 +60,11 @@ function applyChange(data: AppData, change: DomainChange): AppData {
     !data.projects.some((project) => project.id === change.value.id)
   ) {
     const number =
-      change.value.number === 0
-        ? Math.max(0, ...data.projects.map((project) => project.number)) + 1
+      change.value.number === AUTO_PROJECT_NUMBER
+        ? Math.max(
+            AUTO_PROJECT_NUMBER,
+            ...data.projects.map((project) => project.number),
+          ) + 1
         : change.value.number;
     return {
       ...data,

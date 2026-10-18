@@ -8,7 +8,7 @@ export function demoData(): AppData {
     return localToday(value);
   };
   const active = {
-    number: 1,
+    number: 0,
     ...metadata(),
     status: "Aktiv" as const,
     name: "Website überarbeiten",
@@ -16,7 +16,7 @@ export function demoData(): AppData {
       "Konzept, Inhalte und Veröffentlichung der persönlichen Website.",
   };
   const resting = {
-    number: 2,
+    number: 1,
     ...metadata(),
     status: "Abgeschlossen" as const,
     name: "Arbeitsplatz erneuern",

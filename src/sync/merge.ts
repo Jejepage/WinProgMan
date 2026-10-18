@@ -1,3 +1,4 @@
+import { AUTO_PROJECT_NUMBER } from "../domain/types";
 import {
   collectionByKind,
   dropExpired,
@@ -165,7 +166,7 @@ export function mergeData(
       numbers.set(project.id, number);
     }
   }
-  let next = Math.max(0, ...taken);
+  let next = Math.max(AUTO_PROJECT_NUMBER, ...taken);
   for (const project of ordered)
     if (!numbers.has(project.id)) numbers.set(project.id, ++next);
   projects = projects.map((project) =>

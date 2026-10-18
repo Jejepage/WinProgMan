@@ -1,3 +1,4 @@
+import { AUTO_PROJECT_NUMBER } from "./types";
 import type { AppData, Base, RecordKind, Tombstone } from "./types";
 
 /** Deletions are kept this long so they can be restored and reach other devices. */
@@ -149,7 +150,7 @@ export function restore(data: AppData, id: string, now: Date): AppData {
       updatedAt: now.toISOString(),
     };
     if (item.kind === "project" && taken.has(Number(record.number))) {
-      record.number = Math.max(0, ...taken) + 1;
+      record.number = Math.max(AUTO_PROJECT_NUMBER, ...taken) + 1;
     }
     if (
       item.kind === "project" &&
@@ -206,7 +207,8 @@ function restoreConflict(data: AppData, dead: Tombstone, now: Date): AppData {
   const field = nameField.find((key) => typeof record[key] === "string");
   if (field) record[field] = `${record[field]} (other version)`;
   if (dead.kind === "project")
-    record.number = Math.max(0, ...data.projects.map((p) => p.number)) + 1;
+    record.number =
+      Math.max(AUTO_PROJECT_NUMBER, ...data.projects.map((p) => p.number)) + 1;
   const name = collectionByKind[dead.kind];
   return {
     ...data,

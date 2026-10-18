@@ -24,6 +24,8 @@ export type ProjectStatus = (typeof projectStatuses)[number];
 export interface ProjectCategory extends Base {
   name: string;
 }
+/** Placeholder number: the store assigns the next free number on save. */
+export const AUTO_PROJECT_NUMBER = -1;
 export interface Project extends Base {
   number: number;
   status: ProjectStatus;

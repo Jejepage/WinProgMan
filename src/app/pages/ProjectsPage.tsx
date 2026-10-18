@@ -5,7 +5,7 @@ import {
   type AppData,
   type ProjectStatus,
 } from "../../domain/types";
-import { statusLabel } from "../../ui/labels";
+import { projectNumberLabel, statusLabel } from "../../ui/labels";
 
 export function ProjectsPage({
   data,
@@ -98,10 +98,7 @@ export function ProjectsPage({
                 </tr>
                 {group.projects.map((p) => (
                   <tr key={p.id}>
-                    <td className="col-fit">
-                      PRJ-
-                      {String(p.number).padStart(3, "0")}
-                    </td>
+                    <td className="col-fit">{projectNumberLabel(p.number)}</td>
                     <td>
                       <button
                         className="project-title"

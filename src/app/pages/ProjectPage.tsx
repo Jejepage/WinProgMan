@@ -1,6 +1,7 @@
 import { EventsPanel } from "../../features/events/EventsPanel";
 import { ProjectHeader } from "../../features/projects/ProjectHeader";
 import { TodosPanel } from "../../features/todos/TodosPanel";
+import { projectNumberLabel } from "../../ui/labels";
 import { formatDate } from "../../domain/queries";
 import type { AppData, DomainChange } from "../../domain/types";
 import type { PanelShared } from "../types";
@@ -51,10 +52,7 @@ export function ProjectPage({
           onDelete={onDelete}
         />
         <div className="project-metadata">
-          <span>
-            PRJ-
-            {String(project.number).padStart(3, "0")}
-          </span>
+          <span>{projectNumberLabel(project.number)}</span>
           <span>Created {formatDate(project.createdAt.slice(0, 10))}</span>
           <span>Updated {formatDate(project.updatedAt.slice(0, 10))}</span>
           <span>

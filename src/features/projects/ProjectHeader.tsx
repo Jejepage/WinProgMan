@@ -52,9 +52,9 @@ export function ProjectHeader({
     if (
       !/^\d+$/.test(number) ||
       !Number.isSafeInteger(parsedNumber) ||
-      parsedNumber < 1
+      parsedNumber < 0
     ) {
-      setNumberError("Enter a positive whole project number.");
+      setNumberError("Enter a whole project number (0 or higher).");
       return;
     }
     if (

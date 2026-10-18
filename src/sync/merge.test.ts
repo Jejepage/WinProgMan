@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import { demoData } from "../domain/demo";
-import { metadata, type AppData } from "../domain/types";
+import { AUTO_PROJECT_NUMBER, metadata, type AppData } from "../domain/types";
 import { IndexedDbProjectStore } from "../storage/IndexedDbProjectStore";
 import { validateData } from "../storage/validation";
 import { mergeData, sameData } from "./merge";
@@ -203,7 +203,7 @@ describe("Zusammenführen zweier Geräte", () => {
     const base = await a.load();
     const make = (name: string) => ({
       ...metadata(),
-      number: 0,
+      number: AUTO_PROJECT_NUMBER,
       status: "Aktiv" as const,
       name,
       description: "",

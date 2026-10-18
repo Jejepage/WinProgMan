@@ -1,7 +1,12 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vitest";
 import { demoData } from "../domain/demo";
-import { emptyData, metadata, type ExportEnvelope } from "../domain/types";
+import {
+  AUTO_PROJECT_NUMBER,
+  emptyData,
+  metadata,
+  type ExportEnvelope,
+} from "../domain/types";
 import { IndexedDbProjectStore } from "./IndexedDbProjectStore";
 import { validateData, validateImport } from "./validation";
 
@@ -51,7 +56,7 @@ describe("Sicherungsvalidierung", () => {
     const data = envelope();
     const old = { ...oldFields(data), schemaVersion: 4 };
     const imported = validateImport(old);
-    expect(imported.projects.map((project) => project.number)).toEqual([1, 2]);
+    expect(imported.projects.map((project) => project.number)).toEqual([0, 1]);
     expect(imported.brainstorm).toEqual(emptyData().brainstorm);
     const snapshot = JSON.stringify(data);
     data.projects[1].number = data.projects[0].number;
@@ -130,7 +135,7 @@ describe("Sicherungsvalidierung", () => {
     expect(migrated.projects).toEqual(
       legacy.projects.map((project, index) => ({
         ...project,
-        number: index + 1,
+        number: index,
         status: "Aktiv",
       })),
     );
@@ -288,7 +293,7 @@ describe("IndexedDB", () => {
     const second = new IndexedDbProjectStore(name);
     const projects = Array.from({ length: 8 }, (_, index) => ({
       ...metadata(),
-      number: 0,
+      number: AUTO_PROJECT_NUMBER,
       name: `Projekt ${index}`,
       description: "",
       status: "Aktiv" as const,
@@ -301,7 +306,7 @@ describe("IndexedDB", () => {
     const before = await first.load();
     expect(
       before.projects.map((project) => project.number).sort((a, b) => a - b),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    ).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     const edited = { ...before.projects[0], number: 20 };
     await first.apply({
       type: "project.saveWithLinks",
@@ -321,7 +326,6 @@ describe("IndexedDB", () => {
       true,
     );
     for (const number of [
-      0,
       -1,
       1.5,
       Number.MAX_SAFE_INTEGER + 1,
@@ -584,7 +588,7 @@ describe("IndexedDB", () => {
     expect(await first.load()).toEqual(emptyData());
     const project = {
       ...metadata(),
-      number: 0,
+      number: AUTO_PROJECT_NUMBER,
       name: "Projekt",
       description: "",
       status: "Aktiv" as const,
@@ -602,7 +606,7 @@ describe("IndexedDB", () => {
       value: { ...todo, completed: true },
     });
     const loaded = await new IndexedDbProjectStore(name).load();
-    expect(bare(loaded.projects)).toEqual([{ ...project, number: 1 }]);
+    expect(bare(loaded.projects)).toEqual([{ ...project, number: 0 }]);
     expect(bare(loaded.todos)).toEqual([{ ...todo, completed: true }]);
     await first.apply({ type: "todo.delete", id: todo.id });
     expect((await first.load()).todos).toEqual([]);

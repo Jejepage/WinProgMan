@@ -170,8 +170,11 @@ export function validateImport(value: unknown): ExportEnvelope {
         categoryIds.add(entry.id);
       } else if (collection === "projects") {
         if (current) {
-          if (!Number.isSafeInteger(entry.number) || Number(entry.number) < 1)
-            fail(`${path}.number`, "Positive ganze Projektnummer erwartet.");
+          if (!Number.isSafeInteger(entry.number) || Number(entry.number) < 0)
+            fail(
+              `${path}.number`,
+              "Nichtnegative ganze Projektnummer erwartet.",
+            );
           const number = entry.number as number;
           if (projectNumbers.has(number))
             fail(`${path}.number`, "Diese Projektnummer ist bereits vergeben.");
@@ -288,7 +291,7 @@ export function validateImport(value: unknown): ExportEnvelope {
   if (!current) {
     result.brainstorm = emptyBrainstorm();
     result.projects = (result.projects as Record<string, unknown>[]).map(
-      (project, index) => ({ ...project, number: index + 1 }),
+      (project, index) => ({ ...project, number: index }),
     );
   }
   if (legacy) {

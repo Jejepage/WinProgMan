@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import {
+  AUTO_PROJECT_NUMBER,
   metadata,
   projectStatuses,
   type DomainChange,
@@ -253,7 +254,7 @@ export function App() {
     e.preventDefault();
     const value = {
       ...metadata(),
-      number: 0,
+      number: AUTO_PROJECT_NUMBER,
       name: draft.name.trim() || "New project",
       description: "",
       status: draft.status,

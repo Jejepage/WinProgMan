@@ -197,11 +197,11 @@ test("Projektnummern sind editierbar, eindeutig und unabhängig von Filtern daue
   await page.reload();
   await navigate(page, "Projects");
   await page.getByLabel("Search projects").fill("Zulu");
-  await expect(page.locator(".project-topic-group")).toContainText("PRJ-042");
+  await expect(page.locator(".project-topic-group")).toContainText("P-042");
   await page.getByLabel("Search projects").fill("");
   await expect(
     page.locator(".project-topic-group").filter({ hasText: "Alpha project" }),
-  ).toContainText("PRJ-002");
+  ).toContainText("P-002");
   await page
     .getByRole("button", { name: "New project", exact: true })
     .click();
@@ -437,7 +437,7 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
     "No topic 1",
   ]);
   await expect(page.locator(".project-topic-group").nth(1)).toContainText(
-    "PRJ-001",
+    "P-001",
   );
   await page.screenshot({
     path: "test-results/visual/feedback-topics.png",

@@ -16,6 +16,9 @@ export const eventCategoryLabels: Record<Category, string> = {
   Notiz: "Note",
 };
 
+export const projectNumberLabel = (number: number): string =>
+  `P-${String(number).padStart(3, "0")}`;
+
 export const statusLabel = (status: ProjectStatus): string =>
   projectStatusLabels[status];
 export const categoryLabel = (category: Category): string =>
@@ -30,8 +33,8 @@ const errorTranslations: Record<string, string> = {
   "Gültiges Datum YYYY-MM-DD erwartet.": "Expected a valid YYYY-MM-DD date.",
   "Nur Sicherungsformat 1, 2, 3, 4, 5 und 6 werden unterstützt.":
     "Only backup formats 1, 2, 3, 4, 5 and 6 are supported.",
-  "Positive ganze Projektnummer erwartet.":
-    "Expected a positive whole project number.",
+  "Nichtnegative ganze Projektnummer erwartet.":
+    "Expected a non-negative whole project number.",
   "Diese Projektnummer ist bereits vergeben.":
     "Project number is already in use.",
   "Nichtnegative ganze Revision erwartet.":
