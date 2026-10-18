@@ -10,7 +10,10 @@ function readPreference(
     const saved = localStorage.getItem(`winprogman-${key}`);
     if (
       key === "design" &&
-      (saved === "classic" || saved === "color" || saved === "split-compact")
+      (saved === "classic" ||
+        saved === "color" ||
+        saved === "split-compact" ||
+        saved === "slate")
     )
       return saved;
     if (key === "sidebar" && (saved === "labels" || saved === "icons"))

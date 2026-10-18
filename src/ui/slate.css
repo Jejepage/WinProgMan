@@ -1,0 +1,332 @@
+/*
+ * Design "Slate": dunkle Schieferleiste, helle Arbeitsfläche, weiße Karten mit
+ * weichem Schatten und Akzentlinie, Großbuchstaben-Überschriften, farbige
+ * Statusmarken. Reine Optik: Markup, Aufteilung und Logik bleiben wie bei Classic.
+ */
+:root[data-design="slate"] {
+  --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --surface: #fff;
+  --canvas: #e9edf3;
+  --ink: #33425b;
+  --muted: #5d6c85;
+  --line: #d5dce8;
+  --accent: #1f78a8;
+  --green: #5c6e8f;
+  --accent-soft: #e4f1f8;
+  --danger: #b93a30;
+  --radius: 3px;
+  --slate-bar: #2f3b52;
+  --slate-bar-deep: #232d41;
+  --slate-bar-ink: #cfd8e6;
+  --slate-bar-muted: #93a1b8;
+  --slate-heading: #5c6e8f;
+  --slate-button: #5c6e8f;
+  --slate-sky: #3aa6d8;
+  --slate-orange: #f9a65a;
+  --slate-on-orange: #3b2300;
+  --slate-shadow: 0 1px 3px rgb(35 48 74 / 18%);
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: 14px;
+}
+:root[data-design="slate"][data-theme="dark"] {
+  --surface: #263146;
+  --canvas: #1b2333;
+  --ink: #e4eaf4;
+  --muted: #a9b6cc;
+  --line: #3b4963;
+  --accent: #7cc4ea;
+  --green: #4f6288;
+  --accent-soft: #2c4560;
+  --danger: #ff9b92;
+  --slate-bar: #182033;
+  --slate-bar-deep: #111827;
+  --slate-heading: #b3c1db;
+  --slate-button: #5a6f99;
+  --slate-shadow: 0 1px 3px rgb(0 0 0 / 40%);
+}
+:root[data-design="slate"] body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+/* Seitenleiste */
+:root[data-design="slate"] .sidebar {
+  background: var(--slate-bar);
+  color: var(--slate-bar-ink);
+  border-right: 0;
+  padding: 0 0 20px;
+}
+:root[data-design="slate"] .brand {
+  padding: 18px 20px;
+  background: var(--surface);
+  color: var(--slate-heading);
+  font-weight: 400;
+  font-size: 19px;
+}
+:root[data-design="slate"] .brand-mark {
+  background: var(--slate-sky);
+  color: #fff;
+  border-radius: var(--radius);
+}
+:root[data-design="slate"] .brand small {
+  color: var(--muted);
+}
+:root[data-design="slate"] .search-button {
+  margin: 14px 16px 6px;
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  background: var(--slate-bar-deep);
+  color: var(--slate-bar-ink);
+  border: 1px solid #ffffff1f;
+  border-radius: var(--radius);
+}
+:root[data-design="slate"] .sidebar nav {
+  gap: 0;
+  margin-top: 8px;
+}
+:root[data-design="slate"] .nav-button {
+  color: var(--slate-bar-ink);
+  border-radius: 0;
+  padding: 14px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] .nav-button.active {
+  background: var(--slate-bar-deep);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--slate-sky);
+}
+:root[data-design="slate"] .nav-button:hover:not(.active) {
+  background: #ffffff12;
+}
+:root[data-design="slate"] .nav-button small {
+  background: var(--slate-orange);
+  color: var(--slate-on-orange);
+  border-radius: 10px;
+  font-weight: 700;
+}
+:root[data-design="slate"] .sidebar-bottom {
+  color: var(--slate-bar-ink);
+  border-top: 1px solid #ffffff1f;
+  margin: auto 0 0;
+  padding: 18px 20px 0;
+}
+:root[data-design="slate"] .sidebar-bottom > small {
+  color: var(--slate-bar-muted);
+}
+:root[data-design="slate"] .sidebar-bottom :is(.text-button, .link-button) {
+  color: var(--slate-orange);
+}
+:root[data-design="slate"] .local-dot {
+  background: #1abc9c;
+}
+
+/* Arbeitsfläche */
+:root[data-design="slate"] main {
+  padding: 0 32px;
+}
+:root[data-design="slate"] h1 {
+  color: var(--slate-heading);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] h2 {
+  color: var(--slate-heading);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] h3 {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] :is(.panel, .stats > div) {
+  background: var(--surface);
+  color: var(--ink);
+  border: 0;
+  border-bottom: 3px solid var(--accent-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--slate-shadow);
+}
+:root[data-design="slate"] .stats > div:nth-child(2) {
+  border-bottom-color: #fde3c8;
+}
+:root[data-design="slate"] .stats > div:nth-child(3) {
+  border-bottom-color: #cdeee6;
+}
+:root[data-design="slate"] .stats strong {
+  color: var(--slate-heading);
+}
+:root[data-design="slate"] .section-heading {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+:root[data-design="slate"] :is(.muted, .description, .field, footer) {
+  color: var(--muted);
+}
+:root[data-design="slate"]
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .list-search input,
+    .markdown-editor > textarea
+  ) {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+:root[data-design="slate"]
+  :is(.editor, .event-editor, .event-details, .markdown-preview, .event-note) {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-design="slate"] a,
+:root[data-design="slate"] :is(.text-button, .icon-button, .project-link) {
+  color: var(--accent);
+}
+:root[data-design="slate"]
+  :is(.task-title-button, .event-title, .project-title) {
+  color: var(--ink);
+}
+:root[data-design="slate"] :is(.project-title, .task-title-button):hover {
+  color: var(--accent);
+}
+:root[data-design="slate"] input[type="checkbox"] {
+  accent-color: var(--slate-button);
+}
+:root[data-design="slate"]
+  :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--slate-sky);
+  outline-offset: 2px;
+}
+
+/* Schaltflächen */
+:root[data-design="slate"] .button {
+  background: var(--slate-button);
+  border-color: var(--slate-button);
+  color: #fff;
+  border-radius: var(--radius);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] .button:hover {
+  filter: brightness(0.92);
+}
+:root[data-design="slate"] .button.secondary {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--slate-heading);
+}
+:root[data-design="slate"] .button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+:root[data-design="slate"][data-theme="dark"] .button.danger {
+  color: #1b2333;
+}
+
+/* Tabellen */
+:root[data-design="slate"] .data-table th {
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] .data-table :is(th, td) {
+  border-color: var(--line);
+}
+:root[data-design="slate"] .data-table tr:hover td {
+  background: var(--accent-soft);
+}
+:root[data-design="slate"] .tasks-table .is-do-next td {
+  background: #fff6ec;
+}
+:root[data-design="slate"][data-theme="dark"] .tasks-table .is-do-next td {
+  background: #3a3333;
+}
+
+/* Marken: volle Farbflächen mit gut lesbarer Schrift */
+:root[data-design="slate"]
+  :is([data-status="Geplant"], [data-category="Meeting"]) {
+  --badge-bg: #1f6f9e;
+  --badge-ink: #fff;
+  --badge-border: #1f6f9e;
+}
+:root[data-design="slate"] [data-status="Aktiv"] {
+  --badge-bg: #0f7b64;
+  --badge-ink: #fff;
+  --badge-border: #0f7b64;
+}
+:root[data-design="slate"]
+  :is([data-status="Pausiert"], [data-category="Milestone"]) {
+  --badge-bg: #f5b800;
+  --badge-ink: #3b2a00;
+  --badge-border: #f5b800;
+}
+:root[data-design="slate"]
+  :is([data-status="Abgeschlossen"], [data-category="Telefonat"]) {
+  --badge-bg: #6a52b3;
+  --badge-ink: #fff;
+  --badge-border: #6a52b3;
+}
+:root[data-design="slate"] [data-category="Beschluss"] {
+  --badge-bg: #12707a;
+  --badge-ink: #fff;
+  --badge-border: #12707a;
+}
+:root[data-design="slate"] [data-category="Notiz"] {
+  --badge-bg: #b0346f;
+  --badge-ink: #fff;
+  --badge-border: #b0346f;
+}
+:root[data-design="slate"]
+  :is(.status-pill, .status-label, .category)[data-status],
+:root[data-design="slate"] .category[data-category] {
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+:root[data-design="slate"] .do-next-badge {
+  background: var(--slate-orange);
+  color: var(--slate-on-orange);
+  border: 0;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* Hinweise */
+:root[data-design="slate"] .message {
+  background: var(--slate-orange);
+  color: var(--slate-on-orange);
+  border: 0;
+  border-radius: var(--radius);
+}
+:root[data-design="slate"] .message .icon-button {
+  color: var(--slate-on-orange);
+}
+:root[data-design="slate"] .message.error {
+  background: #fbe3e0;
+  color: #7a1c14;
+}
+:root[data-design="slate"][data-theme="dark"] .message.error {
+  background: #4a2523;
+  color: #ffd9d5;
+}

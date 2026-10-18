@@ -53,27 +53,32 @@ export function SettingsPage({
           <h2>Appearance</h2>
           <h3>Design variant</h3>
           <div className="actions" role="group" aria-label="Design variant">
-            {(["classic", "color", "split-compact"] as const).map((choice) => (
-              <button
-                key={choice}
-                type="button"
-                className={`button ${design === choice ? "" : "secondary"}`}
-                aria-pressed={design === choice}
-                onClick={() => setDesign(choice)}
-              >
-                {choice === "classic"
-                  ? "Classic"
-                  : choice === "color"
-                    ? "Color"
-                    : "Split Compact"}
-              </button>
-            ))}
+            {(["classic", "color", "split-compact", "slate"] as const).map(
+              (choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className={`button ${design === choice ? "" : "secondary"}`}
+                  aria-pressed={design === choice}
+                  onClick={() => setDesign(choice)}
+                >
+                  {choice === "classic"
+                    ? "Classic"
+                    : choice === "color"
+                      ? "Color"
+                      : choice === "slate"
+                        ? "Slate"
+                        : "Split Compact"}
+                </button>
+              ),
+            )}
           </div>
           <p className="description">
             Classic uses monospace text. Color uses proportional text and a
             distinct accent for projects, tasks, events and notes. Split Compact
             offers sidebar or top navigation and a blue project file beside the
-            workspace.
+            workspace. Slate has a dark slate sidebar, a light content area,
+            white cards and solid status badges.
           </p>
           <div className="design-palette" aria-label="Item colors">
             <span data-kind="projects">Projects</span>
