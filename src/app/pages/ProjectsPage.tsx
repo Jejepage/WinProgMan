@@ -60,16 +60,22 @@ export function ProjectsPage({
                 {statusLabel(value)}
               </label>
             ))}
-            <label>
-              <input
-                type="checkbox"
-                checked={importantOnly}
-                onChange={(e) => onImportantOnly(e.target.checked)}
-              />
-              Important only
-            </label>
           </div>
         </fieldset>
+        <button
+          type="button"
+          className={`star-button star-filter ${importantOnly ? "is-on" : ""}`}
+          aria-pressed={importantOnly}
+          aria-label="Important only"
+          title={
+            importantOnly
+              ? "Showing important projects only"
+              : "Show important projects only"
+          }
+          onClick={() => onImportantOnly(!importantOnly)}
+        >
+          <Star size={18} aria-hidden="true" />
+        </button>
         <label className="field">
           <span className="sr-only">Filter topic</span>
           <select
@@ -92,12 +98,13 @@ export function ProjectsPage({
         />
         <button
           type="button"
-          className="button secondary"
+          className="button secondary report-button"
           disabled={!projects.length}
           onClick={onReport}
+          aria-label="Report"
           title="Save a Markdown report of the projects shown below"
         >
-          <FileText size={14} aria-hidden="true" /> Report
+          <FileText size={16} aria-hidden="true" />
         </button>
       </div>
       {!projects.length && !!data.projects.length && (

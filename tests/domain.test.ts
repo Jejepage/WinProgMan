@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeProjects,
   formatDate,
+  parseTime24,
   groupProjects,
   localToday,
   overdue,
@@ -258,5 +259,17 @@ describe("Darstellung, Projektreihenfolge und Bericht", () => {
     expect(report).toContain("- [ ] open (due 01/10/26, overdue)");
     expect(report).not.toContain("done");
     expect(report).not.toContain("Beta");
+  });
+});
+
+describe("Uhrzeit im 24-Stunden-Format", () => {
+  it("normalisiert Eingaben und weist ungültige Zeiten ab", () => {
+    expect(parseTime24("")).toBe("");
+    expect(parseTime24("9:30")).toBe("09:30");
+    expect(parseTime24("0930")).toBe("09:30");
+    expect(parseTime24("23:59")).toBe("23:59");
+    expect(parseTime24("24:00")).toBeNull();
+    expect(parseTime24("12:60")).toBeNull();
+    expect(parseTime24("2 pm")).toBeNull();
   });
 });

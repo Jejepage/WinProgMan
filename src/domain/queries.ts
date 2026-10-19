@@ -81,3 +81,14 @@ export const formatTimestampTime = (timestamp: string) => {
   const date = new Date(timestamp);
   return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 };
+/** Reads a typed 24-hour time ("9:30", "0930", "14:05") as HH:mm; "" stays empty, invalid gives null. */
+export function parseTime24(text: string): string | null {
+  const value = text.trim();
+  if (!value) return "";
+  const match = /^(\d{1,2}):?(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return `${pad2(hours)}:${pad2(minutes)}`;
+}

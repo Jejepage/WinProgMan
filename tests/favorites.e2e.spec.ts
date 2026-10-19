@@ -13,7 +13,7 @@ test("Wichtig-Stern, Filter, Bericht, Link ohne Bearbeiten und Dashboard-Links",
   await page
     .getByRole("button", { name: /^Mark as important: Website/ })
     .click();
-  await page.getByLabel("Important only").check();
+  await page.getByRole("button", { name: "Important only" }).click();
   await expect(
     page.locator(".projects-table tbody tr:not(.topic-group-row)"),
   ).toHaveCount(1);

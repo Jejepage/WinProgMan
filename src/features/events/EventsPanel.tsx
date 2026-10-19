@@ -10,7 +10,7 @@ import {
   type Project,
   type ProjectEvent,
 } from "../../domain/types";
-import { formatDate, sortEvents } from "../../domain/queries";
+import { formatDate, parseTime24, sortEvents } from "../../domain/queries";
 import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
 import { MarkdownNote } from "./MarkdownNote";
 import { legacyNoteToMarkdown } from "./markdown";
@@ -155,8 +155,13 @@ export function EventsPanel({
       );
       return;
     }
+    const time = notesOnly ? editor.draft.time : parseTime24(editor.draft.time);
+    if (time === null) {
+      setNoteError("Enter the time in 24-hour format, e.g. 14:30.");
+      return;
+    }
     setNoteError("");
-    const draft = { ...editor.draft, note };
+    const draft = { ...editor.draft, note, time };
     const value: ProjectEvent = {
       ...(original ?? metadata()),
       updatedAt: new Date().toISOString(),
@@ -473,7 +478,11 @@ export function EventsPanel({
                 Time (optional)
                 <input
                   id={`${prefix}-time`}
-                  type="time"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="HH:mm"
+                  maxLength={5}
                   value={editor.draft.time}
                   disabled={busy}
                   onChange={(event) => patch({ time: event.target.value })}

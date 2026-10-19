@@ -2189,3 +2189,27 @@ button.project-resource {
   align-items: center;
   gap: 6px;
 }
+
+/* Project list header: one row, report icon on the far right. */
+.project-filters {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.project-filters .field {
+  flex: 0 1 200px;
+  min-width: 140px;
+}
+.project-filters .list-search {
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+.project-filters .report-button {
+  margin-left: auto;
+  padding: 7px 9px;
+}
+.star-filter {
+  margin: 0;
+  padding: 6px;
+}

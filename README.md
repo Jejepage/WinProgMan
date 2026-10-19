@@ -271,3 +271,10 @@ Ereignisliste: Reihenfolge Datum, Titel mit direkt danebenstehendem Notizpfeil, 
 ## Installer 0.8.0 – 19. Oktober 2026
 
 Quellcommit `f7b9cc3` auf `main` (enthält Datumsformat dd/mm/yy, Wichtig-Stern mit Filter, Markdown-Bericht, Links per `+` in der Projektansicht, Dashboard-Links in Daten/Sicherung/Sync, Settings unten, Slate-Dark-Buttonfix). [Windows test build 39250260153](https://github.com/Jejepage/WinProgMan/actions/runs/39250260153) erfolgreich, inklusive Rust-Tests. Artefakt `WinProgMan-windows-x64` (ID `12185463125`, 3.070.787 Bytes), GitHub-Digest `sha256:3a8cc4e32b12dcaed96284ab37afa1c7aebe831b6fca9bf3351024813b00ad99`. Der Download erfordert eine GitHub-Anmeldung und wurde vom Benutzer selbst vorgenommen; EXE-Version, Prüfsumme und native Funktion sind von mir **nicht** geprüft. Installer ist unsigniert. Vor dem Update App schließen und JSON sichern.
+
+## 0.8.1 – 19. Oktober 2026
+
+- Uhrzeit bei Ereignissen als Textfeld im 24-Stunden-Format (`HH:mm`; „9:30“ und „0930“ werden zu 09:30, ungültige Eingaben melden einen Fehler) statt des vom Betriebssystem abhängigen Zeitfelds. Das native Datumsfeld folgt weiterhin der Systemsprache; Anzeigen in der App sind `dd/mm/yy`.
+- Kopf der Projektliste in einer Zeile: Status, Stern-Filter (nur Symbol), Topic, Suche; der Report-Button ist nur noch ein Symbol ganz rechts.
+- Settings stehen in allen Seitenleisten-Designs unten (bereits seit 0.8.0); bei „Top navigation“ bleiben sie in der Leiste.
+- 151 Unit-Tests, 43 Edge-Abläufe, Typprüfung und Webbuild erfolgreich.
