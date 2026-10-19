@@ -1,8 +1,10 @@
+import { FileText, Star } from "lucide-react";
 import { Card, SearchField, StatusLabel, Table } from "../../ui/components";
 import { groupProjects } from "../../domain/queries";
 import {
   projectStatuses,
   type AppData,
+  type DomainChange,
   type ProjectStatus,
 } from "../../domain/types";
 import { projectNumberLabel, statusLabel } from "../../ui/labels";
@@ -17,6 +19,11 @@ export function ProjectsPage({
   onSearch,
   projects,
   onProject,
+  importantOnly,
+  onImportantOnly,
+  onChange,
+  onReport,
+  busy,
 }: {
   data: AppData;
   selectedStatuses: Set<ProjectStatus>;
@@ -29,6 +36,12 @@ export function ProjectsPage({
   /** Projects after status, topic and text filters. */
   projects: AppData["projects"];
   onProject: (id: string) => void;
+  importantOnly: boolean;
+  onImportantOnly: (value: boolean) => void;
+  onChange: (change: DomainChange) => Promise<boolean>;
+  /** Creates a Markdown report of `projects`. */
+  onReport: () => void;
+  busy: boolean;
 }) {
   const groups = groupProjects(projects, data.projectCategories);
   return (
@@ -47,6 +60,14 @@ export function ProjectsPage({
                 {statusLabel(value)}
               </label>
             ))}
+            <label>
+              <input
+                type="checkbox"
+                checked={importantOnly}
+                onChange={(e) => onImportantOnly(e.target.checked)}
+              />
+              Important only
+            </label>
           </div>
         </fieldset>
         <label className="field">
@@ -69,6 +90,15 @@ export function ProjectsPage({
           value={search}
           onChange={onSearch}
         />
+        <button
+          type="button"
+          className="button secondary"
+          disabled={!projects.length}
+          onClick={onReport}
+          title="Save a Markdown report of the projects shown below"
+        >
+          <FileText size={14} aria-hidden="true" /> Report
+        </button>
       </div>
       {!projects.length && !!data.projects.length && (
         <p className="panel empty">
@@ -80,6 +110,9 @@ export function ProjectsPage({
           <Table className="projects-table">
             <thead>
               <tr>
+                <th className="col-fit">
+                  <span className="sr-only">Important</span>
+                </th>
                 <th className="col-fit">Project #</th>
                 <th>Title</th>
                 <th className="col-fit">Status</th>
@@ -89,7 +122,7 @@ export function ProjectsPage({
             {groups.map((group) => (
               <tbody key={group.id} className="project-topic-group">
                 <tr className="topic-group-row">
-                  <th colSpan={4} scope="rowgroup">
+                  <th colSpan={5} scope="rowgroup">
                     <h2 className="topic-group-heading">
                       {group.name}{" "}
                       <span className="count">{group.projects.length}</span>
@@ -98,6 +131,32 @@ export function ProjectsPage({
                 </tr>
                 {group.projects.map((p) => (
                   <tr key={p.id}>
+                    <td className="col-fit">
+                      <button
+                        type="button"
+                        className={`star-button ${p.important ? "is-on" : ""}`}
+                        aria-pressed={!!p.important}
+                        aria-label={`${p.important ? "Remove important mark from" : "Mark as important:"} ${p.name}`}
+                        title={
+                          p.important
+                            ? "Remove important mark"
+                            : "Mark as important"
+                        }
+                        disabled={busy}
+                        onClick={() =>
+                          void onChange({
+                            type: "project.save",
+                            value: {
+                              ...p,
+                              important: !p.important,
+                              updatedAt: new Date().toISOString(),
+                            },
+                          })
+                        }
+                      >
+                        <Star size={16} aria-hidden="true" />
+                      </button>
+                    </td>
                     <td className="col-fit">{projectNumberLabel(p.number)}</td>
                     <td>
                       <button

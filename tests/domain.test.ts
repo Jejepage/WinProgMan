@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeProjects,
+  formatDate,
   groupProjects,
   localToday,
   overdue,
@@ -8,6 +9,7 @@ import {
   sortTodos,
   upcoming,
 } from "../src/domain/queries";
+import { projectReport } from "../src/domain/report";
 import { emptyData, type ProjectEvent, type Todo } from "../src/domain/types";
 
 const base = {
@@ -181,11 +183,12 @@ describe("fachliche Kalendergrenzen", () => {
       event("all-day", "2026-10-13"),
       event("early", "2026-10-13", "09:00"),
     ];
+    // Newest first; within a day later times first, all-day entries last.
     expect(sortEvents(events).map((e) => e.id)).toEqual([
-      "all-day",
-      "early",
-      "late",
       "next",
+      "late",
+      "early",
+      "all-day",
     ]);
     expect(events[0].id).toBe("late");
   });
@@ -202,5 +205,58 @@ describe("fachliche Kalendergrenzen", () => {
       "early",
       "done-next",
     ]);
+  });
+});
+
+describe("Darstellung, Projektreihenfolge und Bericht", () => {
+  it("formatiert Daten als dd/mm/yy", () => {
+    expect(formatDate("2026-10-05")).toBe("05/10/26");
+  });
+  it("sortiert Projekte je Thema aufsteigend nach Nummer", () => {
+    const project = (id: string, number: number) => ({
+      ...base,
+      id,
+      number,
+      status: "Aktiv" as const,
+      name: id,
+      description: "",
+    });
+    const groups = groupProjects(
+      [project("c", 12), project("a", 3), project("b", 7)],
+      [],
+    );
+    expect(groups[0].projects.map((p) => p.id)).toEqual(["a", "b", "c"]);
+  });
+  it("listet im Bericht nur offene Aufgaben der übergebenen Projekte", () => {
+    const data = {
+      ...emptyData(),
+      projects: [
+        {
+          ...base,
+          id: "p",
+          number: 4,
+          status: "Aktiv" as const,
+          name: "Alpha",
+          description: "",
+          important: true,
+        },
+        {
+          ...base,
+          id: "q",
+          number: 5,
+          status: "Aktiv" as const,
+          name: "Beta",
+          description: "",
+        },
+      ],
+      todos: [todo("open", "2026-10-01"), todo("done", undefined, true)].map(
+        (item) => ({ ...item, title: item.id }),
+      ),
+    };
+    const report = projectReport(data, [data.projects[0]], "2026-10-13");
+    expect(report).toContain("P-004 Alpha ★");
+    expect(report).toContain("- [ ] open (due 01/10/26, overdue)");
+    expect(report).not.toContain("done");
+    expect(report).not.toContain("Beta");
   });
 });

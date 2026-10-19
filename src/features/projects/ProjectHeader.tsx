@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Copy, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Copy, Pencil, Plus, Save, Star, Trash2 } from "lucide-react";
 import { projectStatusLabels } from "../../ui/labels";
 import {
   metadata,
@@ -109,6 +109,16 @@ export function ProjectHeader({
       target: normalizeLinkTarget(target),
       updatedAt: new Date().toISOString(),
     };
+    if (!editing) {
+      // Outside project editing the link is stored right away.
+      void onChange({ type: "link.save", value }).then((ok) => {
+        if (ok) {
+          setLinkEditor(false);
+          setMessage("");
+        }
+      });
+      return;
+    }
     setDraftLinks((current) =>
       link
         ? current.map((item) => (item.id === link.id ? value : item))
@@ -128,7 +138,37 @@ export function ProjectHeader({
           <div className="split-only project-file-number">
             {String(project.number).padStart(3, "0")}
           </div>
-          <h1>{project.name}</h1>
+          <div className="project-title-row">
+            <h1>{project.name}</h1>
+            <button
+              type="button"
+              className={`star-button ${project.important ? "is-on" : ""}`}
+              aria-pressed={!!project.important}
+              aria-label={
+                project.important
+                  ? "Remove important mark"
+                  : "Mark as important"
+              }
+              title={
+                project.important
+                  ? "Remove important mark"
+                  : "Mark as important"
+              }
+              disabled={busy}
+              onClick={() =>
+                void onChange({
+                  type: "project.save",
+                  value: {
+                    ...project,
+                    important: !project.important,
+                    updatedAt: new Date().toISOString(),
+                  },
+                })
+              }
+            >
+              <Star size={18} aria-hidden="true" />
+            </button>
+          </div>
           <p className="muted">
             <StatusLabel data-status={project.status}>
               {projectStatusLabels[project.status]}
@@ -267,17 +307,15 @@ export function ProjectHeader({
       )}
       <div className="links-heading">
         <h2>Links & resources</h2>
-        {editing && (
-          <button
-            className="text-button"
-            disabled={busy}
-            aria-label="Add link"
-            title="Add link"
-            onClick={() => editLink()}
-          >
-            <Plus size={14} aria-hidden="true" />
-          </button>
-        )}
+        <button
+          className="text-button"
+          disabled={busy}
+          aria-label="Add link"
+          title="Add link"
+          onClick={() => editLink()}
+        >
+          <Plus size={14} aria-hidden="true" />
+        </button>
       </div>
       <ul className={`links-list ${editing ? "" : "project-links-display"}`}>
         {(editing ? draftLinks : links).map((l) => (
@@ -332,7 +370,7 @@ export function ProjectHeader({
           {editing ? "Add links to folders or websites." : "No links yet."}
         </p>
       )}
-      {editing && linkEditor && (
+      {linkEditor && (
         <form className="editor" onSubmit={saveLink}>
           <div className="form-grid">
             <label className="field">

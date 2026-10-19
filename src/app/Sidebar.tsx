@@ -1,7 +1,7 @@
 import {
   CalendarDays,
   CheckSquare,
-  Folder,
+  ClipboardList,
   LayoutDashboard,
   Lightbulb,
   NotebookPen,
@@ -15,7 +15,7 @@ import { navigationViews, type View } from "./types";
 
 const icons = [
   LayoutDashboard,
-  Folder,
+  ClipboardList,
   CheckSquare,
   CalendarDays,
   NotebookPen,
@@ -79,7 +79,7 @@ export function Sidebar({
               aria-label={v}
               title={v}
               aria-current={current === v ? "page" : undefined}
-              className={`nav-button ${current === v ? "active" : ""}`}
+              className={`nav-button ${v === "Settings" ? "settings-nav" : ""} ${current === v ? "active" : ""}`}
               data-kind={v.toLowerCase()}
               onClick={() => onNavigate(v)}
             >

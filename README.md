@@ -257,3 +257,13 @@ Aufgaben- und Ereignistitel öffnen eine Detailansicht innerhalb der App; bei Er
 Ereignisse werden ausschließlich im geöffneten Editor gelöscht; die Ereignisliste hat keinen Delete-Button mehr. Die Löschbestätigung kann abgebrochen werden und führt dann zum unveränderten Entwurf zurück. Erfolgreiches Löschen führt zurück zur Liste.
 
 Ereignisliste: Reihenfolge Datum, Titel mit direkt danebenstehendem Notizpfeil, Past/Today/Upcoming, Kategorie und Projekt. Alle Felder sind linksbündig; Past/Today/Upcoming behalten eine feste Breite. Einheitlicher linker Einzug und eine Mindestbreite für das Datum halten die Felder bei unterschiedlichen Monatsnamen ausgerichtet.
+
+## Änderungen 19. Oktober 2026 (nach 0.7.3)
+
+- Datumsformat `dd/mm/yy`, Uhrzeiten 24 h. Ereignisse überall von neu nach alt; Vorschauen zeigen die nächsten Ereignisse, ebenfalls absteigend sortiert.
+- Projekte je Thema nach Projektnummer aufsteigend. Neues optionales Feld `Project.important` (Stern, Filter „Important only“ in der Projektliste; Sicherungsformat 6, Feld nur ab Format 6 erlaubt).
+- Link hinzufügen per `+` direkt in der Projektansicht (speichert sofort, ohne Projektbearbeitung). Settings unten in der Seitenleiste. Projekt-Icon `ClipboardList`.
+- Bericht: Schaltfläche „Report“ in der Projektliste speichert einen Markdown-Bericht der aktuell gefilterten Projekte mit offenen Aufgaben (`src/domain/report.ts`).
+- Dashboard-Box „Links“: **pro Gerät in localStorage**, nicht in Sicherung/Sync (bewusst ohne Schemaänderung).
+- Slate Dark: Text auf roten Buttons lesbar (globale `.danger`-Regel überschrieb die Farbe).
+- Geprüft: Typprüfung, 148 Unit-Tests, Webbuild, 43 Edge-Abläufe (inkl. neuem `tests/favorites.e2e.spec.ts`). Kein Installer gebaut.

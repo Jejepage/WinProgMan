@@ -1,3 +1,4 @@
+import { QuickLinks } from "../../features/dashboard/QuickLinks";
 import { StatusLabel } from "../../ui/components";
 import {
   formatDate,
@@ -8,6 +9,10 @@ import {
 import type { AppData, Todo } from "../../domain/types";
 import { openItem } from "../../ui/itemNavigation";
 import { categoryLabel, statusLabel } from "../../ui/labels";
+
+/** The five nearest upcoming events, still shown newest first. */
+const nearest = (events: AppData["events"]) =>
+  [...events].reverse().slice(0, 5).reverse();
 
 export function DashboardPage({
   data,
@@ -130,7 +135,7 @@ export function DashboardPage({
                     {!projectEvents.length && (
                       <p className="muted">No upcoming events.</p>
                     )}
-                    {projectEvents.slice(0, 5).map((event) => (
+                    {nearest(projectEvents).map((event) => (
                       <div className="overview-event" key={event.id}>
                         <span
                           className="category"
@@ -209,6 +214,7 @@ export function DashboardPage({
             </div>
           ))}
         </section>
+        <QuickLinks />
       </div>
     </>
   );

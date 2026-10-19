@@ -2135,3 +2135,57 @@ button.project-resource {
   word-break: break-word;
   font: inherit;
 }
+
+/* Important-project star and dashboard link box. */
+.dashboard-projects {
+  grid-row: span 2;
+}
+.dashboard-links {
+  grid-column: 2;
+}
+@media (max-width: 900px) {
+  .dashboard-projects {
+    grid-row: auto;
+  }
+  .dashboard-links {
+    grid-column: auto;
+  }
+}
+.star-button {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 2px 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  color: var(--muted);
+  cursor: pointer;
+}
+.star-button.is-on {
+  color: #e0a100;
+}
+.star-button.is-on svg {
+  fill: currentColor;
+}
+.star-button:hover:not(:disabled) {
+  color: #e0a100;
+}
+
+/* Settings sits at the bottom of a vertical sidebar. */
+@media (min-width: 761px) {
+  .app-shell:not([data-navigation="top"]) .sidebar nav {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    gap: 6px;
+  }
+  .app-shell:not([data-navigation="top"]) .sidebar .settings-nav {
+    margin-top: auto;
+  }
+}
+.project-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

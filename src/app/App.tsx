@@ -34,7 +34,8 @@ import { ownConflicts } from "../sync/conflicts";
 import { deviceId } from "../sync/useSync";
 import { openItem, openNewItem } from "../ui/itemNavigation";
 import { errorLabel } from "../ui/labels";
-import { confirmAction, saveBackup } from "../platform/desktop";
+import { projectReport } from "../domain/report";
+import { confirmAction, saveBackup, saveTextFile } from "../platform/desktop";
 import { ImportPreview } from "./ImportPreview";
 import { NewProjectForm, type NewProjectDraft } from "./NewProjectForm";
 import { Sidebar } from "./Sidebar";
@@ -93,6 +94,7 @@ export function App() {
   );
   const [categoryFilter, setCategoryFilter] = useState("");
   const [projectSearch, setProjectSearch] = useState("");
+  const [importantOnly, setImportantOnly] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [noteSearch, setNoteSearch] = useState("");
@@ -293,6 +295,20 @@ export function App() {
       return next;
     });
   }
+  async function report() {
+    try {
+      const ok = await saveTextFile(
+        `winprogman-report-${today}.md`,
+        projectReport(data, filteredProjects, today),
+        "text/markdown",
+        "md",
+        "Markdown report",
+      );
+      if (ok) setNotice("Project report saved.");
+    } catch (e) {
+      setError(errorLabel(e));
+    }
+  }
   async function download() {
     try {
       await brainstormPanel.current?.flush();
@@ -374,6 +390,7 @@ export function App() {
   const filteredProjects = data.projects.filter(
     (p) =>
       selectedStatuses.has(p.status) &&
+      (!importantOnly || !!p.important) &&
       (!effectiveCategoryFilter ||
         (effectiveCategoryFilter === "none"
           ? !p.categoryId
@@ -565,6 +582,11 @@ export function App() {
                   onSearch={setProjectSearch}
                   projects={filteredProjects}
                   onProject={goProject}
+                  importantOnly={importantOnly}
+                  onImportantOnly={setImportantOnly}
+                  onChange={change}
+                  busy={busy}
+                  onReport={() => void report()}
                 />
               )}
               {view === "Tasks" && (

@@ -37,6 +37,35 @@ export async function saveBackup(
   return true;
 }
 
+/** Saves a text document (e.g. the project report); false means cancelled. */
+export async function saveTextFile(
+  filename: string,
+  contents: string,
+  mime: string,
+  extension: string,
+  filterName: string,
+): Promise<boolean> {
+  if (isDesktop()) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+    const path = await save({
+      title: "Save report",
+      defaultPath: filename,
+      filters: [{ name: filterName, extensions: [extension] }],
+    });
+    if (!path) return false;
+    await writeTextFile(path, contents);
+    return true;
+  }
+  const url = URL.createObjectURL(new Blob([contents], { type: mime }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
+}
+
 export async function openExternalUrl(url: string): Promise<void> {
   if (!/^(https?:\/\/|mailto:|tel:)/i.test(url))
     throw new Error("Unsupported link destination.");

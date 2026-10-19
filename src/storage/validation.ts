@@ -121,6 +121,7 @@ export function validateImport(value: unknown): ExportEnvelope {
                 "description",
                 ...(current ? ["number"] : []),
                 ...(legacy ? [] : ["status", "categoryId"]),
+                ...(Number(root.schemaVersion) >= 6 ? ["important"] : []),
               ]
             : collection === "links"
               ? ["projectId", "label", "target"]
@@ -193,6 +194,11 @@ export function validateImport(value: unknown): ExportEnvelope {
               fail(`${path}.categoryId`, "Kategorie existiert nicht.");
           }
         }
+        if (
+          entry.important !== undefined &&
+          typeof entry.important !== "boolean"
+        )
+          fail(`${path}.important`, "Wahrheitswert erwartet.");
         projects.add(entry.id);
         string(entry.name, `${path}.name`, true);
         string(entry.description, `${path}.description`);

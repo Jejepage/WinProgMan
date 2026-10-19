@@ -9,6 +9,7 @@ import type {
   RecordKind,
   Tombstone,
 } from "../../domain/types";
+import { formatTimestampDate } from "../../domain/queries";
 import { confirmAction } from "../../platform/desktop";
 import { deviceId } from "../../sync/useSync";
 
@@ -130,8 +131,8 @@ export function TrashSettings({
                     : title(item) || "Untitled"}
                   <small>
                     {item.conflict
-                      ? ` · changed on ${item.conflict.device}, your version is kept here (${new Date(item.deletedAt).toLocaleDateString()})`
-                      : ` · deleted ${new Date(item.deletedAt).toLocaleDateString()}`}
+                      ? ` · changed on ${item.conflict.device}, your version is kept here (${formatTimestampDate(item.deletedAt)})`
+                      : ` · deleted ${formatTimestampDate(item.deletedAt)}`}
                   </small>
                   {item.conflict && (
                     <details>

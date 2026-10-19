@@ -124,13 +124,16 @@ export function EventsPanel({
         ),
     ),
   );
-  if (notesOnly) filtered.reverse();
   const preview = compactPreview && !showAll && !timeline;
   const visible = preview
-    ? (notesOnly
-        ? filtered
-        : filtered.filter((event) => event.date >= today)
-      ).slice(0, 3)
+    ? notesOnly
+      ? filtered.slice(0, 3)
+      : // The nearest three upcoming events, still shown newest first.
+        filtered
+          .filter((event) => event.date >= today)
+          .reverse()
+          .slice(0, 3)
+          .reverse()
     : filtered;
   const patch = (change: Partial<Draft>) =>
     setEditor((current) =>
@@ -589,9 +592,9 @@ export function EventsPanel({
           <ul className={timeline ? "item-list timeline" : "item-list"}>
             {timeline ? (
               <>
-                {past.map(renderEvent)}
-                {marker}
                 {future.map(renderEvent)}
+                {marker}
+                {past.map(renderEvent)}
               </>
             ) : (
               visible.map(renderEvent)

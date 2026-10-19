@@ -30,6 +30,8 @@ export interface Project extends Base {
   number: number;
   status: ProjectStatus;
   categoryId?: string;
+  /** Marked with a star in the project list. */
+  important?: boolean;
   name: string;
   description: string;
 }

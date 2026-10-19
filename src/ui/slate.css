@@ -236,7 +236,10 @@
   color: #fff;
 }
 :root[data-design="slate"][data-theme="dark"] .button.danger {
-  color: #1b2333;
+  background: #b3383f;
+  border-color: #b3383f;
+  /* The global dark ".danger" rule forces pink text with !important. */
+  color: #fff !important;
 }
 
 /* Tabellen */

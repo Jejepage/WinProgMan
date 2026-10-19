@@ -20,6 +20,8 @@ export const overdue = (todo: Todo, today = localToday()) =>
 export const upcoming = (event: ProjectEvent, today = localToday()) =>
   event.category !== "Notiz" && event.date >= today;
 
+const byNumber = (projects: Project[]) =>
+  [...projects].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
 /** Filter first, then group. Categories are identities, even when named No topic. */
 export function groupProjects(projects: Project[], topics: ProjectCategory[]) {
   const groups = [...topics]
@@ -31,12 +33,14 @@ export function groupProjects(projects: Project[], topics: ProjectCategory[]) {
     .map((topic) => ({
       id: topic.id,
       name: topic.name,
-      projects: projects.filter((project) => project.categoryId === topic.id),
+      projects: byNumber(
+        projects.filter((project) => project.categoryId === topic.id),
+      ),
     }));
   groups.push({
     id: "",
     name: "No topic",
-    projects: projects.filter((project) => !project.categoryId),
+    projects: byNumber(projects.filter((project) => !project.categoryId)),
   });
   return groups.filter((group) => group.projects.length);
 }
@@ -52,9 +56,9 @@ export const sortTodos = (todos: Todo[]) =>
 export const sortEvents = (events: ProjectEvent[]) =>
   [...events].sort(
     (a, b) =>
-      a.date.localeCompare(b.date) ||
-      (a.time || "").localeCompare(b.time || "") ||
-      a.id.localeCompare(b.id),
+      b.date.localeCompare(a.date) ||
+      (b.time || "").localeCompare(a.time || "") ||
+      b.id.localeCompare(a.id),
   );
 export const activeProjects = (data: AppData, today = localToday()) =>
   data.projects.filter(
@@ -62,15 +66,18 @@ export const activeProjects = (data: AppData, today = localToday()) =>
       data.todos.some((t) => t.projectId === p.id && !t.completed) ||
       data.events.some((e) => e.projectId === p.id && upcoming(e, today)),
   );
-export const formatDate = (date: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${date}T12:00:00`));
-export const formatTimestampDate = (timestamp: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(timestamp));
+const pad2 = (value: number) => String(value).padStart(2, "0");
+/** Date as dd/mm/yy. */
+export const formatDate = (date: string) => {
+  const [year = "", month = "", day = ""] = date.split("-");
+  return `${day}/${month}/${year.slice(-2)}`;
+};
+export const formatTimestampDate = (timestamp: string) => {
+  const date = new Date(timestamp);
+  return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${pad2(date.getFullYear() % 100)}`;
+};
+/** Time of day as 24-hour HH:mm. */
+export const formatTimestampTime = (timestamp: string) => {
+  const date = new Date(timestamp);
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+};

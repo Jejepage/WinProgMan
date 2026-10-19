@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatTimestampTime } from "../../domain/queries";
 import { confirmAction } from "../../platform/desktop";
 import { getDeviceName, setDeviceName, type useSync } from "../../sync/useSync";
 
@@ -11,7 +12,7 @@ export function syncSummary(state: Sync["state"]): string {
   if (state.running) return "Syncing …";
   if (state.last?.skipped.length) return "Waiting for other device";
   return state.last
-    ? `Synced ${new Date(state.last.syncedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    ? `Synced ${formatTimestampTime(state.last.syncedAt)}`
     : "Not synced yet";
 }
 

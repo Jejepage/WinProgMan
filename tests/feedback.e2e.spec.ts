@@ -599,7 +599,7 @@ test("Linktypen und Projektentwürfe mit Save/Cancel; getrennte Projektbereiche 
   const header = page.locator(".project-header");
   await expect(
     header.getByRole("button", { name: "Add link", exact: true }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await expect(header.locator(".row-actions")).toHaveCount(0);
   await expect(header.locator(".links-list li").nth(0)).toContainText("Folder");
   await expect(header.locator(".links-list li").nth(1)).toContainText(
