@@ -267,3 +267,7 @@ Ereignisliste: Reihenfolge Datum, Titel mit direkt danebenstehendem Notizpfeil, 
 - Dashboard-Box „Links“: eigene Sammlung `quickLinks` (Art `quicklink`) in Daten, Sicherung (Format 6, Feld optional beim Import), Sync und Papierkorb. Frühere lokale Einträge (`winprogman-quick-links`) werden beim ersten Öffnen übernommen.
 - Slate Dark: Text auf roten Buttons lesbar (globale `.danger`-Regel überschrieb die Farbe).
 - Geprüft: Typprüfung, 150 Unit-Tests, Webbuild, 43 Edge-Abläufe (inkl. neuem `tests/favorites.e2e.spec.ts`). Kein Installer gebaut.
+
+## Installer 0.8.0 – 19. Oktober 2026
+
+Quellcommit `f7b9cc3` auf `main` (enthält Datumsformat dd/mm/yy, Wichtig-Stern mit Filter, Markdown-Bericht, Links per `+` in der Projektansicht, Dashboard-Links in Daten/Sicherung/Sync, Settings unten, Slate-Dark-Buttonfix). [Windows test build 39250260153](https://github.com/Jejepage/WinProgMan/actions/runs/39250260153) erfolgreich, inklusive Rust-Tests. Artefakt `WinProgMan-windows-x64` (ID `12185463125`, 3.070.787 Bytes), GitHub-Digest `sha256:3a8cc4e32b12dcaed96284ab37afa1c7aebe831b6fca9bf3351024813b00ad99`. Der Download erfordert eine GitHub-Anmeldung und wurde vom Benutzer selbst vorgenommen; EXE-Version, Prüfsumme und native Funktion sind von mir **nicht** geprüft. Installer ist unsigniert. Vor dem Update App schließen und JSON sichern.
