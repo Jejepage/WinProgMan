@@ -78,7 +78,7 @@ export function validateImport(value: unknown): ExportEnvelope {
       "todos",
       "events",
       ...(current ? ["brainstorm"] : []),
-      ...(synced ? ["tombstones"] : []),
+      ...(synced ? ["tombstones", "quickLinks"] : []),
       ...(legacy ? [] : ["projectCategories"]),
     ],
     "Sicherung",
@@ -106,6 +106,9 @@ export function validateImport(value: unknown): ExportEnvelope {
     "links",
     "todos",
     "events",
+    ...(synced && root.quickLinks !== undefined
+      ? (["quickLinks"] as const)
+      : []),
   ] as const) {
     const list = root[collection];
     if (!Array.isArray(list)) return fail(collection, "Liste erwartet.");
@@ -115,7 +118,9 @@ export function validateImport(value: unknown): ExportEnvelope {
       const extras =
         collection === "projectCategories"
           ? ["name"]
-          : collection === "projects"
+          : collection === "quickLinks"
+            ? ["label", "target"]
+            : collection === "projects"
             ? [
                 "name",
                 "description",
@@ -203,10 +208,12 @@ export function validateImport(value: unknown): ExportEnvelope {
         string(entry.name, `${path}.name`, true);
         string(entry.description, `${path}.description`);
       } else {
-        string(entry.projectId, `${path}.projectId`, true);
-        if (!projects.has(entry.projectId))
-          fail(`${path}.projectId`, "Projekt existiert nicht.");
-        if (collection === "links") {
+        if (collection !== "quickLinks") {
+          string(entry.projectId, `${path}.projectId`, true);
+          if (!projects.has(entry.projectId))
+            fail(`${path}.projectId`, "Projekt existiert nicht.");
+        }
+        if (collection === "links" || collection === "quickLinks") {
           string(entry.label, `${path}.label`, true);
           string(entry.target, `${path}.target`, true);
           if (
@@ -306,6 +313,7 @@ export function validateImport(value: unknown): ExportEnvelope {
       (project) => ({ ...project, status: "Aktiv" }),
     );
   }
+  result.quickLinks = result.quickLinks ?? [];
   return result as unknown as ExportEnvelope;
 }
 

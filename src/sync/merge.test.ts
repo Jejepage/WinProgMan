@@ -276,3 +276,48 @@ describe("Zusammenführen zweier Geräte", () => {
     expect(sameData(mergeData(base, [base], now()), base)).toBe(true);
   });
 });
+
+describe("Dashboard-Links", () => {
+  it("bleiben in Sicherung, Import und Sync erhalten und kommen aus dem Papierkorb zurück", async () => {
+    const { a, b } = await pair();
+    await a.apply({
+      type: "quicklink.save",
+      value: { ...metadata(), label: "Docs", target: "https://example.org/" },
+    });
+    const backup = await a.exportData();
+    expect(backup.quickLinks.map((l) => l.label)).toEqual(["Docs"]);
+    await sync(a, b);
+    expect((await b.load()).quickLinks.map((l) => l.label)).toEqual(["Docs"]);
+
+    const id = backup.quickLinks[0].id;
+    await b.apply({ type: "quicklink.delete", id });
+    await sync(a, b);
+    expect((await a.load()).quickLinks).toEqual([]);
+    await a.apply({ type: "trash.restore", id });
+    expect((await a.load()).quickLinks.map((l) => l.label)).toEqual(["Docs"]);
+
+    const copy = store();
+    await copy.importData({
+      ...(await a.exportData()),
+      exportedAt: now().toISOString(),
+    });
+    expect((await copy.load()).quickLinks).toHaveLength(1);
+  });
+  it("lehnt unsichere Ziele in Dashboard-Links ab und ergänzt Sicherungen ohne Links", () => {
+    const data = {
+      ...demoData(),
+      schemaVersion: 6,
+      exportedAt: now().toISOString(),
+    };
+    expect(() =>
+      validateData({
+        ...data,
+        quickLinks: [
+          { ...metadata(), label: "x", target: "javascript:alert(1)" },
+        ],
+      }),
+    ).toThrow();
+    const { quickLinks: _omit, ...without } = data;
+    expect(validateData(without).quickLinks).toEqual([]);
+  });
+});

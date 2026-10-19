@@ -28,6 +28,7 @@ export function demoData(): AppData {
     brainstorm: emptyBrainstorm(),
     projectCategories: [],
     projects: [active, resting],
+    quickLinks: [],
     links: [
       {
         ...metadata(),

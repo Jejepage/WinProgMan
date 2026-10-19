@@ -21,8 +21,8 @@ export function ImportPreview({
         {pending.events.filter((event) => event.category !== "Notiz").length}{" "}
         Events ·{" "}
         {pending.events.filter((event) => event.category === "Notiz").length}{" "}
-        Notes · {pending.links.length} Links ·{" "}
-        {pending.projectCategories.length} project topics
+        Notes · {pending.links.length} Links · {pending.quickLinks.length}{" "}
+        dashboard links · {pending.projectCategories.length} project topics
       </p>
       <p>Brainstorm: {pending.brainstorm.text.length} characters.</p>
       <p>

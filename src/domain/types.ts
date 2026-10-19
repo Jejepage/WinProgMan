@@ -40,6 +40,11 @@ export interface Link extends Base {
   label: string;
   target: string;
 }
+/** Free link on the dashboard, not tied to a project. */
+export interface QuickLink extends Base {
+  label: string;
+  target: string;
+}
 export interface Todo extends Base {
   projectId: string;
   title: string;
@@ -60,6 +65,7 @@ export const tombstoneKinds = [
   "category",
   "project",
   "link",
+  "quicklink",
   "todo",
   "event",
   "brainstorm",
@@ -95,6 +101,7 @@ export interface AppData {
   projectCategories: ProjectCategory[];
   projects: Project[];
   links: Link[];
+  quickLinks: QuickLink[];
   todos: Todo[];
   events: ProjectEvent[];
 }
@@ -124,6 +131,8 @@ export type DomainChange =
   | { type: "category.save"; value: ProjectCategory }
   | { type: "category.delete"; id: string }
   | { type: "link.save"; value: Link }
+  | { type: "quicklink.save"; value: QuickLink }
+  | { type: "quicklink.delete"; id: string }
   | { type: "todo.save"; value: Todo }
   | { type: "todo.setDoNext"; id: string; doNext: boolean }
   | { type: "event.save"; value: ProjectEvent }
@@ -137,6 +146,7 @@ export const emptyData = (): AppData => ({
   projectCategories: [],
   projects: [],
   links: [],
+  quickLinks: [],
   todos: [],
   events: [],
 });

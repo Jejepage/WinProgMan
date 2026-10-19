@@ -1,23 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { classifyLinkTarget, normalizeLinkTarget } from "../../domain/links";
-import type { Link } from "../../domain/types";
+import {
+  metadata,
+  type DomainChange,
+  type QuickLink,
+} from "../../domain/types";
 import { ProjectLink } from "../../ui/ProjectLink";
 
-const storageKey = "winprogman-quick-links";
+/** Links kept on this device before they became part of the data. */
+const legacyKey = "winprogman-quick-links";
 
-type Saved = Pick<Link, "id" | "label" | "target">;
-
-function load(): Saved[] {
+function legacyLinks(): { label: string; target: string }[] {
   try {
-    const parsed: unknown = JSON.parse(
-      localStorage.getItem(storageKey) || "[]",
-    );
+    const parsed: unknown = JSON.parse(localStorage.getItem(legacyKey) || "[]");
     return Array.isArray(parsed)
       ? parsed.filter(
-          (item): item is Saved =>
+          (item) =>
             !!item &&
-            typeof item.id === "string" &&
             typeof item.label === "string" &&
             typeof item.target === "string",
         )
@@ -27,42 +27,63 @@ function load(): Saved[] {
   }
 }
 
-/** Dashboard box with free links; kept per device, outside the project data. */
-export function QuickLinks() {
-  const [links, setLinks] = useState(load);
+/** Dashboard box with free links; part of the data, backup and sync. */
+export function QuickLinks({
+  links,
+  busy,
+  onChange,
+}: {
+  links: QuickLink[];
+  busy: boolean;
+  onChange: (change: DomainChange) => Promise<boolean>;
+}) {
   const [adding, setAdding] = useState(false);
   const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
 
-  function store(next: Saved[]) {
-    setLinks(next);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-    } catch {
-      setMessage("Links could not be stored on this device.");
-    }
-  }
-  function add(e: React.FormEvent) {
+  // Take over links stored locally by the earlier version, once.
+  useEffect(() => {
+    const old = legacyLinks();
+    if (!old.length) return;
+    void (async () => {
+      for (const item of old)
+        if (
+          !(await onChange({
+            type: "quicklink.save",
+            value: { ...metadata(), ...item },
+          }))
+        )
+          return;
+      try {
+        localStorage.removeItem(legacyKey);
+      } catch {
+        /* nothing to clean up */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function add(e: React.FormEvent) {
     e.preventDefault();
     if (classifyLinkTarget(target).kind === "unknown") {
       setMessage("Enter a website address or an absolute Windows folder path.");
       return;
     }
-    store([
-      ...links,
-      {
-        id: crypto.randomUUID(),
+    const ok = await onChange({
+      type: "quicklink.save",
+      value: {
+        ...metadata(),
         label: label.trim() || target.trim(),
         target: normalizeLinkTarget(target),
       },
-    ]);
+    });
+    if (!ok) return;
     setLabel("");
     setTarget("");
     setMessage("");
     setAdding(false);
   }
-  const now = new Date().toISOString();
   return (
     <section className="panel dashboard-links">
       <div className="section-heading">
@@ -83,20 +104,16 @@ export function QuickLinks() {
         {links.map((item) => (
           <li key={item.id}>
             <div>
-              <ProjectLink
-                link={{
-                  ...item,
-                  projectId: "",
-                  createdAt: now,
-                  updatedAt: now,
-                }}
-              />
+              <ProjectLink link={{ ...item, projectId: "" }} />
             </div>
             <button
               className="icon-button danger"
               aria-label={`Remove ${item.label}`}
               title="Remove"
-              onClick={() => store(links.filter((l) => l.id !== item.id))}
+              disabled={busy}
+              onClick={() =>
+                void onChange({ type: "quicklink.delete", id: item.id })
+              }
             >
               <Trash2 size={14} aria-hidden="true" />
             </button>
@@ -122,7 +139,9 @@ export function QuickLinks() {
             />
           </label>
           <div className="actions">
-            <button className="button">Save link</button>
+            <button className="button" disabled={busy}>
+              Save link
+            </button>
             <button
               type="button"
               className="button secondary"

@@ -6,11 +6,17 @@ export const TOMBSTONE_RETENTION_DAYS = 60;
 const DAY = 24 * 60 * 60 * 1000;
 
 type Collection =
-  "projectCategories" | "projects" | "links" | "todos" | "events";
+  | "projectCategories"
+  | "projects"
+  | "links"
+  | "quickLinks"
+  | "todos"
+  | "events";
 export const collectionByKind: Record<RecordKind, Collection> = {
   category: "projectCategories",
   project: "projects",
   link: "links",
+  quicklink: "quickLinks",
   todo: "todos",
   event: "events",
 };
@@ -18,6 +24,7 @@ export const kindOrder: RecordKind[] = [
   "category",
   "project",
   "link",
+  "quicklink",
   "todo",
   "event",
 ];
@@ -193,7 +200,11 @@ function restoreConflict(data: AppData, dead: Tombstone, now: Date): AppData {
     };
   }
   const projectId = dead.record.projectId;
-  if (dead.kind !== "project" && dead.kind !== "category") {
+  if (
+    dead.kind !== "project" &&
+    dead.kind !== "category" &&
+    dead.kind !== "quicklink"
+  ) {
     if (!data.projects.some((p) => p.id === projectId))
       throw new Error("The project of this item no longer exists.");
   }

@@ -12,6 +12,7 @@ const code = "const value = `literal`;\n\tconsole.log(value);";
 function fixture(): ExportEnvelope {
   return {
     schemaVersion: 6,
+    quickLinks: [],
     tombstones: [],
     brainstorm: { text: "", revision: 0, updatedAt: timestamp },
     exportedAt: timestamp,

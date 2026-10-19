@@ -17,6 +17,7 @@ const kindLabel: Record<Tombstone["kind"], string> = {
   category: "Category",
   project: "Project",
   link: "Link",
+  quicklink: "Dashboard link",
   todo: "Task",
   event: "Event",
   brainstorm: "Brainstorm",

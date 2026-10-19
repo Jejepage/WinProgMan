@@ -16,7 +16,11 @@ function applyChange(data: AppData, change: DomainChange): AppData {
       throw new Error(
         "Sample data can only be loaded when there are no projects.",
       );
-    return { ...change.value, brainstorm: data.brainstorm };
+    return {
+      ...change.value,
+      brainstorm: data.brainstorm,
+      quickLinks: data.quickLinks,
+    };
   }
   if (change.type === "brainstorm.save") {
     if (change.expectedRevision !== data.brainstorm.revision)
@@ -127,11 +131,13 @@ function applyChange(data: AppData, change: DomainChange): AppData {
     ? "projectCategories"
     : change.type.startsWith("project.")
       ? "projects"
-      : change.type.startsWith("link.")
-        ? "links"
-        : change.type.startsWith("todo.")
-          ? "todos"
-          : "events";
+      : change.type.startsWith("quicklink.")
+        ? "quickLinks"
+        : change.type.startsWith("link.")
+          ? "links"
+          : change.type.startsWith("todo.")
+            ? "todos"
+            : "events";
   if ("id" in change) {
     return {
       ...data,

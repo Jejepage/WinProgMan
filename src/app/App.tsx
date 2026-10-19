@@ -565,6 +565,7 @@ export function App() {
                   busy={busy}
                   onProject={goProject}
                   onComplete={(todo) => void completeTodo(todo)}
+                  onChange={change}
                   active={activeProjects(data, today)}
                   open={open}
                   coming={data.events.filter((e) => upcoming(e, today))}

@@ -6,7 +6,7 @@ import {
   sortEvents,
   sortTodos,
 } from "../../domain/queries";
-import type { AppData, Todo } from "../../domain/types";
+import type { AppData, DomainChange, Todo } from "../../domain/types";
 import { openItem } from "../../ui/itemNavigation";
 import { categoryLabel, statusLabel } from "../../ui/labels";
 
@@ -20,6 +20,7 @@ export function DashboardPage({
   busy,
   onProject,
   onComplete,
+  onChange,
   active,
   open,
   coming,
@@ -30,6 +31,7 @@ export function DashboardPage({
   busy: boolean;
   onProject: (id: string) => void;
   onComplete: (todo: Todo) => void;
+  onChange: (change: DomainChange) => Promise<boolean>;
   active: AppData["projects"];
   open: Todo[];
   coming: AppData["events"];
@@ -214,7 +216,7 @@ export function DashboardPage({
             </div>
           ))}
         </section>
-        <QuickLinks />
+        <QuickLinks links={data.quickLinks} busy={busy} onChange={onChange} />
       </div>
     </>
   );

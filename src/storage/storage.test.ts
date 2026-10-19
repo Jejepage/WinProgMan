@@ -15,6 +15,7 @@ const legacyData = () => {
     projectCategories: _categories,
     brainstorm: _brainstorm,
     tombstones: _tombstones,
+    quickLinks: _quickLinks,
     ...data
   } = demoData();
   return {
@@ -32,7 +33,12 @@ const legacyData = () => {
 };
 
 const oldFields = (data: ExportEnvelope) => {
-  const { brainstorm: _brainstorm, tombstones: _tombstones, ...rest } = data;
+  const {
+    brainstorm: _brainstorm,
+    tombstones: _tombstones,
+    quickLinks: _quickLinks,
+    ...rest
+  } = data;
   return {
     ...rest,
     projects: rest.projects.map(({ number: _number, ...project }) => project),
@@ -144,6 +150,7 @@ describe("Sicherungsvalidierung", () => {
       tombstones: [],
       brainstorm: emptyData().brainstorm,
       projectCategories: [],
+      quickLinks: [],
       projects: migrated.projects,
     });
     expect(legacy.projects[0]).not.toHaveProperty("status");
@@ -549,6 +556,7 @@ describe("IndexedDB", () => {
       brainstorm: data.brainstorm,
       projectCategories: data.projectCategories,
       projects: data.projects,
+      quickLinks: [],
       links: data.links,
       todos: data.todos,
       events: data.events,

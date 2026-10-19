@@ -28,9 +28,7 @@ async function saveEditor(page: Page, detail: Page) {
 }
 
 async function createProject(page: Page, name = "Browserprojekt") {
-  await page
-    .getByRole("button", { name: "New project", exact: true })
-    .click();
+  await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByLabel("Project name", { exact: true }).fill(name);
   await page
     .getByRole("button", { name: "Create project", exact: true })
@@ -397,9 +395,7 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .getByRole("navigation")
     .getByRole("button", { name: /Projects/ })
     .click();
-  await page
-    .getByRole("button", { name: "New project", exact: true })
-    .click();
+  await page.getByRole("button", { name: "New project", exact: true }).click();
   await page
     .getByLabel("Project name", { exact: true })
     .fill("Kategorienprojekt");
@@ -653,6 +649,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
   };
   delete legacy.brainstorm;
   delete legacy.tombstones;
+  delete legacy.quickLinks;
   for (const list of [
     legacy.projects,
     legacy.links,

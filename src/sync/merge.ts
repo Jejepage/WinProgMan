@@ -190,6 +190,7 @@ export function mergeData(
     projectCategories: categories as never,
     projects: projects as never,
     links: dependants("link") as never,
+    quickLinks: rows(kindOrder.indexOf("quicklink")) as never,
     todos: dependants("todo") as never,
     events: dependants("event") as never,
     tombstones: dropExpired([...tombstones.values()], now).sort((a, b) =>
@@ -208,6 +209,7 @@ export function sameData(a: AppData, b: AppData): boolean {
     ),
     projects: [...d.projects].sort((x, y) => (x.id < y.id ? -1 : 1)),
     links: [...d.links].sort((x, y) => (x.id < y.id ? -1 : 1)),
+    quickLinks: [...d.quickLinks].sort((x, y) => (x.id < y.id ? -1 : 1)),
     todos: [...d.todos].sort((x, y) => (x.id < y.id ? -1 : 1)),
     events: [...d.events].sort((x, y) => (x.id < y.id ? -1 : 1)),
     tombstones: [...d.tombstones].sort((x, y) => (x.id < y.id ? -1 : 1)),

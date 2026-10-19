@@ -264,6 +264,6 @@ Ereignisliste: Reihenfolge Datum, Titel mit direkt danebenstehendem Notizpfeil, 
 - Projekte je Thema nach Projektnummer aufsteigend. Neues optionales Feld `Project.important` (Stern, Filter „Important only“ in der Projektliste; Sicherungsformat 6, Feld nur ab Format 6 erlaubt).
 - Link hinzufügen per `+` direkt in der Projektansicht (speichert sofort, ohne Projektbearbeitung). Settings unten in der Seitenleiste. Projekt-Icon `ClipboardList`.
 - Bericht: Schaltfläche „Report“ in der Projektliste speichert einen Markdown-Bericht der aktuell gefilterten Projekte mit offenen Aufgaben (`src/domain/report.ts`).
-- Dashboard-Box „Links“: **pro Gerät in localStorage**, nicht in Sicherung/Sync (bewusst ohne Schemaänderung).
+- Dashboard-Box „Links“: eigene Sammlung `quickLinks` (Art `quicklink`) in Daten, Sicherung (Format 6, Feld optional beim Import), Sync und Papierkorb. Frühere lokale Einträge (`winprogman-quick-links`) werden beim ersten Öffnen übernommen.
 - Slate Dark: Text auf roten Buttons lesbar (globale `.danger`-Regel überschrieb die Farbe).
-- Geprüft: Typprüfung, 148 Unit-Tests, Webbuild, 43 Edge-Abläufe (inkl. neuem `tests/favorites.e2e.spec.ts`). Kein Installer gebaut.
+- Geprüft: Typprüfung, 150 Unit-Tests, Webbuild, 43 Edge-Abläufe (inkl. neuem `tests/favorites.e2e.spec.ts`). Kein Installer gebaut.
