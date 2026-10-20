@@ -62,7 +62,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("Unable to start WinProgMan");
+        .expect("Unable to start Plan B");
 }
 
 // Setup has no WebView yet. Show startup failures even in release builds without
@@ -79,7 +79,7 @@ fn startup_error(message: &str) {
         ) -> i32;
     }
     let text: Vec<u16> = message.encode_utf16().chain(Some(0)).collect();
-    let caption: Vec<u16> = "WinProgMan — storage unavailable"
+    let caption: Vec<u16> = "Plan B — storage unavailable"
         .encode_utf16()
         .chain(Some(0))
         .collect();

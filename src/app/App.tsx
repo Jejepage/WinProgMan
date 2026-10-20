@@ -226,6 +226,7 @@ export function App() {
       value.type === "event.delete" ||
       value.type === "project.delete" ||
       value.type === "link.delete" ||
+      value.type === "quicklink.delete" ||
       value.type === "category.delete"
     ) {
       setUndo({ id: value.id, label: "Moved to trash." });
@@ -649,7 +650,7 @@ export function App() {
           )}
         </div>
         <footer>
-          WinProgMan <span>Personal projects · Local storage</span>
+          Plan B <span>Personal projects · Local storage</span>
         </footer>
       </main>
     </div>

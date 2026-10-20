@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { classifyLinkTarget, normalizeLinkTarget } from "../../domain/links";
 import {
   metadata,
@@ -37,7 +37,8 @@ export function QuickLinks({
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
 }) {
-  const [adding, setAdding] = useState(false);
+  /** "new", the id of the link being edited, or null when closed. */
+  const [editing, setEditing] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
@@ -64,64 +65,87 @@ export function QuickLinks({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function add(e: React.FormEvent) {
+  function open(item?: QuickLink) {
+    if (item && editing === item.id) return close();
+    if (!item && editing === "new") return close();
+    setEditing(item ? item.id : "new");
+    setLabel(item?.label ?? "");
+    setTarget(item?.target ?? "");
+    setMessage("");
+  }
+
+  function close() {
+    setEditing(null);
+    setLabel("");
+    setTarget("");
+    setMessage("");
+  }
+
+  const current = links.find((item) => item.id === editing);
+
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (classifyLinkTarget(target).kind === "unknown") {
       setMessage("Enter a website address or an absolute Windows folder path.");
       return;
     }
+    const fields = {
+      label: label.trim() || target.trim(),
+      target: normalizeLinkTarget(target),
+    };
     const ok = await onChange({
       type: "quicklink.save",
-      value: {
-        ...metadata(),
-        label: label.trim() || target.trim(),
-        target: normalizeLinkTarget(target),
-      },
+      value: current
+        ? { ...current, ...fields, updatedAt: new Date().toISOString() }
+        : { ...metadata(), ...fields },
     });
-    if (!ok) return;
-    setLabel("");
-    setTarget("");
-    setMessage("");
-    setAdding(false);
+    if (ok) close();
   }
+
+  async function remove() {
+    if (!current) return;
+    if (await onChange({ type: "quicklink.delete", id: current.id })) close();
+  }
+
   return (
     <section className="panel dashboard-links">
-      <div className="section-heading">
+      <div className="dashboard-links-row">
         <h2>Links</h2>
+        {!links.length && editing === null && (
+          <p className="muted">Keep frequently used links here.</p>
+        )}
+        <ul className="dashboard-links-list">
+          {links.map((item) => (
+            <li
+              key={item.id}
+              className={editing === item.id ? "is-editing" : undefined}
+            >
+              <ProjectLink link={{ ...item, projectId: "" }} compact />
+              <button
+                className="icon-button"
+                aria-label={`Edit ${item.label}`}
+                aria-expanded={editing === item.id}
+                title="Edit link"
+                disabled={busy}
+                onClick={() => open(item)}
+              >
+                <Pencil size={13} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
         <button
           className="text-button"
           aria-label="Add dashboard link"
+          aria-expanded={editing === "new"}
           title="Add link"
-          onClick={() => setAdding((value) => !value)}
+          onClick={() => open()}
         >
           <Plus size={14} aria-hidden="true" />
         </button>
       </div>
-      {!links.length && !adding && (
-        <p className="muted">Keep frequently used links here.</p>
-      )}
-      <ul className="links-list">
-        {links.map((item) => (
-          <li key={item.id}>
-            <div>
-              <ProjectLink link={{ ...item, projectId: "" }} />
-            </div>
-            <button
-              className="icon-button danger"
-              aria-label={`Remove ${item.label}`}
-              title="Remove"
-              disabled={busy}
-              onClick={() =>
-                void onChange({ type: "quicklink.delete", id: item.id })
-              }
-            >
-              <Trash2 size={14} aria-hidden="true" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      {adding && (
-        <form className="editor" onSubmit={add}>
+      {(editing === "new" || current) && (
+        <form className="editor" onSubmit={save}>
           <label className="field">
             Label
             <input
@@ -142,13 +166,19 @@ export function QuickLinks({
             <button className="button" disabled={busy}>
               Save link
             </button>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => setAdding(false)}
-            >
+            <button type="button" className="button secondary" onClick={close}>
               Cancel
             </button>
+            {current && (
+              <button
+                type="button"
+                className="button danger"
+                disabled={busy}
+                onClick={() => void remove()}
+              >
+                <Trash2 size={14} aria-hidden="true" /> Delete link
+              </button>
+            )}
           </div>
         </form>
       )}

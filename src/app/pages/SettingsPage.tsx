@@ -35,6 +35,8 @@ export function SettingsPage({
     setNavigation,
     density,
     setDensity,
+    markdownPaper,
+    setMarkdownPaper,
     sidebar,
     setSidebar,
     theme,
@@ -150,6 +152,23 @@ export function SettingsPage({
                 onClick={() => setTheme(choice)}
               >
                 {choice[0].toUpperCase() + choice.slice(1)}
+              </button>
+            ))}
+          </div>
+          <h3>Markdown fields</h3>
+          <p className="description">
+            Show notes and Brainstorm black on white, even in dark mode.
+          </p>
+          <div className="actions" role="group" aria-label="Markdown fields">
+            {(["theme", "white"] as const).map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                className={`button ${markdownPaper === choice ? "" : "secondary"}`}
+                aria-pressed={markdownPaper === choice}
+                onClick={() => setMarkdownPaper(choice)}
+              >
+                {choice === "theme" ? "Follow design" : "Always white"}
               </button>
             ))}
           </div>

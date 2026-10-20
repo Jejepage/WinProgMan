@@ -1,3 +1,4 @@
+import logo from "../ui/logo.png";
 import {
   CalendarDays,
   CheckSquare,
@@ -46,17 +47,19 @@ export function Sidebar({
     <aside className="sidebar">
       <a
         className="brand"
-        aria-label="WinProgMan — Dashboard"
-        title="WinProgMan — Dashboard"
+        aria-label="Plan B — Dashboard"
+        title="Plan B — Dashboard"
         href="#"
         onClick={(e) => {
           e.preventDefault();
           onNavigate("Dashboard");
         }}
       >
-        <span className="brand-mark">W</span>
+        <span className="brand-mark">
+          <img src={logo} alt="" />
+        </span>
         <span className="brand-label">
-          WinProgMan<small>Personal workspace</small>
+          Plan B<small>Personal workspace</small>
         </span>
       </a>
       <button

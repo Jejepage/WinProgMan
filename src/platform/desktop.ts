@@ -5,7 +5,7 @@ export const isDesktop = () => isTauri();
 export async function confirmAction(message: string): Promise<boolean> {
   if (!isDesktop()) return window.confirm(message);
   const { confirm } = await import("@tauri-apps/plugin-dialog");
-  return confirm(message, { title: "WinProgMan", kind: "warning" });
+  return confirm(message, { title: "Plan B", kind: "warning" });
 }
 
 /** False means the user cancelled; errors are handled by the calling UI. */
