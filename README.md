@@ -309,3 +309,7 @@ Prüfung: Typprüfung, 167 Unit-Tests (16 neue mit synthetischen `.msg`-Dateien 
 - **Settings → Appearance → Markdown fields**: „Always white“ zeigt Editor, Quellmodus und Event-Notizanzeige in allen Designs und auch im Dark Mode schwarz auf weiß. Lokale Präferenz `winprogman-markdown-paper`, keine Datenmigration.
 
 Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 46 Edge-Abläufe (neu `tests/markdown-paper.e2e.spec.ts`, erweitert `tests/favorites.e2e.spec.ts` um Bearbeiten/Löschen/Rückgängig der Dashboard-Links). Sichtprüfung Classic/Split Compact hell und dunkel. Rust lokal nicht installiert; Rust-Tests und NSIS-Build über Windows-CI.
+
+### Installer 0.10.0 – geprüft am 20. Oktober 2026
+
+Quellcommit `1102ded`, PR #12 (Entwurf), allgemeine CI `39418677230` und Windows-CI `39418677316` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `29f3e3507bfbf220bb67f9b063ac2eb7142bdb3455fc1d88a31ae2ee96213bc0` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.10.0, SHA256 `102d41fdb6bef298d1a14a7c7e2b354664fa1f6d0b3c4919ebb550bd1faf1ad8`. Datei `src-tauri/target/windows-ci/0.10.0/1102ded/installer/Plan B_0.10.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Funktionsabnahme steht aus.
