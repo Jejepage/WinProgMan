@@ -23,7 +23,14 @@ function SharePointIcon() {
   );
 }
 
-export function ProjectLink({ link }: { link: Link }) {
+/** `compact` shows only icon and label; the target moves into the tooltip. */
+export function ProjectLink({
+  link,
+  compact = false,
+}: {
+  link: Link;
+  compact?: boolean;
+}) {
   const destination = classifyLinkTarget(link.target);
   const [error, setError] = useState("");
   const label =
@@ -56,7 +63,7 @@ export function ProjectLink({ link }: { link: Link }) {
     <>
       {icon}
       <span>{link.label}</span>
-      <span className="project-resource-type">{label}</span>
+      {!compact && <span className="project-resource-type">{label}</span>}
     </>
   );
   return (
@@ -66,6 +73,7 @@ export function ProjectLink({ link }: { link: Link }) {
           <button
             type="button"
             className="text-button project-resource"
+            title={compact ? link.target : undefined}
             onClick={() => {
               setError("");
               void openLocalFolder(destination.path).catch(() =>
@@ -79,21 +87,40 @@ export function ProjectLink({ link }: { link: Link }) {
           </button>
         ) : (
           <>
-            <span className="project-resource">{content}</span>
-            <small className="muted">
-              Open folder links in the Windows app.
-            </small>
+            <span
+              className="project-resource"
+              title={
+                compact
+                  ? `${link.target} · Open folder links in the Windows app.`
+                  : undefined
+              }
+            >
+              {content}
+            </span>
+            {!compact && (
+              <small className="muted">
+                Open folder links in the Windows app.
+              </small>
+            )}
           </>
         )
       ) : destination.kind === "unknown" ? (
-        <span className="project-resource">{content}</span>
+        <span
+          className="project-resource"
+          title={compact ? link.target : undefined}
+        >
+          {content}
+        </span>
       ) : (
-        <span className="project-resource">
+        <span
+          className="project-resource"
+          title={compact ? link.target : undefined}
+        >
           <ExternalLink href={destination.href}>{content}</ExternalLink>
         </span>
       )}
       {error && <small role="status">{error}</small>}
-      <small>{link.target}</small>
+      {!compact && <small>{link.target}</small>}
     </>
   );
 }

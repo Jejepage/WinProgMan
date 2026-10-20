@@ -46,5 +46,29 @@ test("Wichtig-Stern, Filter, Bericht, Link ohne Bearbeiten und Dashboard-Links",
   await page.getByLabel("URL or path").fill("https://example.org");
   await page.getByRole("button", { name: "Save link" }).click();
   await page.reload();
-  await expect(page.locator(".dashboard-links")).toContainText("Docs");
+  const links = page.locator(".dashboard-links");
+  await expect(links).toContainText("Docs");
+  // Only the label is shown; the address stays in the tooltip.
+  await expect(links).not.toContainText("example.org");
+  await expect(links.locator(".project-resource")).toHaveAttribute(
+    "title",
+    "https://example.org",
+  );
+  // Dashboard links sit above the statistics.
+  const linksBox = await links.boundingBox();
+  const statsBox = await page.locator(".stats").boundingBox();
+  expect(linksBox!.y).toBeLessThan(statsBox!.y);
+
+  await page.getByRole("button", { name: "Edit Docs" }).click();
+  await page.getByLabel("Label").fill("Handbuch");
+  await page.getByRole("button", { name: "Save link" }).click();
+  await expect(links).toContainText("Handbuch");
+  await page.reload();
+  await expect(links).toContainText("Handbuch");
+
+  await page.getByRole("button", { name: "Edit Handbuch" }).click();
+  await page.getByRole("button", { name: "Delete link" }).click();
+  await expect(links).not.toContainText("Handbuch");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(links).toContainText("Handbuch");
 });

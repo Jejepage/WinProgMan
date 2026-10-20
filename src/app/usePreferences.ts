@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export type ThemeChoice = "system" | "light" | "dark";
 
 function readPreference(
-  key: "design" | "sidebar" | "navigation" | "density",
+  key: "design" | "sidebar" | "navigation" | "density" | "markdown-paper",
   fallback: string,
 ) {
   try {
@@ -21,6 +21,8 @@ function readPreference(
     if (key === "navigation" && (saved === "sidebar" || saved === "top"))
       return saved;
     if (key === "density" && (saved === "comfortable" || saved === "compact"))
+      return saved;
+    if (key === "markdown-paper" && (saved === "theme" || saved === "white"))
       return saved;
   } catch {
     /* Session only. */
@@ -50,6 +52,10 @@ export function usePreferences() {
   const [density, setDensity] = useState(() =>
     readPreference("density", "comfortable"),
   );
+  // "white" keeps Markdown fields black on white in every design and theme.
+  const [markdownPaper, setMarkdownPaper] = useState(() =>
+    readPreference("markdown-paper", "theme"),
+  );
   const [theme, setTheme] = useState<ThemeChoice>(() => {
     try {
       const saved = localStorage.getItem("winprogman-theme");
@@ -78,6 +84,10 @@ export function usePreferences() {
     document.documentElement.dataset.density = density;
     remember("winprogman-density", density);
   }, [density]);
+  useEffect(() => {
+    document.documentElement.dataset.markdownPaper = markdownPaper;
+    remember("winprogman-markdown-paper", markdownPaper);
+  }, [markdownPaper]);
   useEffect(() => remember("winprogman-sidebar", sidebar), [sidebar]);
   useEffect(() => remember("winprogman-navigation", navigation), [navigation]);
   return {
@@ -89,6 +99,8 @@ export function usePreferences() {
     setNavigation,
     density,
     setDensity,
+    markdownPaper,
+    setMarkdownPaper,
     theme,
     setTheme,
   };

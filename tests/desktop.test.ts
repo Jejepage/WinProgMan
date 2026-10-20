@@ -113,7 +113,7 @@ describe("destructive-action confirmation", () => {
 
       await expect(confirmAction("Delete project?")).resolves.toBe(answer);
       expect(native.confirm).toHaveBeenCalledWith("Delete project?", {
-        title: "WinProgMan",
+        title: "Plan B",
         kind: "warning",
       });
     },

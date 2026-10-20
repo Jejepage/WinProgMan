@@ -144,7 +144,7 @@ fn copy_closed_profile(source: &Path, destination: &Path) -> Result<(), String> 
             Err(e) => {
                 drop(files);
                 if Instant::now() >= deadline {
-                    return Err(format!("The previous WebView profile is still in use or unreadable. Close WinProgMan and try again. {e}"));
+                    return Err(format!("The previous WebView profile is still in use or unreadable. Close Plan B and try again. {e}"));
                 }
                 std::thread::sleep(Duration::from_millis(250));
             }
@@ -202,7 +202,7 @@ impl StorageLocation {
             Some(path) => {
                 // Never create an empty replacement for an unavailable configured profile.
                 if !path.is_absolute() || !path.is_dir() {
-                    return Err(format!("Configured data folder is unavailable: {}. Reconnect the drive or restore the folder before starting WinProgMan. No new database was created.", path.display()));
+                    return Err(format!("Configured data folder is unavailable: {}. Reconnect the drive or restore the folder before starting Plan B. No new database was created.", path.display()));
                 }
                 path.clone()
             }
@@ -265,7 +265,7 @@ impl StorageLocation {
                 write_pointer(&self.root, &pointer)
             });
             match recovery {
-                Ok(()) => message.push_str(" The original data folder has been restored. Start WinProgMan again."),
+                Ok(()) => message.push_str(" The original data folder has been restored. Start Plan B again."),
                 Err(error) => message.push_str(&format!(" Unable to restore storage settings: {error}. The original data remains in {}. Storage settings: {}.", previous.display(), self.root.join("storage-location.json").display())),
             }
         } else {
@@ -295,7 +295,7 @@ pub async fn choose_storage_folder(app: tauri::AppHandle) -> Result<Option<Strin
     tauri::async_runtime::spawn_blocking(move || {
         app.dialog()
             .file()
-            .set_title("Choose an empty folder for WinProgMan data")
+            .set_title("Choose an empty folder for Plan B data")
             .blocking_pick_folder()
             .map(|p| {
                 p.into_path()

@@ -9,7 +9,7 @@ winprogman-*.json
 src-tauri/target/
 src-tauri/gen/
 src-tauri/icons/*
-!src-tauri/icons/app.svg
+!src-tauri/icons/logo-source.png
 !src-tauri/icons/icon.ico
 !src-tauri/icons/icon.png
 spikes/*/out/

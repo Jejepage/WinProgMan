@@ -1,4 +1,4 @@
-# WinProgMan
+# Plan B (vormals WinProgMan)
 
 Persönliche Projektverwaltung mit To-Dos und einer Ereignis-Timeline. Englische Oberfläche, lokale Speicherung im Browser und JSON-Sicherung. Kein Konto erforderlich.
 
@@ -298,3 +298,14 @@ Technik: Edge/WebView2 liefern Outlook-Elemente beim HTML5-Drop als `.msg`-Datei
 Spike: `spikes/outlook-drop/` (unversioniert) erzeugt eine Test-ZIP für einen Rechner mit Outlook; Ergebnis auf dem Outlook-Rechner: Mail, Einzeltermin, Besprechung, ganztägig und Mehrfachauswahl kommen in Edge als `.msg` an, keine Sicherheitsabfragen.
 
 Prüfung: Typprüfung, 167 Unit-Tests (16 neue mit synthetischen `.msg`-Dateien aus `tests/msgFixture.ts`, keine echten Mails), Webbuild, Outlook-Abläufe zusätzlich gegen den Produktionsbuild, Gesamtlauf 45 Edge-Abläufe (inkl. zwei neuer in `tests/outlook.e2e.spec.ts`). Sichtprüfung Overlay/Editor hell und dunkel. Echter Drop aus Outlook in die **Tauri-App** (WebView2 mit abgeschaltetem nativen Drop) mit Installer 0.9.0 vom Benutzer bestätigt (siehe unten).
+
+## Plan B – Version 0.10.0, 20. Oktober 2026
+
+- **Neuer Name „Plan B“ und neues Logo**: Fenster-/Browsertitel, Navigation, Fußzeile, native Meldungen, Installername (`Plan B_0.10.0_x64-setup.exe`) und alle Icons (`src-tauri/icons/icon.ico`, `icon.png`, Quelle `logo-source.png`; Favicon unter `public/`, Navigationslogo `src/ui/logo.png`).
+- **Unverändert, damit vorhandene Daten gefunden werden**: Kennung `io.github.jejepage.winprogman`, WebView-Profil, `storage-location.json`, Sync-Dateinamen, lokale Präferenzschlüssel `winprogman-*`, Sicherungsformat 6, Repository- und npm-/Cargo-Paketname.
+- **Hinweis zur Installation**: Wegen des neuen Produktnamens installiert der NSIS-Installer „Plan B“ neben der alten „WinProgMan“-Installation (eigener Startmenüeintrag/Ordner). Beide nutzen dieselben Daten. Die alte Version kann danach deinstalliert werden – dabei **nicht** „Anwendungsdaten löschen“ ankreuzen, sonst wird das gemeinsame Datenverzeichnis entfernt.
+- **Dashboard-Links**: ganz oben im Überblick als eine scrollbare Zeile, nur Icon und Label (Adresse als Tooltip). Je Link ein Edit-Button mit Label/Ziel, Save, Cancel und Delete; Löschen mit Rückgängig und Papierkorb. Datenmodell unverändert.
+- **Markdown-Schrift**: Notes, Event-Notizen und Brainstorm (Editor und Anzeige) in Segoe UI statt Monospace (`--font-markdown`); Codeblöcke und Quellmodus bleiben Monospace. Split Compact behält Arial.
+- **Settings → Appearance → Markdown fields**: „Always white“ zeigt Editor, Quellmodus und Event-Notizanzeige in allen Designs und auch im Dark Mode schwarz auf weiß. Lokale Präferenz `winprogman-markdown-paper`, keine Datenmigration.
+
+Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 46 Edge-Abläufe (neu `tests/markdown-paper.e2e.spec.ts`, erweitert `tests/favorites.e2e.spec.ts` um Bearbeiten/Löschen/Rückgängig der Dashboard-Links). Sichtprüfung Classic/Split Compact hell und dunkel. Rust lokal nicht installiert; Rust-Tests und NSIS-Build über Windows-CI.

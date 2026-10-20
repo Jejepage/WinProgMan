@@ -17,8 +17,8 @@
   --crepe-color-selected: var(--accent-soft);
   --crepe-color-inline-area: var(--line);
   --crepe-base-font-size: 14px;
-  --crepe-font-title: "IBM Plex Mono", monospace;
-  --crepe-font-default: "IBM Plex Mono", monospace;
+  --crepe-font-title: var(--font-markdown);
+  --crepe-font-default: var(--font-markdown);
   --crepe-font-code: "IBM Plex Mono", monospace;
   color: var(--ink);
   background: var(--surface);
@@ -152,4 +152,39 @@
   .rich-note-editor .milkdown .top-bar-item {
     min-width: 32px;
   }
+}
+
+/* Settings → Markdown fields → Always white: black on white in every design
+   and theme. Tokens are redefined on the field, so design rules that read
+   them follow; `html:root` outranks the design and dark-theme selectors. */
+html:root[data-markdown-paper="white"]
+  :is(.rich-note-editor .milkdown, .rich-note-editor > textarea, .event-note) {
+  --surface: #fff;
+  --canvas: #f4f6f9;
+  --ink: #000;
+  --muted: #555;
+  --line: #d0d7e2;
+  --accent: #1458c8;
+  --accent-soft: #e6eefc;
+  --danger: #b3261e;
+}
+html:root[data-markdown-paper="white"] .rich-note-editor .milkdown,
+html:root[data-markdown-paper="white"] .rich-note-editor > textarea,
+html:root[data-markdown-paper="white"] .event-note {
+  background: #fff;
+  color: #000;
+  border-color: #d0d7e2;
+}
+html:root[data-markdown-paper="white"] .rich-note-editor .milkdown .ProseMirror,
+html:root[data-markdown-paper="white"]
+  :is(.rich-note-editor .ProseMirror, .event-note .markdown-note)
+  :is(h1, h2, h3, h4, h5, h6, p, li, td, th, blockquote) {
+  color: #000;
+}
+html:root[data-markdown-paper="white"]
+  .event-note
+  .markdown-note
+  :is(th, code, pre) {
+  background: #eef2f7;
+  color: #000;
 }

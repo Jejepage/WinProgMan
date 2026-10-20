@@ -24,6 +24,6 @@ jobs:
       - run: npm run desktop:build -- -- --locked
       - uses: actions/upload-artifact@v4
         with:
-          name: WinProgMan-windows-x64
+          name: PlanB-windows-x64
           path: src-tauri/target/windows/release/bundle/nsis/*-setup.exe
           if-no-files-found: error

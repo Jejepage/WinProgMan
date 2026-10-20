@@ -96,7 +96,7 @@ export function StorageSettings({
                 New folder: <code className="storage-path">{selected}</code>
               </p>
               <p>
-                Choose an empty local folder. On the next app start, WinProgMan
+                Choose an empty local folder. On the next app start, Plan B
                 copies the closed database and its browser profile here. The
                 original data is kept. Please export a JSON backup first.
               </p>

@@ -39,6 +39,7 @@ export function DashboardPage({
 }) {
   return (
     <>
+      <QuickLinks links={data.quickLinks} busy={busy} onChange={onChange} />
       <div className="stats">
         <div>
           <strong>{active.length}</strong>
@@ -216,7 +217,6 @@ export function DashboardPage({
             </div>
           ))}
         </section>
-        <QuickLinks links={data.quickLinks} busy={busy} onChange={onChange} />
       </div>
     </>
   );
