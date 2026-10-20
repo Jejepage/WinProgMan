@@ -12,3 +12,4 @@ src-tauri/icons/*
 !src-tauri/icons/app.svg
 !src-tauri/icons/icon.ico
 !src-tauri/icons/icon.png
+spikes/*/out/

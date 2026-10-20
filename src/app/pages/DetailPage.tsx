@@ -1,5 +1,6 @@
 import { EventsPanel } from "../../features/events/EventsPanel";
 import { TodosPanel } from "../../features/todos/TodosPanel";
+import { readPrefill } from "../../features/outlook/pendingPrefill";
 import type { AppData } from "../../domain/types";
 import type { Detail, PanelShared } from "../types";
 
@@ -30,8 +31,12 @@ export function DetailPage({
   const initialProjectId = data.projects.some((p) => p.id === detail.projectId)
     ? detail.projectId
     : undefined;
+  const prefill =
+    detail.creating && detail.kind === "event" && detail.prefill
+      ? readPrefill(detail.prefill)
+      : undefined;
   const detailKey = detail.creating
-    ? `new-${detail.kind}-${initialProjectId || "global"}`
+    ? `new-${detail.kind}-${initialProjectId || "global"}-${detail.prefill || ""}`
     : detail.id;
   const unavailable = detail.creating ? !data.projects.length : !item;
   return (
@@ -76,6 +81,16 @@ export function DetailPage({
           events={!detail.creating && event ? [event] : []}
           initialEvent={detail.creating ? undefined : event}
           initialProjectId={initialProjectId}
+          initialDraft={prefill}
+          notices={
+            prefill
+              ? prefill.notices
+              : detail.prefill && detail.creating
+                ? [
+                    "The dropped Outlook item is no longer available after reloading. Drop it again to prefill this event.",
+                  ]
+                : undefined
+          }
           notesOnly={isNote}
           detailOnly
           onClose={onClose}

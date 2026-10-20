@@ -660,6 +660,14 @@ input[type="checkbox"] {
   margin-top: 20px;
   font-size: 12px;
 }
+.event-editor-notices {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.event-editor-notices .message {
+  margin: 0;
+}
 .message.error {
   color: #863e2e;
   background: #faede6;

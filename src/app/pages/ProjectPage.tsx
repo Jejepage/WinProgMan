@@ -1,4 +1,5 @@
 import { EventsPanel } from "../../features/events/EventsPanel";
+import { OutlookDropZone } from "../../features/outlook/OutlookDropZone";
 import { ProjectHeader } from "../../features/projects/ProjectHeader";
 import { TodosPanel } from "../../features/todos/TodosPanel";
 import { projectNumberLabel } from "../../ui/labels";
@@ -40,57 +41,64 @@ export function ProjectPage({
       <button className="text-button breadcrumb" onClick={onBack}>
         ← All projects
       </button>
-      <div className="project-workspace">
-        <ProjectHeader
-          key={project.id}
-          project={project}
-          projects={data.projects}
-          projectCategories={data.projectCategories}
-          links={data.links.filter((l) => l.projectId === project.id)}
-          busy={busy}
-          onChange={onChange}
-          onDelete={onDelete}
-        />
-        <div className="project-metadata">
-          <span>{projectNumberLabel(project.number)}</span>
-          <span>Created {formatDate(project.createdAt.slice(0, 10))}</span>
-          <span>Updated {formatDate(project.updatedAt.slice(0, 10))}</span>
-          <span>
-            {
-              data.todos.filter(
-                (t) => t.projectId === project.id && t.completed,
-              ).length
-            }{" "}
-            / {data.todos.filter((t) => t.projectId === project.id).length}{" "}
-            tasks completed
-          </span>
+      <OutlookDropZone
+        projectId={project.id}
+        events={data.events}
+        today={shared.today}
+        busy={busy}
+      >
+        <div className="project-workspace">
+          <ProjectHeader
+            key={project.id}
+            project={project}
+            projects={data.projects}
+            projectCategories={data.projectCategories}
+            links={data.links.filter((l) => l.projectId === project.id)}
+            busy={busy}
+            onChange={onChange}
+            onDelete={onDelete}
+          />
+          <div className="project-metadata">
+            <span>{projectNumberLabel(project.number)}</span>
+            <span>Created {formatDate(project.createdAt.slice(0, 10))}</span>
+            <span>Updated {formatDate(project.updatedAt.slice(0, 10))}</span>
+            <span>
+              {
+                data.todos.filter(
+                  (t) => t.projectId === project.id && t.completed,
+                ).length
+              }{" "}
+              / {data.todos.filter((t) => t.projectId === project.id).length}{" "}
+              tasks completed
+            </span>
+          </div>
+          <div className="detail-columns">
+            <TodosPanel
+              key={`todo-${project.id}`}
+              {...shared}
+              projectId={project.id}
+              todos={data.todos.filter((t) => t.projectId === project.id)}
+            />
+            <EventsPanel
+              key={`event-${project.id}`}
+              {...shared}
+              compactPreview={compact}
+              projectId={project.id}
+              events={data.events.filter((e) => e.projectId === project.id)}
+            />
+            <EventsPanel
+              key={`notes-${project.id}`}
+              {...shared}
+              compactPreview={compact}
+              notesOnly
+              projectId={project.id}
+              events={data.events.filter(
+                (event) => event.projectId === project.id,
+              )}
+            />
+          </div>
         </div>
-        <div className="detail-columns">
-          <TodosPanel
-            key={`todo-${project.id}`}
-            {...shared}
-            projectId={project.id}
-            todos={data.todos.filter((t) => t.projectId === project.id)}
-          />
-          <EventsPanel
-            key={`event-${project.id}`}
-            {...shared}
-            compactPreview={compact}
-            projectId={project.id}
-            events={data.events.filter((e) => e.projectId === project.id)}
-          />
-          <EventsPanel
-            key={`notes-${project.id}`}
-            {...shared}
-            compactPreview={compact}
-            notesOnly
-            projectId={project.id}
-            events={data.events.filter(
-              (event) => event.projectId === project.id,
-            )}
-          />
-        </div>
-      </div>
+      </OutlookDropZone>
     </>
   );
 }

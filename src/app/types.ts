@@ -37,6 +37,8 @@ export interface Detail {
   creating: boolean;
   projectId?: string;
   notesOnly: boolean;
+  /** Token of a prefill held in memory, e.g. from an Outlook drop. */
+  prefill?: string;
 }
 
 /** Reads the open task/event/note editor from the URL hash. */
@@ -50,6 +52,7 @@ export function readDetail(): Detail | null {
         creating: params.get("mode") === "new",
         projectId: params.get("project") || undefined,
         notesOnly: params.get("note") === "1",
+        prefill: params.get("prefill") || undefined,
       }
     : null;
 }

@@ -9,6 +9,14 @@ import "./ui/split-compact.css";
 import "./ui/badges.css";
 import "./ui/slate.css";
 import "./ui/density.css";
+// A file dropped outside a drop zone must not replace the app with the file.
+for (const type of ["dragover", "drop"] as const)
+  window.addEventListener(type, (event) => {
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    if (type === "dragover" && !event.defaultPrevented)
+      event.dataTransfer.dropEffect = "none";
+    event.preventDefault();
+  });
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
