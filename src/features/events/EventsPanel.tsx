@@ -21,8 +21,20 @@ import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
 const eventCategories = categories.filter((category) => category !== "Notiz");
 
+/** Values to prefill a new event with, e.g. from a dropped Outlook item. */
+export interface EventDraftInput {
+  category: Category;
+  title: string;
+  date: string;
+  time: string;
+  note: string;
+}
+
 interface Props {
   initialEvent?: ProjectEvent;
+  initialDraft?: EventDraftInput;
+  /** Hints shown above the editor (not saved). */
+  notices?: string[];
   initialProjectId?: string;
   detailOnly?: boolean;
   onClose?: () => void;
@@ -53,6 +65,8 @@ interface Draft {
 
 export function EventsPanel({
   initialEvent,
+  initialDraft,
+  notices = [],
   initialProjectId,
   detailOnly = false,
   onClose,
@@ -96,15 +110,17 @@ export function EventsPanel({
               projectId ||
               projects[0]?.id ||
               "",
-            category: notesOnly ? "Notiz" : initialEvent?.category || "Meeting",
-            title: initialEvent?.title || "",
-            date: initialEvent?.date || today,
-            time: initialEvent?.time || "",
+            category: notesOnly
+              ? "Notiz"
+              : initialEvent?.category || initialDraft?.category || "Meeting",
+            title: initialEvent?.title || initialDraft?.title || "",
+            date: initialEvent?.date || initialDraft?.date || today,
+            time: initialEvent?.time || initialDraft?.time || "",
             note: initialEvent?.note
               ? initialEvent.noteFormat === "markdown"
                 ? initialEvent.note
                 : legacyNoteToMarkdown(initialEvent.note)
-              : "",
+              : initialDraft?.note || "",
           },
         }
       : null,
@@ -412,6 +428,15 @@ export function EventsPanel({
             <h3>
               {editor.original ? `Edit ${itemLabel}` : `New ${itemLabel}`}
             </h3>
+          )}
+          {notices.length > 0 && (
+            <div className="event-editor-notices">
+              {notices.map((notice) => (
+                <p key={notice} className="message" role="status">
+                  {notice}
+                </p>
+              ))}
+            </div>
           )}
           <div className="form-grid">
             {!projectId && (

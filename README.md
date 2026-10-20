@@ -278,3 +278,21 @@ Quellcommit `f7b9cc3` auf `main` (enthält Datumsformat dd/mm/yy, Wichtig-Stern 
 - Kopf der Projektliste in einer Zeile: Status, Stern-Filter (nur Symbol), Topic, Suche; der Report-Button ist nur noch ein Symbol ganz rechts.
 - Settings stehen in allen Seitenleisten-Designs unten (bereits seit 0.8.0); bei „Top navigation“ bleiben sie in der Leiste.
 - 151 Unit-Tests, 43 Edge-Abläufe, Typprüfung und Webbuild erfolgreich.
+
+## Outlook per Drag & Drop – Version 0.9.0, 20. Oktober 2026
+
+Eine Mail oder ein Kalendereintrag aus dem klassischen Outlook (Desktop, Exchange) lässt sich auf die **Projektseite** ziehen. Danach öffnet sich die bekannte Seite „New event“, vorbelegt mit dem Projekt; erst **Save** legt das Ereignis an, **Cancel** verwirft es.
+
+- **Mail** → Kategorie *Mail*, Titel = Betreff, Datum/Uhrzeit = Empfangszeit (Ortszeit). Notiztext: Liste mit From/To/Cc/Received, darunter der Mailtext (Klartext, maskiert wie alte Klartextnotizen; über 50.000 Zeichen gekürzt).
+- **Termin/Besprechungsanfrage** → Kategorie *Meeting*, Datum/Uhrzeit = Beginn. Ganztägige Termine ohne Uhrzeit. Notiztext: When (inkl. Ende bzw. letztem Tag), Location, Organizer, Attendees, Termintext.
+- **Serientermin**: Outlook liefert beim Ziehen eines Vorkommens nur die Serie, nicht das gezogene Datum (im Spike bestätigt). Vorbelegt wird daher das **nächste Vorkommen ab heute** (heute eingeschlossen), berechnet aus dem Serienmuster (täglich, wöchentlich, monatlich, n-ter Wochentag, Monatsende, jährlich; gelöschte und verschobene Vorkommen berücksichtigt). Ein Hinweis bittet, das Datum zu prüfen. Ohne kommendes Vorkommen (beendete Serie, Hijri-Kalender) wird der Serienbeginn vorgeschlagen.
+- Hinweise im Editor (nicht gespeichert): Serientermin, bereits vorhandenes Ereignis mit gleichem Titel und Datum im Projekt, mehrere gezogene Elemente (nur das erste wird übernommen).
+- Mailinhalte stehen nie in der URL; die Hash-Route trägt nur ein Token (`prefill=`), die Daten liegen im Speicher. Nach Neuladen meldet der Editor, dass die Vorbelegung verloren ist.
+- Andere Dateien werden mit einer Meldung abgelehnt; Dateien außerhalb der Projektseite werden ignoriert, statt das Fenster zu ersetzen.
+- **Kein neues Datenfeld, Sicherungsformat bleibt 6.** Die Doppelerkennung vergleicht Titel und Datum, damit Sync mit älteren Versionen kompatibel bleibt.
+
+Technik: Edge/WebView2 liefern Outlook-Elemente beim HTML5-Drop als `.msg`-Dateien. Gelesen wird mit `@kenjiuno/msgreader` 1.28.0 (Apache-2.0, nur bei Bedarf nachgeladen; `iconv-lite` per Vite-Alias durch `TextDecoder` ersetzt, `src/features/outlook/iconvShim.ts`). Fachregeln in `src/domain/outlookImport.ts`, Lesen/Vorbelegung/Ablagefläche in `src/features/outlook/`. In Tauri ist `dragDropEnabled: false` gesetzt, damit der Drop das WebView erreicht. Kein Outlook-COM, keine Outlook-Automatisierung.
+
+Spike: `spikes/outlook-drop/` (unversioniert) erzeugt eine Test-ZIP für einen Rechner mit Outlook; Ergebnis auf dem Outlook-Rechner: Mail, Einzeltermin, Besprechung, ganztägig und Mehrfachauswahl kommen in Edge als `.msg` an, keine Sicherheitsabfragen.
+
+Prüfung: Typprüfung, 167 Unit-Tests (16 neue mit synthetischen `.msg`-Dateien aus `tests/msgFixture.ts`, keine echten Mails), Webbuild, Outlook-Abläufe zusätzlich gegen den Produktionsbuild, Gesamtlauf 45 Edge-Abläufe (inkl. zwei neuer in `tests/outlook.e2e.spec.ts`). Sichtprüfung Overlay/Editor hell und dunkel. **Nicht geprüft:** echter Drop aus Outlook in die **Tauri-App** (WebView2 mit abgeschaltetem nativen Drop) – dafür ist ein Windows-CI-Build und ein Test auf dem Outlook-Rechner nötig. Kein Installer gebaut.

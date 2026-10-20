@@ -1,0 +1,29 @@
+.outlook-drop-zone {
+  position: relative;
+}
+.outlook-drop-zone > .message {
+  margin: 0 0 16px;
+}
+.outlook-drop-overlay {
+  position: absolute;
+  inset: -6px;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 120px;
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-soft) 85%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+  pointer-events: none;
+}
+.outlook-drop-overlay span {
+  position: sticky;
+  top: 120px;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--accent-soft);
+}
