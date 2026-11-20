@@ -322,3 +322,7 @@ Quellcommit `1102ded`, PR #12 (Entwurf), allgemeine CI `39418677230` und Windows
 - Keine Datenmigration, Sicherungsformat 6 unverändert.
 
 Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 48 Edge-Abläufe (neu `tests/dashboard.e2e.spec.ts` mit wichtigen Projekten, Auf-/Zuklappen samt Reload, Open-tasks-Navigation und Fluent-Markenkontrast ≥ 4,5:1 hell/dunkel; bestehende Tests auf den Schalter umgestellt). Sichtprüfung Fluent hell/dunkel (Dashboard, Tasks, Events, Projektseite). Noch kein Installer.
+
+### Installer 0.11.0 – geprüft am 20. November 2026
+
+Quellcommit `62a071d`, PR #13 (Entwurf), allgemeine CI `44729283730` und Windows-CI `44729283954` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `d59a8cb2f9aae7a172d0b48aa406e9f141434bffca9c3688dd6157a0f6d64df5` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.11.0, SHA256 `a1f02f2016817d1e6df3d6b73725cb380e86fcc155d87aad11257d8b51411192`. Datei `src-tauri/target/windows-ci/0.11.0/62a071d/installer/Plan B_0.11.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; aktualisiert eine bestehende Plan-B-Installation (gleicher Produktname).
