@@ -334,3 +334,7 @@ Quellcommit `62a071d`, PR #13 (Entwurf), allgemeine CI `44729283730` und Windows
 - Sicherungsformat bleibt 6; `owner` ist dort neu erlaubt (wie zuvor `important`). **Ältere Versionen (bis 0.11.0) lehnen Sicherungen und Sync-Dateien mit `owner` ab.** Bei Ordner-Sync beide Rechner zeitnah aktualisieren; ein älterer Rechner, der ein Projekt bearbeitet, würde den Owner beim Abgleich überschreiben.
 
 Prüfung: Typprüfung, 169 Unit-Tests (neu: Owner-Validierung, Namensliste/Filter), Webbuild, Gesamtlauf 49 Edge-Abläufe (neu `tests/owner.e2e.spec.ts`: neue Person, Wiederverwendung aus Liste, Zurücksetzen, Reload, Spalte, Filter, Dashboard).
+
+### Installer 0.12.0 – geprüft am 20. November 2026
+
+Quellcommit `d897be8`, PR #13 (Entwurf), allgemeine CI `44737663069` und Windows-CI `44737663104` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `fc1b4debb96bea89c0e5d97cfe0b2294c4c53e843fcff7c61f53b905dc6c97b9` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.12.0, SHA256 `54c5383510c529b0dd92ba5578baecf819cc5d4733cb49babfbcbb2ba47e9ae8`. Datei `src-tauri/target/windows-ci/0.12.0/d897be8/installer/Plan B_0.12.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld: beide Sync-Rechner aktualisieren.
