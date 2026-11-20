@@ -313,3 +313,12 @@ Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 46 Edge-Abläufe (ne
 ### Installer 0.10.0 – geprüft am 20. Oktober 2026
 
 Quellcommit `1102ded`, PR #12 (Entwurf), allgemeine CI `39418677230` und Windows-CI `39418677316` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `29f3e3507bfbf220bb67f9b063ac2eb7142bdb3455fc1d88a31ae2ee96213bc0` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.10.0, SHA256 `102d41fdb6bef298d1a14a7c7e2b354664fa1f6d0b3c4919ebb550bd1faf1ad8`. Datei `src-tauri/target/windows-ci/0.10.0/1102ded/installer/Plan B_0.10.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Funktionsabnahme steht aus.
+
+## Dashboard, Aufgabenfilter und Design „Fluent“ – 20. November 2026
+
+- **Aufgabenlisten** (Tasks, Projektseite) zeigen standardmäßig nur offene Aufgaben. Der Schalter **Show completed** blendet erledigte ein; er gilt pro Liste und startet wieder ausgeschaltet. Ersetzt die bisherigen Knöpfe „All tasks“/„Open tasks“.
+- **Dashboard**: neuer erster Block **Important projects** mit allen per Stern (Projects) markierten Projekten im gleichen Zeilenformat wie „Projects with open work“, auch ohne offene Arbeit. Beide Blöcke lassen sich über ihre Überschrift auf- und zuklappen; der Zustand bleibt lokal (`winprogman-dashboard-collapsed`). Die Kennzahlen sind klickbar: Projects with work → Projects, **Open tasks → Tasks**, Upcoming events → Events.
+- **Design „Fluent“** (Settings → Appearance), angelehnt an Office/Teams: helle Seitenleiste mit blauem Kopfblock und zweizeiligen Menüeinträgen (Untertitel nur per CSS), weiße Arbeitsfläche, Pill-Umschalter, pastellfarbene Marken, umrandete Symbolknöpfe, orange Do-next-Flagge. Hell und dunkel; reine Optik in `src/ui/fluent.css`, Struktur unverändert.
+- Keine Datenmigration, Sicherungsformat 6 unverändert.
+
+Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 48 Edge-Abläufe (neu `tests/dashboard.e2e.spec.ts` mit wichtigen Projekten, Auf-/Zuklappen samt Reload, Open-tasks-Navigation und Fluent-Markenkontrast ≥ 4,5:1 hell/dunkel; bestehende Tests auf den Schalter umgestellt). Sichtprüfung Fluent hell/dunkel (Dashboard, Tasks, Events, Projektseite). Noch kein Installer.

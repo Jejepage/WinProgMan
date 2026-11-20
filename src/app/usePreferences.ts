@@ -13,7 +13,8 @@ function readPreference(
       (saved === "classic" ||
         saved === "color" ||
         saved === "split-compact" ||
-        saved === "slate")
+        saved === "slate" ||
+        saved === "fluent")
     )
       return saved;
     if (key === "sidebar" && (saved === "labels" || saved === "icons"))

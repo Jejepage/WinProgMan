@@ -52,10 +52,11 @@ export function TodosPanel({
   onChange,
   onProject,
 }: Props) {
-  const [openOnly, setOpenOnly] = useState(false);
+  // Completed tasks stay hidden until "Show completed" is switched on.
+  const [showCompleted, setShowCompleted] = useState(false);
   const visible = todos.filter(
     (todo) =>
-      (!openOnly || !todo.completed) &&
+      (showCompleted || !todo.completed) &&
       matchesSearch(
         search,
         todo.title,
@@ -136,20 +137,15 @@ export function TodosPanel({
             {headerTarget ? createPortal(addButton, headerTarget) : addButton}
           </div>
           <div className="task-filters actions" aria-label="Task filter">
-            <button
-              className={`button ${openOnly ? "secondary" : ""}`}
-              aria-pressed={!openOnly}
-              onClick={() => setOpenOnly(false)}
-            >
-              All tasks
-            </button>
-            <button
-              className={`button ${openOnly ? "" : "secondary"}`}
-              aria-pressed={openOnly}
-              onClick={() => setOpenOnly(true)}
-            >
-              Open tasks
-            </button>
+            <label className="show-completed-toggle">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={showCompleted}
+                onChange={(event) => setShowCompleted(event.target.checked)}
+              />
+              <span>Show completed</span>
+            </label>
             {!showHeading && (
               <span className="muted filter-count">
                 {search.trim()
@@ -250,8 +246,8 @@ export function TodosPanel({
             <p className="empty">
               {search.trim()
                 ? "No tasks match this search and filter."
-                : openOnly && todos.length
-                  ? "No open tasks."
+                : !showCompleted && todos.length
+                  ? "No open tasks. Switch on Show completed to see finished ones."
                   : "No tasks yet. Add the next step."}
               {!search.trim() && !todos.length && projects.length > 0 && (
                 <>

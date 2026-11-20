@@ -565,6 +565,7 @@ export function App() {
                   today={today}
                   busy={busy}
                   onProject={goProject}
+                  onNavigate={(target) => void navigate(target)}
                   onComplete={(todo) => void completeTodo(todo)}
                   onChange={change}
                   active={activeProjects(data, today)}

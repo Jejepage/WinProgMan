@@ -8,6 +8,7 @@ import "./ui/styles.css";
 import "./ui/split-compact.css";
 import "./ui/badges.css";
 import "./ui/slate.css";
+import "./ui/fluent.css";
 import "./ui/density.css";
 // A file dropped outside a drop zone must not replace the app with the file.
 for (const type of ["dragover", "drop"] as const)

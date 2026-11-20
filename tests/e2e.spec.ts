@@ -85,6 +85,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
     .fill("2020-01-01");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.locator(".todo-item")).toContainText("Overdue");
+  await page.getByRole("switch", { name: "Show completed" }).check();
   await page
     .getByRole("checkbox", { name: "Aufgabe prüfen completed", exact: true })
     .click();
@@ -732,10 +733,16 @@ test("header actions, task filters and integrated event timeline", async ({
     page.locator(".page-heading").getByRole("button", { name: "Add task" }),
   ).toBeVisible();
   const rows = page.locator(".tasks-table tbody tr");
+  const showCompleted = page.getByRole("switch", { name: "Show completed" });
+  // Only open tasks are listed until completed ones are switched on.
+  await expect(showCompleted).not.toBeChecked();
+  const openCount = await rows.count();
+  await expect(
+    page.locator('.tasks-table input[aria-label$=" completed"]:checked'),
+  ).toHaveCount(0);
+  await showCompleted.check();
   const initial = await rows.count();
-  const openCount = await page
-    .locator('.tasks-table input[aria-label$=" completed"]:not(:checked)')
-    .count();
+  expect(initial).toBeGreaterThan(openCount);
   const taskLabel = await rows
     .first()
     .getByRole("checkbox", { name: / completed$/ })
@@ -746,9 +753,9 @@ test("header actions, task filters and integrated event timeline", async ({
   });
   await checkbox.click();
   await expect(checkbox).toBeChecked();
-  await page.getByRole("button", { name: "Open tasks", exact: true }).click();
+  await showCompleted.uncheck();
   await expect(rows).toHaveCount(openCount - 1);
-  await page.getByRole("button", { name: "All tasks", exact: true }).click();
+  await showCompleted.check();
   await expect(rows).toHaveCount(initial);
   await nav.getByRole("button", { name: "Events", exact: true }).click();
   await expect(
@@ -808,7 +815,6 @@ test("Add task and Add event use detail pages, preserve filters and only save co
 
   await nav.getByRole("button", { name: "Tasks", exact: true }).click();
   await page.getByRole("searchbox", { name: "Search tasks" }).fill("Projekt");
-  await page.getByRole("button", { name: "Open tasks", exact: true }).click();
   await openEditor(
     page,
     page.getByRole("button", { name: "Add task", exact: true }),
@@ -819,8 +825,8 @@ test("Add task and Add event use detail pages, preserve filters and only save co
     page.getByRole("searchbox", { name: "Search tasks" }),
   ).toHaveValue("Projekt");
   await expect(
-    page.getByRole("button", { name: "Open tasks", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("switch", { name: "Show completed" }),
+  ).not.toBeChecked();
   await expect(page.locator(".tasks-table tbody tr:visible")).toHaveCount(1);
   await openEditor(
     page,
@@ -897,6 +903,7 @@ test("Add task and Add event use detail pages, preserve filters and only save co
   }
   await page.reload();
   await nav.getByRole("button", { name: "Tasks", exact: true }).click();
+  await page.getByRole("switch", { name: "Show completed" }).check();
   await expect(page.locator(".tasks-table tbody tr")).toHaveCount(6);
   await nav.getByRole("button", { name: "Events", exact: true }).click();
   await expect(page.locator(".event-item")).toHaveCount(7);
@@ -936,13 +943,12 @@ test("text search combines with existing list filters and can be cleared", async
   await page
     .getByRole("searchbox", { name: "Search tasks" })
     .fill("arbeitsplatz erneuern");
-  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(1);
-  await page.getByRole("button", { name: "Open tasks" }).click();
   await expect(page.locator(".tasks-table tbody tr")).toHaveCount(0);
   await expect(
     page.getByText("No tasks match this search and filter."),
   ).toBeVisible();
-  await page.getByRole("button", { name: "All tasks" }).click();
+  await page.getByRole("switch", { name: "Show completed" }).check();
+  await expect(page.locator(".tasks-table tbody tr")).toHaveCount(1);
   await page.getByRole("button", { name: "Clear search" }).click();
   await expect(page.locator(".tasks-table tbody tr")).toHaveCount(4);
 

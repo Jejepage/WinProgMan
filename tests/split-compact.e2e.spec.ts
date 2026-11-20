@@ -585,7 +585,6 @@ test("task and Markdown drafts and list filters survive design changes with expl
   await load(page);
   await navigate(page, "Tasks");
   await page.getByLabel("Search tasks").fill("Review compact");
-  await page.getByRole("button", { name: "Open tasks", exact: true }).click();
   await page
     .getByRole("button", { name: "Review compact task edit", exact: true })
     .click();
@@ -603,8 +602,8 @@ test("task and Markdown drafts and list filters survive design changes with expl
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByLabel("Search tasks")).toHaveValue("Review compact");
   await expect(
-    page.getByRole("button", { name: "Open tasks", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("switch", { name: "Show completed" }),
+  ).not.toBeChecked();
   await expect(
     page.getByRole("button", { name: "Review compact task edit", exact: true }),
   ).toBeVisible();
@@ -670,6 +669,7 @@ test("Split Compact keeps project actions, timeline and narrow layouts usable", 
   await notes
     .getByRole("button", { name: "Recent notes", exact: true })
     .click();
+  await page.getByRole("switch", { name: "Show completed" }).check();
   await page
     .getByRole("checkbox", {
       name: "Review compact task completed",

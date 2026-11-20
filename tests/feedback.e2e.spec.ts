@@ -471,6 +471,7 @@ test("Topics, direkte Flags und strikt getrennte Notes bleiben nach Reload und S
   await flag.click();
   await expect(flag).toHaveAttribute("aria-pressed", "false");
   await flag.click();
+  await page.getByRole("switch", { name: "Show completed" }).check();
   await page
     .getByRole("checkbox", { name: "Flag this task completed", exact: true })
     .click();

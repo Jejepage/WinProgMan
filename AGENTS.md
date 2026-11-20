@@ -126,3 +126,6 @@
 - Branch `claude/plan-b`, Installer über Windows-CI; kein Merge, keine automatische Installation. Prüfstand im README.
 - Installer 0.10.0: Commit `1102ded`, PR #12, CI `39418677230` und Windows-CI `39418677316` grün. ZIP-Digest geprüft, EXE „Plan B“ 0.10.0, SHA256 `102d41fdb6bef298d1a14a7c7e2b354664fa1f6d0b3c4919ebb550bd1faf1ad8`, unsigniert, nicht installiert. Datei unter `src-tauri/target/windows-ci/0.10.0/1102ded/installer/`.
 - 20. Oktober 2026: Benutzer hat Plan B 0.10.0 installiert, alles getestet („läuft super“) und den Merge beauftragt. PR #12 nach main gemergt (`953d39b`).
+
+## Dashboard/Fluent – 20. November 2026
+- Benutzerauftrag umgesetzt auf Branch `claude/fluent-dashboard`: Aufgabenlisten standardmäßig nur offen mit Schalter „Show completed“; Dashboard-Block „Important projects“ (Stern-Projekte) vor „Projects with open work“, beide klappbar (`winprogman-dashboard-collapsed`); Kennzahlen klickbar (Open tasks → Tasks); fünftes Design `fluent` (`src/ui/fluent.css`, nur CSS, Menü-Untertitel per `::after`). Keine Datenmigration. Kein Push/Installer ohne Auftrag. Prüfstand im README.
