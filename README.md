@@ -346,3 +346,7 @@ Quellcommit `d897be8`, PR #13 (Entwurf), allgemeine CI `44737663069` und Windows
 - Ab 1200 px nebeneinander (7:5), darunter untereinander. Keine Datenänderung.
 
 Prüfung: Typprüfung, 169 Unit-Tests, Webbuild, Gesamtlauf 50 Edge-Abläufe (neu `tests/project-tasks-side.e2e.spec.ts`; drei Selektoren in `tests/e2e.spec.ts` auf die Projekttabelle eingegrenzt). Sichtprüfung bei 1440 px.
+
+### Installer 0.13.0 – geprüft
+
+Quellcommit `92f6118`, PR #13 (Entwurf), allgemeine CI `44825876370` und Windows-CI `44825876399` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `8b3853b67f3381537f10b087acb98c94a53809490a7d3ea7d49ab16853440c30` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.13.0, SHA256 `55e8eca711884d91003fbb190e96051f8b34ecbefc4f679edea9ce132811dfa3`. Datei `src-tauri/target/windows-ci/0.13.0/92f6118/installer/Plan B_0.13.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld und Aufgaben neben der Projektliste; beide Sync-Rechner aktualisieren.
