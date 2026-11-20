@@ -14,6 +14,8 @@ import { classifyLinkTarget, normalizeLinkTarget } from "../../domain/links";
 import { confirmAction } from "../../platform/desktop";
 import { ProjectLink } from "../../ui/ProjectLink";
 import { StatusLabel } from "../../ui/components";
+import { ownerNames } from "../../domain/queries";
+import { OwnerSelect } from "./OwnerSelect";
 interface Props {
   project: Project;
   projects: Project[];
@@ -40,6 +42,7 @@ export function ProjectHeader({
   const [description, setDescription] = useState(project.description);
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [categoryId, setCategoryId] = useState(project.categoryId || "");
+  const [owner, setOwner] = useState(project.owner || "");
   const [linkEditor, setLinkEditor] = useState(false);
   const [link, setLink] = useState<Link | null>(null);
   const [label, setLabel] = useState("");
@@ -80,6 +83,14 @@ export function ProjectHeader({
     };
     if (categoryId) value.categoryId = categoryId;
     else delete value.categoryId;
+    // Reuse the spelling of a known name so the list stays free of duplicates.
+    const ownerName =
+      ownerNames(projects).find(
+        (n) =>
+          n.toLocaleLowerCase("de") === owner.trim().toLocaleLowerCase("de"),
+      ) || owner.trim();
+    if (ownerName) value.owner = ownerName;
+    else delete value.owner;
     if (
       await onChange({
         type: "project.saveWithLinks",
@@ -176,7 +187,11 @@ export function ProjectHeader({
             ·{" "}
             {projectCategories.find(
               (category) => category.id === project.categoryId,
-            )?.name || "No topic"}
+            )?.name || "No topic"}{" "}
+            ·{" "}
+            <span className="project-owner">
+              Owner: {project.owner || "not assigned"}
+            </span>
           </p>
           <p className="description">
             {project.description || "Add a short project description."}
@@ -196,6 +211,7 @@ export function ProjectHeader({
             setDescription(project.description);
             setStatus(project.status);
             setCategoryId(project.categoryId || "");
+            setOwner(project.owner || "");
             setDraftLinks(links.map((item) => ({ ...item })));
             setLinkEditor(false);
             setMessage("");
@@ -264,6 +280,14 @@ export function ProjectHeader({
                 ))}
               </select>
             </label>
+            <div className="field">
+              Owner
+              <OwnerSelect
+                value={owner}
+                names={ownerNames(projects)}
+                onChange={setOwner}
+              />
+            </div>
           </div>
           <label className="field">
             Name

@@ -12,6 +12,7 @@ import {
 import {
   activeProjects,
   localToday,
+  matchesOwner,
   matchesSearch,
   sortTodos,
   upcoming,
@@ -95,6 +96,7 @@ export function App() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [projectSearch, setProjectSearch] = useState("");
   const [importantOnly, setImportantOnly] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [noteSearch, setNoteSearch] = useState("");
@@ -388,10 +390,16 @@ export function App() {
     data.projectCategories.some((c) => c.id === categoryFilter)
       ? categoryFilter
       : "";
+  const effectiveOwnerFilter =
+    ownerFilter === "none" ||
+    data.projects.some((p) => matchesOwner(ownerFilter, p))
+      ? ownerFilter
+      : "";
   const filteredProjects = data.projects.filter(
     (p) =>
       selectedStatuses.has(p.status) &&
       (!importantOnly || !!p.important) &&
+      matchesOwner(effectiveOwnerFilter, p) &&
       (!effectiveCategoryFilter ||
         (effectiveCategoryFilter === "none"
           ? !p.categoryId
@@ -585,6 +593,8 @@ export function App() {
                   onSearch={setProjectSearch}
                   projects={filteredProjects}
                   onProject={goProject}
+                  ownerFilter={effectiveOwnerFilter}
+                  onOwnerFilter={setOwnerFilter}
                   importantOnly={importantOnly}
                   onImportantOnly={setImportantOnly}
                   onChange={change}

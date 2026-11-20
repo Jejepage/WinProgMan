@@ -326,3 +326,11 @@ Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 48 Edge-Abläufe (ne
 ### Installer 0.11.0 – geprüft am 20. November 2026
 
 Quellcommit `62a071d`, PR #13 (Entwurf), allgemeine CI `44729283730` und Windows-CI `44729283954` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `d59a8cb2f9aae7a172d0b48aa406e9f141434bffca9c3688dd6157a0f6d64df5` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.11.0, SHA256 `a1f02f2016817d1e6df3d6b73725cb380e86fcc155d87aad11257d8b51411192`. Datei `src-tauri/target/windows-ci/0.11.0/62a071d/installer/Plan B_0.11.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; aktualisiert eine bestehende Plan-B-Installation (gleicher Produktname).
+
+## Verantwortliche pro Projekt – 20. November 2026
+
+- Neues optionales Projektfeld **Owner** (`owner`, Freitext). Im Projekteditor eine Dropdownliste mit allen Namen, die schon bei anderen Projekten stehen, „Not assigned“ und „New person…“ (Textfeld). Ohne Eintrag gilt der Verantwortliche als nicht zugewiesen. Gleiche Namen mit anderer Groß-/Kleinschreibung werden auf die vorhandene Schreibweise zusammengeführt.
+- Anzeige: Projektseite („Owner: …“), eigene Spalte und Filter („All owners“, „Not assigned“, Namen) in der Projektliste, Dashboard-Projektzeilen und Markdown-Bericht.
+- Sicherungsformat bleibt 6; `owner` ist dort neu erlaubt (wie zuvor `important`). **Ältere Versionen (bis 0.11.0) lehnen Sicherungen und Sync-Dateien mit `owner` ab.** Bei Ordner-Sync beide Rechner zeitnah aktualisieren; ein älterer Rechner, der ein Projekt bearbeitet, würde den Owner beim Abgleich überschreiben.
+
+Prüfung: Typprüfung, 169 Unit-Tests (neu: Owner-Validierung, Namensliste/Filter), Webbuild, Gesamtlauf 49 Edge-Abläufe (neu `tests/owner.e2e.spec.ts`: neue Person, Wiederverwendung aus Liste, Zurücksetzen, Reload, Spalte, Filter, Dashboard).

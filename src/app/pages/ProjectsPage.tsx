@@ -1,6 +1,6 @@
 import { FileText, Star } from "lucide-react";
 import { Card, SearchField, StatusLabel, Table } from "../../ui/components";
-import { groupProjects } from "../../domain/queries";
+import { groupProjects, ownerNames } from "../../domain/queries";
 import {
   projectStatuses,
   type AppData,
@@ -15,6 +15,8 @@ export function ProjectsPage({
   onToggleStatus,
   categoryFilter,
   onCategoryFilter,
+  ownerFilter,
+  onOwnerFilter,
   search,
   onSearch,
   projects,
@@ -31,6 +33,9 @@ export function ProjectsPage({
   /** Already reduced to an existing topic id, "none" or "". */
   categoryFilter: string;
   onCategoryFilter: (value: string) => void;
+  /** Already reduced to an existing owner name, "none" or "". */
+  ownerFilter: string;
+  onOwnerFilter: (value: string) => void;
   search: string;
   onSearch: (value: string) => void;
   /** Projects after status, topic and text filters. */
@@ -91,6 +96,21 @@ export function ProjectsPage({
             ))}
           </select>
         </label>
+        <label className="field">
+          <span className="sr-only">Filter owner</span>
+          <select
+            value={ownerFilter}
+            onChange={(e) => onOwnerFilter(e.target.value)}
+          >
+            <option value="">All owners</option>
+            <option value="none">Not assigned</option>
+            {ownerNames(data.projects).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
         <SearchField
           label="Search projects"
           value={search}
@@ -122,6 +142,7 @@ export function ProjectsPage({
                 </th>
                 <th className="col-fit">Project #</th>
                 <th>Title</th>
+                <th className="col-fit">Owner</th>
                 <th className="col-fit">Status</th>
                 <th className="col-fit">Open tasks</th>
               </tr>
@@ -129,7 +150,7 @@ export function ProjectsPage({
             {groups.map((group) => (
               <tbody key={group.id} className="project-topic-group">
                 <tr className="topic-group-row">
-                  <th colSpan={5} scope="rowgroup">
+                  <th colSpan={6} scope="rowgroup">
                     <h2 className="topic-group-heading">
                       {group.name}{" "}
                       <span className="count">{group.projects.length}</span>
@@ -172,6 +193,9 @@ export function ProjectsPage({
                       >
                         {p.name}
                       </button>
+                    </td>
+                    <td className="col-fit project-owner-cell">
+                      {p.owner || <span className="muted">—</span>}
                     </td>
                     <td className="col-fit">
                       <StatusLabel data-status={p.status}>

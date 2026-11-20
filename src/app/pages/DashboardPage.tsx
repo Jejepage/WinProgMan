@@ -148,7 +148,10 @@ export function DashboardPage({
             </button>
             <p className="muted">{p.description}</p>
             <small>
-              {taskCount} open tasks · {eventCount} upcoming events
+              <span className="project-owner">
+                Owner: {p.owner || "not assigned"}
+              </span>{" "}
+              · {taskCount} open tasks · {eventCount} upcoming events
             </small>
           </div>
           <StatusLabel data-status={p.status}>

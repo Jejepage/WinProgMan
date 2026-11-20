@@ -121,32 +121,36 @@ export function validateImport(value: unknown): ExportEnvelope {
           : collection === "quickLinks"
             ? ["label", "target"]
             : collection === "projects"
-            ? [
-                "name",
-                "description",
-                ...(current ? ["number"] : []),
-                ...(legacy ? [] : ["status", "categoryId"]),
-                ...(Number(root.schemaVersion) >= 6 ? ["important"] : []),
-              ]
-            : collection === "links"
-              ? ["projectId", "label", "target"]
-              : collection === "todos"
-                ? [
-                    "projectId",
-                    "title",
-                    "completed",
-                    "dueDate",
-                    ...(Number(root.schemaVersion) >= 4 ? ["doNext"] : []),
-                  ]
-                : [
-                    "projectId",
-                    "category",
-                    "title",
-                    "date",
-                    "time",
-                    "note",
-                    ...(Number(root.schemaVersion) >= 3 ? ["noteFormat"] : []),
-                  ];
+              ? [
+                  "name",
+                  "description",
+                  ...(current ? ["number"] : []),
+                  ...(legacy ? [] : ["status", "categoryId"]),
+                  ...(Number(root.schemaVersion) >= 6
+                    ? ["important", "owner"]
+                    : []),
+                ]
+              : collection === "links"
+                ? ["projectId", "label", "target"]
+                : collection === "todos"
+                  ? [
+                      "projectId",
+                      "title",
+                      "completed",
+                      "dueDate",
+                      ...(Number(root.schemaVersion) >= 4 ? ["doNext"] : []),
+                    ]
+                  : [
+                      "projectId",
+                      "category",
+                      "title",
+                      "date",
+                      "time",
+                      "note",
+                      ...(Number(root.schemaVersion) >= 3
+                        ? ["noteFormat"]
+                        : []),
+                    ];
       fields(
         entry,
         ["id", "createdAt", "updatedAt", ...(synced ? ["rev"] : []), ...extras],
@@ -204,6 +208,14 @@ export function validateImport(value: unknown): ExportEnvelope {
           typeof entry.important !== "boolean"
         )
           fail(`${path}.important`, "Wahrheitswert erwartet.");
+        if (entry.owner !== undefined) {
+          string(entry.owner, `${path}.owner`, true);
+          if (entry.owner !== entry.owner.trim())
+            fail(
+              `${path}.owner`,
+              "Name ohne führende oder folgende Leerzeichen erwartet.",
+            );
+        }
         projects.add(entry.id);
         string(entry.name, `${path}.name`, true);
         string(entry.description, `${path}.description`);

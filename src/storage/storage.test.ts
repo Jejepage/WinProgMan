@@ -164,6 +164,21 @@ describe("Sicherungsvalidierung", () => {
     orphan.projects[0].categoryId = "fehlt";
     expect(() => validateImport(orphan)).toThrow();
   });
+  it("erhält den Verantwortlichen im Roundtrip und weist leere oder alte Formate ab", () => {
+    const data = envelope();
+    data.projects[0].owner = "Anna Müller";
+    expect(validateImport(JSON.parse(JSON.stringify(data)))).toEqual(data);
+    const blank = envelope();
+    blank.projects[0].owner = "  ";
+    expect(() => validateImport(blank)).toThrow("owner");
+    const padded = envelope();
+    padded.projects[0].owner = " Anna ";
+    expect(() => validateImport(padded)).toThrow("owner");
+    const old = envelope();
+    old.projects[0].owner = "Anna";
+    (old as unknown as { schemaVersion: number }).schemaVersion = 5;
+    expect(() => validateImport(old)).toThrow();
+  });
   it("weist doppelte Kategorienamen und übergreifend doppelte IDs ab", () => {
     const data = envelope();
     data.projectCategories = [

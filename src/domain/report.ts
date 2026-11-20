@@ -23,7 +23,7 @@ export function projectReport(
       lines.push(
         `### ${projectNumberLabel(project.number)} ${escapeInline(project.name)}${project.important ? " ★" : ""}`,
         "",
-        `Status: ${statusLabel(project.status)}`,
+        `Status: ${statusLabel(project.status)} · Owner: ${project.owner ? escapeInline(project.owner) : "not assigned"}`,
         "",
       );
       if (project.description.trim())

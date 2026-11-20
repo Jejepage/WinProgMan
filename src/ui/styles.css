@@ -2413,3 +2413,20 @@ button.project-resource {
   color: #e0a100;
   fill: currentColor;
 }
+
+/* Project owner: list or free text for a new person. */
+.owner-new {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.owner-new input {
+  flex: 1;
+  min-width: 0;
+}
+.owner-new .text-button {
+  white-space: nowrap;
+}
+.project-owner-cell {
+  white-space: nowrap;
+}

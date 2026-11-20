@@ -20,6 +20,27 @@ export const overdue = (todo: Todo, today = localToday()) =>
 export const upcoming = (event: ProjectEvent, today = localToday()) =>
   event.category !== "Notiz" && event.date >= today;
 
+/** Distinct owner names of all projects, alphabetically (case-insensitive). */
+export function ownerNames(projects: Project[]): string[] {
+  const names = new Map<string, string>();
+  for (const project of projects) {
+    const name = project.owner?.trim();
+    if (name && !names.has(name.toLocaleLowerCase("de")))
+      names.set(name.toLocaleLowerCase("de"), name);
+  }
+  return [...names.values()].sort((a, b) =>
+    a.localeCompare(b, "de", { sensitivity: "base" }),
+  );
+}
+
+/** Owner filter: "" shows all, "none" unassigned projects, otherwise a name. */
+export const matchesOwner = (filter: string, project: Project) =>
+  !filter ||
+  (filter === "none"
+    ? !project.owner
+    : project.owner?.toLocaleLowerCase("de") ===
+      filter.toLocaleLowerCase("de"));
+
 const byNumber = (projects: Project[]) =>
   [...projects].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
 /** Filter first, then group. Categories are identities, even when named No topic. */
