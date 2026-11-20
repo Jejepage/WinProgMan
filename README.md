@@ -338,3 +338,11 @@ Prüfung: Typprüfung, 169 Unit-Tests (neu: Owner-Validierung, Namensliste/Filte
 ### Installer 0.12.0 – geprüft am 20. November 2026
 
 Quellcommit `d897be8`, PR #13 (Entwurf), allgemeine CI `44737663069` und Windows-CI `44737663104` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `fc1b4debb96bea89c0e5d97cfe0b2294c4c53e843fcff7c61f53b905dc6c97b9` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.12.0, SHA256 `54c5383510c529b0dd92ba5578baecf819cc5d4733cb49babfbcbb2ba47e9ae8`. Datei `src-tauri/target/windows-ci/0.12.0/d897be8/installer/Plan B_0.12.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld: beide Sync-Rechner aktualisieren.
+
+## Projektliste mit Aufgaben daneben – 20. November 2026
+
+- In der Projektliste steht rechts neben der Tabelle die Aufgabenliste des **ausgewählten Projekts** (gemeinsame `TodosPanel`-Komponente, ohne Projektspalte, mit „Show completed“ und Add task mit Projektvorwahl).
+- Auswahl per Klick auf die Zeile oder Enter/Leertaste auf der fokussierten Zeile; der Projektname öffnet weiter die Projektseite, ebenso der Name in der Überschrift rechts. Das zuletzt gewählte Projekt bleibt lokal gemerkt (`winprogman-selected-project`); ohne Auswahl oder wenn es ausgefiltert ist, gilt das erste angezeigte Projekt.
+- Ab 1200 px nebeneinander (7:5), darunter untereinander. Keine Datenänderung.
+
+Prüfung: Typprüfung, 169 Unit-Tests, Webbuild, Gesamtlauf 50 Edge-Abläufe (neu `tests/project-tasks-side.e2e.spec.ts`; drei Selektoren in `tests/e2e.spec.ts` auf die Projekttabelle eingegrenzt). Sichtprüfung bei 1440 px.

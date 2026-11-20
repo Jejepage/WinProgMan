@@ -313,7 +313,7 @@ test("vollständiger CRUD-Ablauf, Timeline, Sicherung und atomarer Import", asyn
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Replace data", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Backup imported");
-  await page.locator(".project-title").click();
+  await page.locator(".projects-table .project-title").click();
   await expect(page.locator(".todo-item")).toHaveCount(1);
   await expect(page.locator(".event-item")).toHaveCount(2);
   await expect(linkRow).toHaveCount(1);
@@ -442,7 +442,9 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     .click();
   await page.getByRole("checkbox", { name: "Planned" }).uncheck();
   await page.getByRole("checkbox", { name: "Paused" }).uncheck();
-  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
+  await page
+    .getByRole("checkbox", { name: "Completed", exact: true })
+    .uncheck();
   await expect(
     page.locator(".table-wrap tbody tr:has(.project-title)"),
   ).toHaveCount(0);
@@ -607,7 +609,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     .getByRole("navigation")
     .getByRole("button", { name: /Projects/ })
     .click();
-  await page.locator(".project-title").click();
+  await page.locator(".projects-table .project-title").click();
   const markdownEditor = await openEditor(
     page,
     page.getByRole("button", {
@@ -669,7 +671,7 @@ test("Markdown-Notizen, formatierte Zwischenablage und alte Klartext-Sicherungen
     await page
       .getByRole("button", { name: "Replace data", exact: true })
       .click();
-    await page.locator(".project-title").click();
+    await page.locator(".projects-table .project-title").click();
     await page.locator(".event-note-toggle[aria-expanded]").click();
     if (value === backup) {
       await expect(
@@ -926,7 +928,9 @@ test("text search combines with existing list filters and can be cleared", async
   await expect(
     page.locator(".table-wrap tbody tr:has(.project-title)"),
   ).toContainText("Arbeitsplatz erneuern");
-  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
+  await page
+    .getByRole("checkbox", { name: "Completed", exact: true })
+    .uncheck();
   await expect(
     page.locator(".table-wrap tbody tr:has(.project-title)"),
   ).toHaveCount(0);
@@ -1045,7 +1049,9 @@ test("Do next, event dates, project controls and theme work after reload", async
   await expect(
     page.locator(".table-wrap").getByRole("button", { name: "Delete" }),
   ).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "Completed" }).uncheck();
+  await page
+    .getByRole("checkbox", { name: "Completed", exact: true })
+    .uncheck();
   await expect(
     page.locator(".table-wrap tbody tr:has(.project-title)"),
   ).toHaveCount(1);

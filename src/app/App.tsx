@@ -600,6 +600,7 @@ export function App() {
                   onChange={change}
                   busy={busy}
                   onReport={() => void report()}
+                  panel={shared}
                 />
               )}
               {view === "Tasks" && (

@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { FileText, Star } from "lucide-react";
+import { TodosPanel } from "../../features/todos/TodosPanel";
+import type { PanelShared } from "../types";
 import { Card, SearchField, StatusLabel, Table } from "../../ui/components";
 import { groupProjects, ownerNames } from "../../domain/queries";
 import {
@@ -8,6 +11,16 @@ import {
   type ProjectStatus,
 } from "../../domain/types";
 import { projectNumberLabel, statusLabel } from "../../ui/labels";
+
+const selectedKey = "winprogman-selected-project";
+
+function readSelected(): string {
+  try {
+    return localStorage.getItem(selectedKey) || "";
+  } catch {
+    return "";
+  }
+}
 
 export function ProjectsPage({
   data,
@@ -26,6 +39,7 @@ export function ProjectsPage({
   onChange,
   onReport,
   busy,
+  panel,
 }: {
   data: AppData;
   selectedStatuses: Set<ProjectStatus>;
@@ -47,8 +61,22 @@ export function ProjectsPage({
   /** Creates a Markdown report of `projects`. */
   onReport: () => void;
   busy: boolean;
+  /** Shared task panel props for the tasks of the selected project. */
+  panel: PanelShared;
 }) {
   const groups = groupProjects(projects, data.projectCategories);
+  const [selectedId, setSelectedId] = useState(readSelected);
+  useEffect(() => {
+    try {
+      if (selectedId) localStorage.setItem(selectedKey, selectedId);
+    } catch {
+      /* Session only. */
+    }
+  }, [selectedId]);
+  // The last chosen project stays selected; otherwise the first one shown.
+  const visible = groups.flatMap((group) => group.projects);
+  const selected =
+    visible.find((p) => p.id === selectedId) ?? visible[0] ?? undefined;
   return (
     <>
       <div className="panel form-grid project-filters">
@@ -133,88 +161,130 @@ export function ProjectsPage({
         </p>
       )}
       {!!groups.length && (
-        <Card className="table-wrap projects-panel">
-          <Table className="projects-table">
-            <thead>
-              <tr>
-                <th className="col-fit">
-                  <span className="sr-only">Important</span>
-                </th>
-                <th className="col-fit">Project #</th>
-                <th>Title</th>
-                <th className="col-fit">Owner</th>
-                <th className="col-fit">Status</th>
-                <th className="col-fit">Open tasks</th>
-              </tr>
-            </thead>
-            {groups.map((group) => (
-              <tbody key={group.id} className="project-topic-group">
-                <tr className="topic-group-row">
-                  <th colSpan={6} scope="rowgroup">
-                    <h2 className="topic-group-heading">
-                      {group.name}{" "}
-                      <span className="count">{group.projects.length}</span>
-                    </h2>
+        <div className="projects-split">
+          <Card className="table-wrap projects-panel">
+            <Table className="projects-table">
+              <thead>
+                <tr>
+                  <th className="col-fit">
+                    <span className="sr-only">Important</span>
                   </th>
+                  <th className="col-fit">Project #</th>
+                  <th>Title</th>
+                  <th className="col-fit">Owner</th>
+                  <th className="col-fit">Status</th>
+                  <th className="col-fit">Open tasks</th>
                 </tr>
-                {group.projects.map((p) => (
-                  <tr key={p.id}>
-                    <td className="col-fit">
-                      <button
-                        type="button"
-                        className={`star-button ${p.important ? "is-on" : ""}`}
-                        aria-pressed={!!p.important}
-                        aria-label={`${p.important ? "Remove important mark from" : "Mark as important:"} ${p.name}`}
-                        title={
-                          p.important
-                            ? "Remove important mark"
-                            : "Mark as important"
-                        }
-                        disabled={busy}
-                        onClick={() =>
-                          void onChange({
-                            type: "project.save",
-                            value: {
-                              ...p,
-                              important: !p.important,
-                              updatedAt: new Date().toISOString(),
-                            },
-                          })
-                        }
-                      >
-                        <Star size={16} aria-hidden="true" />
-                      </button>
-                    </td>
-                    <td className="col-fit">{projectNumberLabel(p.number)}</td>
-                    <td>
-                      <button
-                        className="project-title"
-                        onClick={() => onProject(p.id)}
-                      >
-                        {p.name}
-                      </button>
-                    </td>
-                    <td className="col-fit project-owner-cell">
-                      {p.owner || <span className="muted">—</span>}
-                    </td>
-                    <td className="col-fit">
-                      <StatusLabel data-status={p.status}>
-                        {statusLabel(p.status)}
-                      </StatusLabel>
-                    </td>
-                    <td className="col-fit">
-                      {
-                        data.todos.filter(
-                          (t) => t.projectId === p.id && !t.completed,
-                        ).length
-                      }
-                    </td>
+              </thead>
+              {groups.map((group) => (
+                <tbody key={group.id} className="project-topic-group">
+                  <tr className="topic-group-row">
+                    <th colSpan={6} scope="rowgroup">
+                      <h2 className="topic-group-heading">
+                        {group.name}{" "}
+                        <span className="count">{group.projects.length}</span>
+                      </h2>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            ))}
-          </Table>
-        </Card>
+                  {group.projects.map((p) => (
+                    <tr
+                      key={p.id}
+                      className={
+                        selected?.id === p.id ? "is-selected" : undefined
+                      }
+                      aria-selected={selected?.id === p.id}
+                      tabIndex={0}
+                      title="Show the tasks of this project"
+                      onClick={() => setSelectedId(p.id)}
+                      onKeyDown={(event) => {
+                        if (
+                          event.target === event.currentTarget &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          setSelectedId(p.id);
+                        }
+                      }}
+                    >
+                      <td className="col-fit">
+                        <button
+                          type="button"
+                          className={`star-button ${p.important ? "is-on" : ""}`}
+                          aria-pressed={!!p.important}
+                          aria-label={`${p.important ? "Remove important mark from" : "Mark as important:"} ${p.name}`}
+                          title={
+                            p.important
+                              ? "Remove important mark"
+                              : "Mark as important"
+                          }
+                          disabled={busy}
+                          onClick={() =>
+                            void onChange({
+                              type: "project.save",
+                              value: {
+                                ...p,
+                                important: !p.important,
+                                updatedAt: new Date().toISOString(),
+                              },
+                            })
+                          }
+                        >
+                          <Star size={16} aria-hidden="true" />
+                        </button>
+                      </td>
+                      <td className="col-fit">
+                        {projectNumberLabel(p.number)}
+                      </td>
+                      <td>
+                        <button
+                          className="project-title"
+                          onClick={() => onProject(p.id)}
+                        >
+                          {p.name}
+                        </button>
+                      </td>
+                      <td className="col-fit project-owner-cell">
+                        {p.owner || <span className="muted">—</span>}
+                      </td>
+                      <td className="col-fit">
+                        <StatusLabel data-status={p.status}>
+                          {statusLabel(p.status)}
+                        </StatusLabel>
+                      </td>
+                      <td className="col-fit">
+                        {
+                          data.todos.filter(
+                            (t) => t.projectId === p.id && !t.completed,
+                          ).length
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
+            </Table>
+          </Card>
+          {selected && (
+            <div className="projects-side-tasks">
+              <TodosPanel
+                key={`side-${selected.id}`}
+                {...panel}
+                projectId={selected.id}
+                heading={
+                  <button
+                    type="button"
+                    className="project-title"
+                    title="Open project"
+                    onClick={() => onProject(selected.id)}
+                  >
+                    {selected.name} <span>↗</span>
+                  </button>
+                }
+                todos={data.todos.filter((t) => t.projectId === selected.id)}
+              />
+            </div>
+          )}
+        </div>
       )}
     </>
   );

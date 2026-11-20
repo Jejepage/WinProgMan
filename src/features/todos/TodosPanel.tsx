@@ -25,6 +25,8 @@ interface Props {
   projects: Project[];
   projectId?: string;
   showHeading?: boolean;
+  /** Replaces the "Tasks" heading text, e.g. with the project name. */
+  heading?: React.ReactNode;
   compactSections?: boolean;
   headerTarget?: HTMLElement | null;
   search?: string;
@@ -43,6 +45,7 @@ export function TodosPanel({
   projects,
   projectId,
   showHeading = true,
+  heading,
   compactSections = false,
   headerTarget,
   search = "",
@@ -128,7 +131,7 @@ export function TodosPanel({
           >
             {showHeading ? (
               <h2>
-                Tasks{" "}
+                {heading ?? "Tasks"}{" "}
                 <span className="count">
                   {todos.filter((t) => !t.completed).length} open
                 </span>

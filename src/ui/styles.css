@@ -2430,3 +2430,44 @@ button.project-resource {
 .project-owner-cell {
   white-space: nowrap;
 }
+
+/* Project list with the tasks of the selected project beside it. */
+.projects-split {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 16px;
+  align-items: start;
+}
+.projects-split > * {
+  margin: 0;
+  min-width: 0;
+}
+.projects-split .projects-table tbody tr:not(.topic-group-row) {
+  cursor: pointer;
+}
+.projects-split .data-table :is(th, td) {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.projects-split .projects-table tr.is-selected td {
+  background: var(--accent-soft);
+}
+.projects-split .projects-table tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.projects-split .projects-table tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.projects-side-tasks .todos-panel {
+  margin: 0;
+}
+.projects-side-tasks h2 .project-title {
+  font: inherit;
+  font-weight: 700;
+}
+@media (max-width: 1200px) {
+  .projects-split {
+    grid-template-columns: 1fr;
+  }
+}
