@@ -232,7 +232,13 @@
   font-style: normal;
 }
 :root[data-design="fluent"]
-  :is(.dashboard-project-row, .dashboard-next-row, .todo-item, .event-item) {
+  :is(
+    .dashboard-project-row,
+    .dashboard-next-row,
+    .dashboard-overdue-row,
+    .todo-item,
+    .event-item
+  ) {
   border-color: var(--fluent-row-line);
 }
 :root[data-design="fluent"] :is(.project-title, .task-title-button) {

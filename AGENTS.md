@@ -135,3 +135,8 @@
 - Folgeauftrag: Projektliste zeigt rechts die Aufgaben des ausgewählten Projekts (Zeilenklick wählt, Name öffnet Projektseite, letzte Auswahl lokal `winprogman-selected-project`; Benutzerentscheidung). Ab 1200 px nebeneinander. Noch nicht im Installer 0.12.0.
 - Installer 0.13.0 nach Benutzerauftrag: Commit `92f6118`, PR #13 (Entwurf), CI `44825876370` und Windows-CI `44825876399` grün. ZIP-Digest geprüft, EXE „Plan B“ 0.13.0, SHA256 `55e8eca711884d91003fbb190e96051f8b34ecbefc4f679edea9ce132811dfa3`, unsigniert, nicht installiert. Datei unter `src-tauri/target/windows-ci/0.13.0/92f6118/installer/`. Kein Merge ohne Auftrag.
 - 21. November 2026: Merge von PR #13 nach main vom Benutzer beauftragt und durchgeführt (`b90a43b`). Stand 0.13.0 auf main.
+
+## Usability-Überarbeitung – 21. November 2026
+- Benutzer hat „Setze alles um“ beauftragt, ohne Datenstrukturänderung. Entscheidungen: Oberfläche bleibt Englisch; Schnellerfassung „Add task …“ zusätzlich zur Detailseite (hebt die 0.2.1-Regel „keine Inline-Erstellung“ nur für diese Zeile auf); neue Projekte über eigene Seite `#detail=project&mode=new`; Events-Liste: kommende aufsteigend oben, Trenner „Past“, Vergangenes absteigend (Timeline unverändert).
+- Hauptansichten im Hash (`src/app/route.ts`), Editoren per markiertem `pushState` (`src/ui/itemNavigation.ts`), Schließen via `history.back()`. Editor-Tasten in `src/ui/useEditorShortcuts.ts`. Neue lokale Präferenzen `winprogman-last-view`, `winprogman-task-grouping`, `winprogman-task-created`. Datumsanzeige `dd.mm.yy` plus `relativeDate`.
+- Branch `claude/usability`; kein Push, Installer oder Merge ohne Auftrag. Prüfstand im README-Abschnitt „Usability-Überarbeitung“.

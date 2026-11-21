@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchAll, type SearchResult } from "../../domain/search";
 import type { AppData } from "../../domain/types";
+import { formatDate } from "../../domain/queries";
 import "./palette.css";
 
 export interface PaletteAction {
@@ -149,13 +150,20 @@ export function CommandPalette({
                       : (entry as Extract<Entry, { type: "action" }>).action
                           .label}
                   </span>
-                  {result && (result.context || result.snippet) && (
-                    <small>
-                      {[result.context, result.snippet]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </small>
-                  )}
+                  {result &&
+                    (result.context || result.snippet || result.date) && (
+                      <small>
+                        {[
+                          result.date &&
+                            (result.kind === "task" ? "due " : "") +
+                              formatDate(result.date),
+                          result.context,
+                          result.snippet,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                    )}
                 </li>
               );
             })}

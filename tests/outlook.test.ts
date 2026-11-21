@@ -347,7 +347,7 @@ describe("Prefilled event", () => {
       [
         "- **From:** Ada Test \\(ada&#64;example\\.test\\)",
         "- **To:** Bob \\(bob&#64;example\\.test\\)",
-        "- **Received:** 15/10/26 10&#58;44",
+        "- **Received:** 15\\.10\\.26 10&#58;44",
         "",
         "---",
         "",
@@ -388,7 +388,9 @@ describe("Prefilled event", () => {
       date: "2026-10-26",
       time: "09:30",
     });
-    expect(prefill.note).toContain("- **When:** 26/10/26 09&#58;30–10&#58;00");
+    expect(prefill.note).toContain(
+      "- **When:** 26\\.10\\.26 09&#58;30–10&#58;00",
+    );
     expect(prefill.note).toContain("- **Series:** recurring appointment");
     expect(prefill.notices[0]).toMatch(/next occurrence from today/);
   });

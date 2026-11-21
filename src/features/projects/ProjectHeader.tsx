@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useEditorShortcuts } from "../../ui/useEditorShortcuts";
 import { Copy, Pencil, Plus, Save, Star, Trash2 } from "lucide-react";
 import { projectStatusLabels } from "../../ui/labels";
 import {
@@ -49,6 +50,24 @@ export function ProjectHeader({
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
   const [draftLinks, setDraftLinks] = useState<Link[]>([]);
+  const editorForm = useRef<HTMLFormElement>(null);
+  useEditorShortcuts(editorForm, {
+    active: editing,
+    isDirty: () =>
+      linkEditor ||
+      name !== project.name ||
+      number !== String(project.number) ||
+      description !== project.description ||
+      status !== project.status ||
+      categoryId !== (project.categoryId || "") ||
+      owner !== (project.owner || "") ||
+      JSON.stringify(draftLinks) !== JSON.stringify(links),
+    onCancel: () => {
+      setEditing(false);
+      setLinkEditor(false);
+      setMessage("");
+    },
+  });
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const parsedNumber = Number(number);
@@ -230,7 +249,7 @@ export function ProjectHeader({
         </button>
       </div>
       {editing && (
-        <form id={editorId} className="editor" onSubmit={save}>
+        <form ref={editorForm} id={editorId} className="editor" onSubmit={save}>
           <div className="form-grid">
             <label className="field">
               Project number

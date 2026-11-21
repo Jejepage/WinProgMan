@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { useId, useRef, useState, type FormEvent } from "react";
+import { useEditorShortcuts } from "../../ui/useEditorShortcuts";
 import {
   categories,
   metadata,
@@ -10,7 +11,13 @@ import {
   type Project,
   type ProjectEvent,
 } from "../../domain/types";
-import { formatDate, parseTime24, sortEvents } from "../../domain/queries";
+import {
+  formatDate,
+  orderEventsForList,
+  parseTime24,
+  relativeDate,
+  sortEvents,
+} from "../../domain/queries";
 import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
 import { MarkdownNote } from "./MarkdownNote";
 import { legacyNoteToMarkdown } from "./markdown";
@@ -20,6 +27,20 @@ import { matchesSearch } from "../../domain/queries";
 import { eventCategoryLabels as categoryLabels } from "../../ui/labels";
 
 const eventCategories = categories.filter((category) => category !== "Notiz");
+
+/** First words of a note as plain text, for list previews. */
+export function notePreview(note: string, length = 140): string {
+  const text = note
+    .replace(/<[^>]+>/g, " ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
+    .replace(/[*_`~|]|\\(?=\S)/g, "")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" · ");
+  return text.length > length ? `${text.slice(0, length).trimEnd()} …` : text;
+}
 
 /** Values to prefill a new event with, e.g. from a dropped Outlook item. */
 export interface EventDraftInput {
@@ -126,6 +147,28 @@ export function EventsPanel({
       : null,
   );
   const [deleting, setDeleting] = useState<ProjectEvent | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const initialDraft_ = useRef(editor?.draft);
+  useEditorShortcuts(form, {
+    active: Boolean(editor) && !deleting,
+    isDirty: () => {
+      const start = initialDraft_.current;
+      if (!editor || !start) return false;
+      let note = editor.draft.note;
+      try {
+        note = noteEditor.current?.read() ?? note;
+      } catch {
+        return true;
+      }
+      return (
+        note !== start.note ||
+        (Object.keys(start) as (keyof Draft)[]).some(
+          (key) => key !== "note" && editor.draft[key] !== start[key],
+        )
+      );
+    },
+    onCancel: () => (detailOnly ? onClose?.() : setEditor(null)),
+  });
   const filtered = sortEvents(
     events.filter(
       (event) =>
@@ -141,15 +184,12 @@ export function EventsPanel({
     ),
   );
   const preview = compactPreview && !showAll && !timeline;
+  const ordered = orderEventsForList(filtered, today);
   const visible = preview
     ? notesOnly
       ? filtered.slice(0, 3)
-      : // The nearest three upcoming events, still shown newest first.
-        filtered
-          .filter((event) => event.date >= today)
-          .reverse()
-          .slice(0, 3)
-          .reverse()
+      : // The nearest three upcoming events, the next one first.
+        ordered.upcoming.slice(0, 3)
     : filtered;
   const patch = (change: Partial<Draft>) =>
     setEditor((current) =>
@@ -240,8 +280,9 @@ export function EventsPanel({
                   ? `${event.date}T${event.time}`
                   : event.date
               }
+              title={formatDate(event.date)}
             >
-              {formatDate(event.date)}
+              {relativeDate(event.date, today)}
               {!notesOnly && event.time ? ` · ${event.time}` : ""}
             </time>
           </button>
@@ -273,6 +314,9 @@ export function EventsPanel({
                 </button>
               </>
             ) : null}
+            {notesOnly && event.note && !isExpanded && (
+              <span className="note-preview">{notePreview(event.note)}</span>
+            )}
           </div>
           {!notesOnly && (
             <span className="category" data-category={event.category}>
@@ -320,13 +364,14 @@ export function EventsPanel({
 
   const addButton = (
     <button
-      className="button"
+      className="button add-button"
       disabled={busy || projects.length === 0}
       aria-label={notesOnly ? "Add note" : "Add event"}
-      title={notesOnly ? "Add note" : "Add event"}
+      title={notesOnly ? "Add note (N)" : "Add event (N)"}
       onClick={() => openNewItem(itemKind, projectId)}
     >
       <Plus size={16} aria-hidden="true" />
+      <span className="button-label">{notesOnly ? "Note" : "Event"}</span>
     </button>
   );
   return (
@@ -423,7 +468,7 @@ export function EventsPanel({
         </>
       )}
       {editor && !deleting && (
-        <form className="event-editor" onSubmit={save}>
+        <form ref={form} className="event-editor" onSubmit={save}>
           {!detailOnly && (
             <h3>
               {editor.original ? `Edit ${itemLabel}` : `New ${itemLabel}`}
@@ -630,8 +675,19 @@ export function EventsPanel({
                 {marker}
                 {past.map(renderEvent)}
               </>
-            ) : (
+            ) : notesOnly || preview ? (
               visible.map(renderEvent)
+            ) : (
+              // Upcoming first (next entry on top), then a divider, then the past.
+              <>
+                {ordered.upcoming.map(renderEvent)}
+                {ordered.past.length > 0 && (
+                  <li key="past-divider" className="today-marker past-divider">
+                    Past · before {formatDate(today)}
+                  </li>
+                )}
+                {ordered.past.map(renderEvent)}
+              </>
             )}
           </ul>
         </>

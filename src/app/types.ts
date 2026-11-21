@@ -24,6 +24,8 @@ export const navigationViews = [
 /** Props shared by the task and event panels. */
 export interface PanelShared {
   compactSections: boolean;
+  /** Task tables show the "Created" column. */
+  showCreated: boolean;
   projects: Project[];
   today: string;
   busy: boolean;
@@ -32,7 +34,7 @@ export interface PanelShared {
 }
 
 export interface Detail {
-  kind: "task" | "event" | "note";
+  kind: "task" | "event" | "note" | "project";
   id: string;
   creating: boolean;
   projectId?: string;
@@ -41,11 +43,15 @@ export interface Detail {
   prefill?: string;
 }
 
-/** Reads the open task/event/note editor from the URL hash. */
+/** Reads the open task/event/note editor (or the new-project page) from the URL hash. */
 export function readDetail(): Detail | null {
   const params = new URLSearchParams(window.location.hash.slice(1));
   const kind = params.get("detail");
-  return kind === "task" || kind === "event" || kind === "note"
+  if (kind === "project" && params.get("mode") !== "new") return null;
+  return kind === "task" ||
+    kind === "event" ||
+    kind === "note" ||
+    kind === "project"
     ? {
         kind,
         id: params.get("id") || "",

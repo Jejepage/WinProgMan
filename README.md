@@ -350,3 +350,22 @@ Prüfung: Typprüfung, 169 Unit-Tests, Webbuild, Gesamtlauf 50 Edge-Abläufe (ne
 ### Installer 0.13.0 – geprüft
 
 Quellcommit `92f6118`, PR #13 (Entwurf), allgemeine CI `44825876370` und Windows-CI `44825876399` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `8b3853b67f3381537f10b087acb98c94a53809490a7d3ea7d49ab16853440c30` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.13.0, SHA256 `55e8eca711884d91003fbb190e96051f8b34ecbefc4f679edea9ce132811dfa3`. Datei `src-tauri/target/windows-ci/0.13.0/92f6118/installer/Plan B_0.13.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld und Aufgaben neben der Projektliste; beide Sync-Rechner aktualisieren.
+
+## Usability-Überarbeitung – 21. November 2026
+
+Nach Durchsicht der Oberfläche auf Branch `claude/usability` umgesetzt; **keine Änderung an Datenmodell, Sicherungsformat oder Sync**. Benutzerentscheidungen: Oberfläche bleibt Englisch, Schnellerfassung von Tasks zusätzlich zur Detailseite, neue Projekte über eigene Seite, kommende Events aufsteigend oben.
+
+- **Navigation in der Adresse:** Jede Hauptansicht hat einen Hash (`#view=tasks`, `#project=<id>`, Modul `src/app/route.ts`). Zurück/Vor (Alt+←/→, Maustasten) wechseln zwischen Ansichten; Editoren legen einen markierten Verlaufseintrag an, Save/Cancel gehen per `history.back()` zur Liste samt Filtern zurück. Ohne Hash öffnet die App die zuletzt genutzte Ansicht (lokal `winprogman-last-view`).
+- **Editoren:** Strg+S speichert, Esc bricht ab und fragt nur bei Änderungen (`src/ui/useEditorShortcuts.ts`; Tasks, Events, Notes, Projektbearbeitung, neues Projekt). Detailseiten zeigen oben „← Liste/Projekt“ und den Projektnamen.
+- **Neues Projekt** über eigene Seite `#detail=project&mode=new` (`NewProjectEditor`: Name, Status, Topic, Owner, Beschreibung); erst „Create project“ speichert und öffnet die Projektseite. Links folgen auf der Projektseite (`project.saveWithLinks` setzt ein bestehendes Projekt voraus, daher bewusst nicht in einem Schritt). Das bisherige Inline-Formular ist entfernt.
+- **Beschriftete Buttons:** „+ Task/Event/Note/Project“; Dashboard „+ New ▾“ mit Project/Task/Event/Note. Flaggen-Tooltip erklärt Do next.
+- **Datum:** Listen zeigen `dd.mm.yy` sowie „Today/Tomorrow/Yesterday“ bzw. Wochentag innerhalb der nächsten Woche (Tooltip mit vollem Datum). Das native Datumsfeld folgt weiter der Browser-/Windows-Sprache. Outlook-Vorbelegung und Bericht nutzen ebenfalls Punkte.
+- **Events:** Liste mit kommenden Einträgen aufsteigend (nächster zuerst, ohne Uhrzeit vor Uhrzeit), Trenner „Past“, danach Vergangenes absteigend. Timeline unverändert. Dashboard und Projektvorschau zeigen die nächsten Termine aufsteigend.
+- **Tasks:** Projektfilter (globale Liste), sortierbare Spalten (Task, Project, Due date, Created; dritter Klick setzt zurück), Schalter „Group by due date“ (Overdue/Today/Next 7 days/Later/No due date, lokal `winprogman-task-grouping`), Schnellerfassung „Add task … (Enter)“ oben in jeder Aufgabenliste; Settings → Appearance blendet die Spalte „Created“ aus (`winprogman-task-created`).
+- **Notes:** Liste zeigt die ersten Zeilen als Klartextvorschau.
+- **Suche:** Ergebnisse zeigen Event-Datum bzw. Fälligkeit; Befehl „Show keyboard shortcuts“.
+- **Dashboard:** „Do next“ und neu „Overdue“ als erste Blöcke unter den Kennzahlen, darunter Important projects und Projects with open work in voller Breite.
+- **Tastenkürzel:** `N` neues Element der aktuellen Ansicht (auf Projektseite ein Task), `1`–`6` Ansichten, `?` Übersicht. In Textfeldern, Editoren und Settings wirken Einzeltasten nicht.
+- Brainstorm/Editor zeigt beim Laden einen Platzhalter statt Text.
+
+Prüfung: Typprüfung, 175 Unit-Tests (neu Datumsgrenzen, Fälligkeitsgruppen, Event-Reihenfolge, Hash-Routen, Notizvorschau), Webbuild und Gesamtlauf 50 Edge-Abläufe erfolgreich. Angepasste Tests: Projektanlage über „+ Project“ bzw. Dashboard-Menü „New → Project“, Reload behält die aktuelle Ansicht, Outlook-Vorbelegung mit Punkt-Datum (Markdown-escaped). Browserablauf im Entwicklungsserver: Neu-Menü → Projekt mit Strg+S, Schnellerfassung, Esc mit/ohne Änderungen, Zurück/Vor, Gruppierung/Sortierung, Event-Reihenfolge, Notizvorschau, Tastenkürzel; Split Compact und schmales Layout gesichtet.

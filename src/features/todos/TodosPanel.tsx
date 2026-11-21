@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
-import { Fragment, useState } from "react";
-import { Flag, Plus } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Flag, Plus } from "lucide-react";
+import { useEditorShortcuts } from "../../ui/useEditorShortcuts";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
@@ -10,12 +11,41 @@ import {
   type Todo,
 } from "../../domain/types";
 import {
+  dueGroup,
   formatDate,
   formatTimestampDate,
   matchesSearch,
   overdue,
+  relativeDate,
   sortTodos,
+  type DueGroup,
 } from "../../domain/queries";
+
+type SortKey = "title" | "project" | "due" | "created";
+const groupLabels: Record<DueGroup | "completed", string> = {
+  overdue: "Overdue",
+  today: "Today",
+  week: "Next 7 days",
+  later: "Later",
+  none: "No due date",
+  completed: "Completed",
+};
+const groupOrder: (DueGroup | "completed")[] = [
+  "overdue",
+  "today",
+  "week",
+  "later",
+  "none",
+  "completed",
+];
+const groupingKey = "winprogman-task-grouping";
+function readGrouping() {
+  try {
+    return localStorage.getItem(groupingKey) === "due";
+  } catch {
+    return false;
+  }
+}
 interface Props {
   initialTodo?: Todo;
   initialProjectId?: string;
@@ -31,6 +61,10 @@ interface Props {
   headerTarget?: HTMLElement | null;
   search?: string;
   onSearchChange?: (value: string) => void;
+  /** Project filter of the global task list ("" = all projects). */
+  projectFilter?: string;
+  onProjectFilterChange?: (value: string) => void;
+  showCreated?: boolean;
   today: string;
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
@@ -50,6 +84,9 @@ export function TodosPanel({
   headerTarget,
   search = "",
   onSearchChange,
+  projectFilter = "",
+  onProjectFilterChange,
+  showCreated = true,
   today,
   busy,
   onChange,
@@ -57,9 +94,27 @@ export function TodosPanel({
 }: Props) {
   // Completed tasks stay hidden until "Show completed" is switched on.
   const [showCompleted, setShowCompleted] = useState(false);
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean } | null>(
+    null,
+  );
+  const [grouped, setGrouped] = useState(readGrouping);
+  useEffect(() => {
+    try {
+      localStorage.setItem(groupingKey, grouped ? "due" : "none");
+    } catch {
+      /* Session only. */
+    }
+  }, [grouped]);
+  const activeProjectFilter =
+    !projectId && projects.some((p) => p.id === projectFilter)
+      ? projectFilter
+      : "";
+  const projectName = (id: string) =>
+    projects.find((project) => project.id === id)?.name || "";
   const visible = todos.filter(
     (todo) =>
       (showCompleted || !todo.completed) &&
+      (!activeProjectFilter || todo.projectId === activeProjectFilter) &&
       matchesSearch(
         search,
         todo.title,
@@ -68,6 +123,94 @@ export function TodosPanel({
   );
   const editing = initialTodo || null;
   const sortedVisible = sortTodos(visible);
+  if (sort) {
+    const value = (todo: Todo) =>
+      sort.key === "title"
+        ? todo.title
+        : sort.key === "project"
+          ? projectName(todo.projectId)
+          : sort.key === "due"
+            ? todo.dueDate || "9999"
+            : todo.createdAt;
+    // Stable sort: equal values keep the default order.
+    sortedVisible.sort(
+      (a, b) =>
+        Number(a.completed) - Number(b.completed) ||
+        value(a).localeCompare(value(b), "de", { sensitivity: "base" }) *
+          (sort.desc ? -1 : 1),
+    );
+  }
+  const groupOf = (todo: Todo): DueGroup | "completed" =>
+    todo.completed ? "completed" : dueGroup(todo, today);
+  if (grouped)
+    sortedVisible.sort(
+      (a, b) => groupOrder.indexOf(groupOf(a)) - groupOrder.indexOf(groupOf(b)),
+    );
+  const sectionOf = (todo: Todo) =>
+    grouped
+      ? groupLabels[groupOf(todo)]
+      : compactSections
+        ? todo.completed
+          ? "Completed"
+          : todo.doNext
+            ? "Do next"
+            : "Open tasks"
+        : "";
+  const sortHeader = (key: SortKey, label: string) => {
+    const active = sort?.key === key;
+    return (
+      <th
+        scope="col"
+        aria-sort={
+          active ? (sort.desc ? "descending" : "ascending") : undefined
+        }
+      >
+        <button
+          type="button"
+          className="sort-button"
+          title={`Sort by ${label.toLowerCase()}`}
+          onClick={() =>
+            setSort(
+              !active
+                ? { key, desc: false }
+                : sort.desc
+                  ? null
+                  : { key, desc: true },
+            )
+          }
+        >
+          {label}
+          {active &&
+            (sort.desc ? (
+              <ArrowDown size={12} aria-hidden="true" />
+            ) : (
+              <ArrowUp size={12} aria-hidden="true" />
+            ))}
+        </button>
+      </th>
+    );
+  };
+  // Quick capture: Enter stores a task right away; details can follow later.
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickProject, setQuickProject] = useState("");
+  const quickTarget =
+    projectId ||
+    activeProjectFilter ||
+    (projects.some((p) => p.id === quickProject) ? quickProject : "") ||
+    projects[0]?.id ||
+    "";
+  async function quickAdd(event: React.FormEvent) {
+    event.preventDefault();
+    const text = quickTitle.trim();
+    if (!text || !quickTarget || busy) return;
+    const value: Todo = {
+      ...metadata(),
+      projectId: quickTarget,
+      title: text,
+      completed: false,
+    };
+    if (await onChange({ type: "todo.save", value })) setQuickTitle("");
+  }
   const [adding, setAdding] = useState(detailOnly || Boolean(initialTodo));
   const [title, setTitle] = useState(initialTodo?.title || "");
   const [date, setDate] = useState(initialTodo?.dueDate || "");
@@ -82,6 +225,17 @@ export function TodosPanel({
   const currentTodo = editing
     ? todos.find((todo) => todo.id === editing.id) || editing
     : null;
+  const form = useRef<HTMLFormElement>(null);
+  const initialOwner = useRef(owner);
+  useEditorShortcuts(form, {
+    active: adding && detailOnly,
+    isDirty: () =>
+      title !== (initialTodo?.title || "") ||
+      date !== (initialTodo?.dueDate || "") ||
+      doNext !== Boolean(initialTodo?.doNext) ||
+      owner !== initialOwner.current,
+    onCancel: () => (detailOnly ? onClose?.() : setAdding(false)),
+  });
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!owner) return;
@@ -104,13 +258,14 @@ export function TodosPanel({
   }
   const addButton = (
     <button
-      className="button"
+      className="button add-button"
       disabled={busy || !projects.length}
       aria-label="Add task"
-      title="Add task"
+      title="Add task (N)"
       onClick={() => openNewItem("task", projectId)}
     >
       <Plus size={16} aria-hidden="true" />
+      <span className="button-label">Task</span>
     </button>
   );
   function toggle(todo: Todo) {
@@ -149,6 +304,36 @@ export function TodosPanel({
               />
               <span>Show completed</span>
             </label>
+            <label className="show-completed-toggle">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={grouped}
+                onChange={(event) => setGrouped(event.target.checked)}
+              />
+              <span>Group by due date</span>
+            </label>
+            {!projectId && onProjectFilterChange && (
+              <label className="field task-project-filter">
+                <span className="sr-only">Project</span>
+                <select
+                  aria-label="Filter by project"
+                  value={activeProjectFilter}
+                  onChange={(event) =>
+                    onProjectFilterChange(event.target.value)
+                  }
+                >
+                  <option value="">All projects</option>
+                  {[...projects]
+                    .sort((a, b) => a.name.localeCompare(b.name, "de"))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
             {!showHeading && (
               <span className="muted filter-count">
                 {search.trim()
@@ -167,7 +352,7 @@ export function TodosPanel({
         </>
       )}
       {adding && (
-        <form className="editor" onSubmit={save}>
+        <form ref={form} className="editor" onSubmit={save}>
           <div className="form-grid">
             <label className="field">
               Title
@@ -243,6 +428,42 @@ export function TodosPanel({
           </div>
         </form>
       )}
+      {!detailOnly && projects.length > 0 && (
+        <form className="quick-add" onSubmit={quickAdd}>
+          <Plus size={15} aria-hidden="true" />
+          <input
+            aria-label="Quick add task"
+            placeholder="Add task … (Enter)"
+            title={
+              projectId || activeProjectFilter
+                ? undefined
+                : "Enter saves the task to the project selected on the right"
+            }
+            value={quickTitle}
+            onChange={(event) => setQuickTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && quickTitle) {
+                event.preventDefault();
+                setQuickTitle("");
+              }
+            }}
+          />
+          {!projectId && !activeProjectFilter && (
+            <select
+              aria-label="Project for the new task"
+              value={quickTarget}
+              disabled={busy}
+              onChange={(event) => setQuickProject(event.target.value)}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </form>
+      )}
       {!detailOnly && (
         <>
           {!visible.length && (
@@ -275,7 +496,7 @@ export function TodosPanel({
                 <col className="task-title-col" />
                 {!projectId && <col className="task-project-col" />}
                 <col className="task-date-col" />
-                <col className="task-created-col" />
+                {showCreated && <col className="task-created-col" />}
               </colgroup>
               <thead>
                 <tr>
@@ -285,30 +506,29 @@ export function TodosPanel({
                   <th scope="col">
                     <span className="sr-only">Do next</span>
                   </th>
-                  <th scope="col">Task</th>
-                  {!projectId && <th scope="col">Project</th>}
-                  <th scope="col">Due date</th>
-                  <th scope="col">Created</th>
+                  {sortHeader("title", "Task")}
+                  {!projectId && sortHeader("project", "Project")}
+                  {sortHeader("due", "Due date")}
+                  {showCreated && sortHeader("created", "Created")}
                 </tr>
               </thead>
               <tbody>
                 {sortedVisible.map((todo, index) => (
                   <Fragment key={todo.id}>
-                    {compactSections &&
+                    {sectionOf(todo) &&
                       (index === 0 ||
-                        todo.completed !== sortedVisible[index - 1].completed ||
-                        (!todo.completed &&
-                          Boolean(todo.doNext) !==
-                            Boolean(sortedVisible[index - 1].doNext))) && (
+                        sectionOf(todo) !==
+                          sectionOf(sortedVisible[index - 1])) && (
                         <tr
-                          className={`split-only task-section ${!todo.completed && todo.doNext ? "next-section" : ""}`}
+                          className={`task-section ${grouped ? "due-section" : "split-only"} ${grouped ? `due-${groupOf(todo)}` : !todo.completed && todo.doNext ? "next-section" : ""}`}
                         >
-                          <th colSpan={projectId ? 5 : 6} scope="colgroup">
-                            {todo.completed
-                              ? "Completed"
-                              : todo.doNext
-                                ? "Do next"
-                                : "Open tasks"}
+                          <th
+                            colSpan={
+                              (projectId ? 4 : 5) + (showCreated ? 1 : 0)
+                            }
+                            scope="colgroup"
+                          >
+                            {sectionOf(todo)}
                           </th>
                         </tr>
                       )}
@@ -334,7 +554,9 @@ export function TodosPanel({
                           title={
                             todo.completed
                               ? "Reopen task to mark as Do next"
-                              : "Do next"
+                              : todo.doNext
+                                ? "Remove Do next mark"
+                                : "Mark as Do next (shown on the dashboard)"
                           }
                           disabled={busy || todo.completed}
                           onClick={() =>
@@ -382,15 +604,18 @@ export function TodosPanel({
                         {todo.dueDate ? (
                           <span
                             className={overdue(todo, today) ? "overdue" : ""}
+                            title={formatDate(todo.dueDate)}
                           >
                             {overdue(todo, today) ? "Overdue · " : ""}
-                            {formatDate(todo.dueDate)}
+                            {relativeDate(todo.dueDate, today)}
                           </span>
                         ) : (
                           <span className="muted">—</span>
                         )}
                       </td>
-                      <td>{formatTimestampDate(todo.createdAt)}</td>
+                      {showCreated && (
+                        <td>{formatTimestampDate(todo.createdAt)}</td>
+                      )}
                     </tr>
                   </Fragment>
                 ))}

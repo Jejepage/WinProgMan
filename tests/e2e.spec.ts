@@ -28,7 +28,13 @@ async function saveEditor(page: Page, detail: Page) {
 }
 
 async function createProject(page: Page, name = "Browserprojekt") {
-  await page.getByRole("button", { name: "New project", exact: true }).click();
+  // Projects has "+ Project"; the dashboard offers it in the New menu.
+  const direct = page.getByRole("button", { name: "New project", exact: true });
+  if (await direct.isVisible()) await direct.click();
+  else {
+    await page.getByRole("button", { name: "New", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Project", exact: true }).click();
+  }
   await page.getByLabel("Project name", { exact: true }).fill(name);
   await page
     .getByRole("button", { name: "Create project", exact: true })
@@ -543,6 +549,14 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
     "Persönlich",
   );
   await page.reload();
+  // Reload keeps the current view (Projects after the import).
+  await expect(
+    page.getByRole("heading", { name: "Projects", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Dashboard", exact: true })
+    .click();
   await expect(page.locator(".overview-todo")).toHaveCount(8);
   await expect(
     page.locator(".overview-todo").filter({ hasText: "Offene Aufgabe 7" }),

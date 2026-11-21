@@ -8,6 +8,8 @@ export interface SearchResult {
   /** Project name or short context. */
   context: string;
   snippet: string;
+  /** Event date or task due date (YYYY-MM-DD), shown next to the result. */
+  date?: string;
   score: number;
 }
 
@@ -57,6 +59,7 @@ export function searchAll(
     context: string,
     body: string,
     extra = "",
+    date?: string,
   ) => {
     const head = fold(`${title} ${extra}`);
     const all = fold(`${title} ${extra} ${context} ${body}`);
@@ -68,6 +71,7 @@ export function searchAll(
       title,
       context,
       snippet: inTitle === tokens.length || !body ? "" : snippet(body, tokens),
+      ...(date ? { date } : {}),
       score:
         inTitle * 10 +
         (fold(title).startsWith(tokens[0]) ? 5 : 0) +
@@ -84,7 +88,15 @@ export function searchAll(
       `#${project.number} ${project.number}`,
     );
   for (const todo of data.todos)
-    consider("task", todo.id, todo.title, names.get(todo.projectId) ?? "", "");
+    consider(
+      "task",
+      todo.id,
+      todo.title,
+      names.get(todo.projectId) ?? "",
+      "",
+      "",
+      todo.dueDate,
+    );
   for (const event of data.events)
     consider(
       event.category === "Notiz" ? "note" : "event",
@@ -92,6 +104,8 @@ export function searchAll(
       event.title,
       names.get(event.projectId) ?? "",
       event.note ?? "",
+      "",
+      event.date,
     );
   if (data.brainstorm.text.trim())
     consider(

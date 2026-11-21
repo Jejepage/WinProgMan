@@ -1,6 +1,7 @@
 import { EventsPanel } from "../../features/events/EventsPanel";
 import { TodosPanel } from "../../features/todos/TodosPanel";
 import { readPrefill } from "../../features/outlook/pendingPrefill";
+import { NewProjectEditor } from "../../features/projects/NewProjectEditor";
 import type { AppData } from "../../domain/types";
 import type { Detail, PanelShared } from "../types";
 
@@ -12,7 +13,9 @@ export function DetailPage({
   error,
   loading,
   shared,
+  backLabel,
   onClose,
+  onProjectCreated,
 }: {
   detail: Detail;
   data: AppData;
@@ -20,7 +23,10 @@ export function DetailPage({
   error: string;
   loading: boolean;
   shared: PanelShared;
+  /** Name of the list or project the editor returns to. */
+  backLabel: string;
   onClose: () => void;
+  onProjectCreated: (id: string) => void;
 }) {
   const todo = data.todos.find((item) => item.id === detail.id);
   const event = data.events.find((item) => item.id === detail.id);
@@ -38,13 +44,29 @@ export function DetailPage({
   const detailKey = detail.creating
     ? `new-${detail.kind}-${initialProjectId || "global"}-${detail.prefill || ""}`
     : detail.id;
-  const unavailable = detail.creating ? !data.projects.length : !item;
+  const unavailable =
+    detail.kind === "project"
+      ? false
+      : detail.creating
+        ? !data.projects.length
+        : !item;
+  const itemProject = data.projects.find(
+    (p) => p.id === (item?.projectId || initialProjectId),
+  );
   return (
     <section className="detail-page" hidden={hidden}>
+      <button className="text-button breadcrumb" onClick={onClose}>
+        ← {backLabel}
+      </button>
       <div className="page-heading">
-        <h1>
-          {`${detail.creating ? "New" : "Edit"} ${detail.kind === "task" ? "task" : isNote ? "note" : "event"}`}
-        </h1>
+        <div>
+          <h1>
+            {`${detail.creating ? "New" : "Edit"} ${detail.kind === "project" ? "project" : detail.kind === "task" ? "task" : isNote ? "note" : "event"}`}
+          </h1>
+          {itemProject && detail.kind !== "project" && (
+            <p className="detail-context">{itemProject.name}</p>
+          )}
+        </div>
       </div>
       {error && (
         <p role="alert" className="panel">
@@ -64,6 +86,15 @@ export function DetailPage({
             Back to list
           </button>
         </section>
+      ) : detail.kind === "project" ? (
+        <NewProjectEditor
+          projects={data.projects}
+          categories={data.projectCategories}
+          busy={shared.busy}
+          onChange={shared.onChange}
+          onCreated={onProjectCreated}
+          onCancel={onClose}
+        />
       ) : detail.kind === "task" ? (
         <TodosPanel
           key={detailKey}
