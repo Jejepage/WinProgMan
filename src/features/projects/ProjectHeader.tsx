@@ -16,6 +16,13 @@ import { confirmAction } from "../../platform/desktop";
 import { ProjectLink } from "../../ui/ProjectLink";
 import { StatusLabel } from "../../ui/components";
 import { ownerNames } from "../../domain/queries";
+import {
+  canonicalOwner,
+  projectPeriod,
+  type QuickProjectFields,
+} from "../../domain/projectFields";
+import { QuickDateField } from "../../ui/QuickDateField";
+import { OwnerQuickSelect, StatusQuickSelect } from "./QuickFields";
 import { OwnerSelect } from "./OwnerSelect";
 interface Props {
   project: Project;
@@ -25,6 +32,8 @@ interface Props {
   busy: boolean;
   onChange: (change: DomainChange) => Promise<boolean>;
   onDelete: () => Promise<void>;
+  /** Status/owner chosen directly outside the editor. */
+  onQuickFields: (fields: QuickProjectFields) => void;
 }
 export function ProjectHeader({
   project,
@@ -34,6 +43,7 @@ export function ProjectHeader({
   busy,
   onChange,
   onDelete,
+  onQuickFields,
 }: Props) {
   const editorId = useId();
   const [editing, setEditing] = useState(false);
@@ -44,6 +54,8 @@ export function ProjectHeader({
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [categoryId, setCategoryId] = useState(project.categoryId || "");
   const [owner, setOwner] = useState(project.owner || "");
+  const [startDate, setStartDate] = useState(project.startDate || "");
+  const [endDate, setEndDate] = useState(project.endDate || "");
   const [linkEditor, setLinkEditor] = useState(false);
   const [link, setLink] = useState<Link | null>(null);
   const [label, setLabel] = useState("");
@@ -61,6 +73,8 @@ export function ProjectHeader({
       status !== project.status ||
       categoryId !== (project.categoryId || "") ||
       owner !== (project.owner || "") ||
+      startDate !== (project.startDate || "") ||
+      endDate !== (project.endDate || "") ||
       JSON.stringify(draftLinks) !== JSON.stringify(links),
     onCancel: () => {
       setEditing(false);
@@ -103,13 +117,13 @@ export function ProjectHeader({
     if (categoryId) value.categoryId = categoryId;
     else delete value.categoryId;
     // Reuse the spelling of a known name so the list stays free of duplicates.
-    const ownerName =
-      ownerNames(projects).find(
-        (n) =>
-          n.toLocaleLowerCase("de") === owner.trim().toLocaleLowerCase("de"),
-      ) || owner.trim();
+    const ownerName = canonicalOwner(projects, owner);
     if (ownerName) value.owner = ownerName;
     else delete value.owner;
+    if (startDate) value.startDate = startDate;
+    else delete value.startDate;
+    if (endDate) value.endDate = endDate;
+    else delete value.endDate;
     if (
       await onChange({
         type: "project.saveWithLinks",
@@ -199,19 +213,65 @@ export function ProjectHeader({
               <Star size={18} aria-hidden="true" />
             </button>
           </div>
-          <p className="muted">
-            <StatusLabel data-status={project.status}>
-              {projectStatusLabels[project.status]}
-            </StatusLabel>{" "}
-            ·{" "}
-            {projectCategories.find(
-              (category) => category.id === project.categoryId,
-            )?.name || "No topic"}{" "}
-            ·{" "}
-            <span className="project-owner">
-              Owner: {project.owner || "not assigned"}
+          <div className="muted project-quick-meta">
+            {editing ? (
+              <StatusLabel data-status={project.status}>
+                {projectStatusLabels[project.status]}
+              </StatusLabel>
+            ) : (
+              <StatusQuickSelect
+                value={project.status}
+                projectName={project.name}
+                disabled={busy}
+                onSelect={(status) => onQuickFields({ status })}
+              />
+            )}
+            <span>
+              {projectCategories.find(
+                (category) => category.id === project.categoryId,
+              )?.name || "No topic"}
             </span>
-          </p>
+            <span className="project-owner">
+              Owner:{" "}
+              {editing ? (
+                project.owner || "not assigned"
+              ) : (
+                <OwnerQuickSelect
+                  value={project.owner || ""}
+                  names={ownerNames(projects)}
+                  projectName={project.name}
+                  disabled={busy}
+                  onSelect={(owner) => onQuickFields({ owner })}
+                />
+              )}
+            </span>
+            {editing ? (
+              projectPeriod(project) && <span>{projectPeriod(project)}</span>
+            ) : (
+              <>
+                <span className="project-date">
+                  Start:{" "}
+                  <QuickDateField
+                    value={project.startDate}
+                    label={`Start date of ${project.name}`}
+                    emptyTitle="Set start date"
+                    disabled={busy}
+                    onSelect={(startDate) => onQuickFields({ startDate })}
+                  />
+                </span>
+                <span className="project-date">
+                  End:{" "}
+                  <QuickDateField
+                    value={project.endDate}
+                    label={`End date of ${project.name}`}
+                    emptyTitle="Set end date"
+                    disabled={busy}
+                    onSelect={(endDate) => onQuickFields({ endDate })}
+                  />
+                </span>
+              </>
+            )}
+          </div>
           <p className="description">
             {project.description || "Add a short project description."}
           </p>
@@ -231,6 +291,8 @@ export function ProjectHeader({
             setStatus(project.status);
             setCategoryId(project.categoryId || "");
             setOwner(project.owner || "");
+            setStartDate(project.startDate || "");
+            setEndDate(project.endDate || "");
             setDraftLinks(links.map((item) => ({ ...item })));
             setLinkEditor(false);
             setMessage("");
@@ -307,6 +369,22 @@ export function ProjectHeader({
                 onChange={setOwner}
               />
             </div>
+            <label className="field">
+              Start date
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              End date
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </label>
           </div>
           <label className="field">
             Name

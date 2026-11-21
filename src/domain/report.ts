@@ -1,6 +1,7 @@
 import { formatDate, groupProjects, sortTodos } from "./queries";
 import type { AppData, Project } from "./types";
 import { projectNumberLabel, statusLabel } from "../ui/labels";
+import { projectPeriod } from "./projectFields";
 
 const escapeInline = (text: string) =>
   text.replace(/\r?\n/g, " ").replace(/([\\`*_[\]|<>])/g, "\\$1");
@@ -23,7 +24,7 @@ export function projectReport(
       lines.push(
         `### ${projectNumberLabel(project.number)} ${escapeInline(project.name)}${project.important ? " ★" : ""}`,
         "",
-        `Status: ${statusLabel(project.status)} · Owner: ${project.owner ? escapeInline(project.owner) : "not assigned"}`,
+        `Status: ${statusLabel(project.status)} · Owner: ${project.owner ? escapeInline(project.owner) : "not assigned"}${projectPeriod(project) ? ` · ${projectPeriod(project)}` : ""}`,
         "",
       );
       if (project.description.trim())

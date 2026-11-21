@@ -4,11 +4,13 @@ import {
   projectStatuses,
   type DomainChange,
   type ExportEnvelope,
+  type Project,
   type ProjectStatus,
   type Todo,
 } from "../domain/types";
 import {
   activeProjects,
+  formatDate,
   localToday,
   matchesOwner,
   matchesSearch,
@@ -32,7 +34,11 @@ import type { SearchResult } from "../domain/search";
 import { ownConflicts } from "../sync/conflicts";
 import { deviceId } from "../sync/useSync";
 import { openItem, openNewItem, type ItemKind } from "../ui/itemNavigation";
-import { errorLabel } from "../ui/labels";
+import { errorLabel, statusLabel } from "../ui/labels";
+import {
+  withQuickFields,
+  type QuickProjectFields,
+} from "../domain/projectFields";
 import { projectReport } from "../domain/report";
 import { confirmAction, saveBackup, saveTextFile } from "../platform/desktop";
 import { ImportPreview } from "./ImportPreview";
@@ -113,7 +119,10 @@ export function App() {
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [undo, setUndo] = useState<{ id: string; label: string } | null>(null);
+  const [undo, setUndo] = useState<{
+    label: string;
+    revert: DomainChange;
+  } | null>(null);
   const prefs = usePreferences();
   const brainstormPanel = useRef<BrainstormPanelHandle>(null);
   const [brainstormOpened, setBrainstormOpened] = useState(
@@ -342,13 +351,43 @@ export function App() {
       value.type === "quicklink.delete" ||
       value.type === "category.delete"
     ) {
-      setUndo({ id: value.id, label: "Moved to trash." });
+      setUndo({
+        label: "Moved to trash.",
+        revert: { type: "trash.restore", id: value.id },
+      });
       setNotice("");
     } else if (value.type === "trash.restore") {
       setUndo(null);
       setNotice("Restored.");
     }
     return true;
+  };
+  /** Status/owner changed directly in a list; stored at once with Undo. */
+  const editProjectFields = async (
+    project: Project,
+    fields: QuickProjectFields,
+  ) => {
+    const next = withQuickFields(project, fields, data.projects);
+    if (!next || !(await change({ type: "project.save", value: next }))) return;
+    const dateLabel = (name: string, value?: string) =>
+      `${name} ${value ? `set to ${formatDate(value)}` : "removed"}`;
+    const label = `${next.name}: ${
+      fields.status !== undefined
+        ? `status set to ${statusLabel(next.status)}`
+        : fields.owner !== undefined
+          ? `owner ${next.owner ? `set to ${next.owner}` : "removed"}`
+          : fields.startDate !== undefined
+            ? dateLabel("start date", next.startDate)
+            : dateLabel("end date", next.endDate)
+    }.`;
+    setNotice("");
+    setUndo({
+      label,
+      revert: {
+        type: "project.save",
+        value: { ...project, updatedAt: new Date().toISOString() },
+      },
+    });
   };
   const completeTodo = (todo: Todo) => {
     const { doNext: _marker, ...rest } = todo;
@@ -542,7 +581,7 @@ export function App() {
               className="button secondary"
               disabled={busy}
               onClick={() =>
-                void change({ type: "trash.restore", id: undo.id })
+                void change(undo.revert).then((ok) => ok && setUndo(null))
               }
             >
               Undo
@@ -694,6 +733,7 @@ export function App() {
                   onSearch={setProjectSearch}
                   projects={filteredProjects}
                   onProject={goProject}
+                  onProjectFields={editProjectFields}
                   ownerFilter={effectiveOwnerFilter}
                   onOwnerFilter={setOwnerFilter}
                   importantOnly={importantOnly}
@@ -758,6 +798,7 @@ export function App() {
                   shared={shared}
                   onChange={change}
                   onDelete={deleteProject}
+                  onProjectFields={editProjectFields}
                   onBack={() => setView("Projects")}
                 />
               )}

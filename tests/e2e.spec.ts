@@ -425,9 +425,10 @@ test("Projektstatus und Kategorien bleiben erhalten; Überblick zeigt alle offen
   await page
     .getByRole("button", { name: "Create project", exact: true })
     .click();
-  await expect(page.locator(".project-header")).toContainText(
-    "Planned · Privat",
-  );
+  await expect(
+    page.locator(".project-quick-meta select[data-status]"),
+  ).toHaveValue("Geplant");
+  await expect(page.locator(".project-quick-meta")).toContainText("Privat");
   await page.getByRole("button", { name: "Edit project", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Status", exact: true })

@@ -373,3 +373,15 @@ Prüfung: Typprüfung, 175 Unit-Tests (neu Datumsgrenzen, Fälligkeitsgruppen, E
 ### Installer 0.14.0 – geprüft
 
 Quellcommit `d72de6a` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44894203362` und Windows-CI `44894203351` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `6fb96e2152184bf352bec2b73503234a41cfc251cfb3a02d528434145aa452fc` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.14.0, SHA256 `36b12eb03aa2c6d2c50e494dd7bdddf885fdddf80217854be9d3f2fd7a8fa92e`. Datei `src-tauri/target/windows-ci/0.14.0/d72de6a/installer/Plan B_0.14.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Abnahme der Usability-Überarbeitung steht aus. Keine Datenformatänderung, Sync mit 0.13.0 kompatibel.
+
+## Direkte Bearbeitung und Projektzeitraum – 21. November 2026
+
+Nach Benutzerauftrag auf Branch `claude/usability` (nach Installer 0.14.0):
+
+- **Status und Owner direkt ändern** in der Projektliste und im Projektkopf (Dropdowns, sofort gespeichert, Meldung mit „Undo“; Owner „New person…“ als Textfeld, Enter/Verlassen speichert, Esc verwirft). Topic bleibt bewusst nur über „Edit project“ änderbar. Ein Klick in die Felder wählt die Listenzeile nicht aus. Während „Edit project“ zeigt der Kopf wieder reinen Text.
+- **Fälligkeitsdatum direkt ändern** in allen Aufgabenlisten: Klick auf das Datum öffnet ein Datumsfeld, Enter/Verlassen speichert, Esc verwirft, leeres Feld entfernt das Datum. Gemeinsames Bauteil `src/ui/QuickDateField.tsx`.
+- **Neue optionale Projektfelder `startDate` und `endDate`** (`YYYY-MM-DD`). Bearbeitbar in „Edit project“, auf der Seite „New project“, direkt im Projektkopf und in der Projektliste. Spalten Start/End in der Liste per Schalter „Dates“ ein-/ausblendbar (lokal `winprogman-project-dates`, standardmäßig aus). Bericht nennt den Zeitraum. Keine Reihenfolgeprüfung Start ≤ End.
+- **Datenformat:** Sicherungsformat bleibt 6 und erlaubt die beiden Felder zusätzlich; Format 5 lehnt sie ab. **Ältere App-Versionen (bis 0.14.0) lehnen Daten mit Start-/Enddatum beim Import und Sync ab → beide Sync-Rechner aktualisieren**, bevor Daten gesetzt werden. Undo für direkte Projektänderungen speichert den vorherigen Datensatz erneut.
+- Reine Logik in `src/domain/projectFields.ts` (`canonicalOwner`, `withQuickFields`, `projectPeriod`), UI in `src/features/projects/QuickFields.tsx`.
+
+Prüfung: Typprüfung, 178 Unit-Tests (neu: Owner-Schreibweise, Datumsfelder setzen/entfernen, Validierung Start/End inkl. ungültiger Daten und Format 5), Webbuild, vollständiger Edge-Lauf 52 Abläufe (neu `tests/quick-edit.e2e.spec.ts`; Owner- und Projektstatus-Test an Dropdowns angepasst). Browser: Liste mit Datumsspalten, Datumseingabe per Tastatur, Projektkopf gesichtet. Noch kein Installer für diesen Stand.

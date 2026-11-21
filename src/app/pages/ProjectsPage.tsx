@@ -2,17 +2,33 @@ import { useEffect, useState } from "react";
 import { FileText, Star } from "lucide-react";
 import { TodosPanel } from "../../features/todos/TodosPanel";
 import type { PanelShared } from "../types";
-import { Card, SearchField, StatusLabel, Table } from "../../ui/components";
+import { Card, SearchField, Table } from "../../ui/components";
+import {
+  OwnerQuickSelect,
+  StatusQuickSelect,
+} from "../../features/projects/QuickFields";
+import type { QuickProjectFields } from "../../domain/projectFields";
+import { QuickDateField } from "../../ui/QuickDateField";
 import { groupProjects, ownerNames } from "../../domain/queries";
 import {
   projectStatuses,
   type AppData,
   type DomainChange,
+  type Project,
   type ProjectStatus,
 } from "../../domain/types";
 import { projectNumberLabel, statusLabel } from "../../ui/labels";
 
 const selectedKey = "winprogman-selected-project";
+const datesKey = "winprogman-project-dates";
+
+function readShowDates(): boolean {
+  try {
+    return localStorage.getItem(datesKey) === "show";
+  } catch {
+    return false;
+  }
+}
 
 function readSelected(): string {
   try {
@@ -34,6 +50,7 @@ export function ProjectsPage({
   onSearch,
   projects,
   onProject,
+  onProjectFields,
   importantOnly,
   onImportantOnly,
   onChange,
@@ -55,6 +72,8 @@ export function ProjectsPage({
   /** Projects after status, topic and text filters. */
   projects: AppData["projects"];
   onProject: (id: string) => void;
+  /** Status/owner chosen directly in the list. */
+  onProjectFields: (project: Project, fields: QuickProjectFields) => void;
   importantOnly: boolean;
   onImportantOnly: (value: boolean) => void;
   onChange: (change: DomainChange) => Promise<boolean>;
@@ -65,6 +84,16 @@ export function ProjectsPage({
   panel: PanelShared;
 }) {
   const groups = groupProjects(projects, data.projectCategories);
+  const owners = ownerNames(data.projects);
+  const [showDates, setShowDates] = useState(readShowDates);
+  useEffect(() => {
+    try {
+      localStorage.setItem(datesKey, showDates ? "show" : "hide");
+    } catch {
+      /* Session only. */
+    }
+  }, [showDates]);
+  const columns = showDates ? 8 : 6;
   const [selectedId, setSelectedId] = useState(readSelected);
   useEffect(() => {
     try {
@@ -139,6 +168,14 @@ export function ProjectsPage({
             ))}
           </select>
         </label>
+        <label className="dates-toggle" title="Show start and end dates">
+          <input
+            type="checkbox"
+            checked={showDates}
+            onChange={(e) => setShowDates(e.target.checked)}
+          />
+          Dates
+        </label>
         <SearchField
           label="Search projects"
           value={search}
@@ -173,13 +210,19 @@ export function ProjectsPage({
                   <th>Title</th>
                   <th className="col-fit">Owner</th>
                   <th className="col-fit">Status</th>
+                  {showDates && (
+                    <>
+                      <th className="col-fit">Start</th>
+                      <th className="col-fit">End</th>
+                    </>
+                  )}
                   <th className="col-fit">Open tasks</th>
                 </tr>
               </thead>
               {groups.map((group) => (
                 <tbody key={group.id} className="project-topic-group">
                   <tr className="topic-group-row">
-                    <th colSpan={6} scope="rowgroup">
+                    <th colSpan={columns} scope="rowgroup">
                       <h2 className="topic-group-heading">
                         {group.name}{" "}
                         <span className="count">{group.projects.length}</span>
@@ -244,13 +287,48 @@ export function ProjectsPage({
                         </button>
                       </td>
                       <td className="col-fit project-owner-cell">
-                        {p.owner || <span className="muted">—</span>}
+                        <OwnerQuickSelect
+                          value={p.owner || ""}
+                          names={owners}
+                          projectName={p.name}
+                          disabled={busy}
+                          onSelect={(owner) => onProjectFields(p, { owner })}
+                        />
                       </td>
                       <td className="col-fit">
-                        <StatusLabel data-status={p.status}>
-                          {statusLabel(p.status)}
-                        </StatusLabel>
+                        <StatusQuickSelect
+                          value={p.status}
+                          projectName={p.name}
+                          disabled={busy}
+                          onSelect={(status) => onProjectFields(p, { status })}
+                        />
                       </td>
+                      {showDates && (
+                        <>
+                          <td className="col-fit">
+                            <QuickDateField
+                              value={p.startDate}
+                              label={`Start date of ${p.name}`}
+                              emptyTitle="Set start date"
+                              disabled={busy}
+                              onSelect={(startDate) =>
+                                onProjectFields(p, { startDate })
+                              }
+                            />
+                          </td>
+                          <td className="col-fit">
+                            <QuickDateField
+                              value={p.endDate}
+                              label={`End date of ${p.name}`}
+                              emptyTitle="Set end date"
+                              disabled={busy}
+                              onSelect={(endDate) =>
+                                onProjectFields(p, { endDate })
+                              }
+                            />
+                          </td>
+                        </>
+                      )}
                       <td className="col-fit">
                         {
                           data.todos.filter(

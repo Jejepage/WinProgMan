@@ -4,7 +4,8 @@ import { ProjectHeader } from "../../features/projects/ProjectHeader";
 import { TodosPanel } from "../../features/todos/TodosPanel";
 import { projectNumberLabel } from "../../ui/labels";
 import { formatDate } from "../../domain/queries";
-import type { AppData, DomainChange } from "../../domain/types";
+import type { AppData, DomainChange, Project } from "../../domain/types";
+import type { QuickProjectFields } from "../../domain/projectFields";
 import type { PanelShared } from "../types";
 
 export function ProjectPage({
@@ -15,6 +16,7 @@ export function ProjectPage({
   shared,
   onChange,
   onDelete,
+  onProjectFields,
   onBack,
 }: {
   data: AppData;
@@ -24,6 +26,7 @@ export function ProjectPage({
   shared: PanelShared;
   onChange: (change: DomainChange) => Promise<boolean>;
   onDelete: () => Promise<void>;
+  onProjectFields: (project: Project, fields: QuickProjectFields) => void;
   onBack: () => void;
 }) {
   const project = data.projects.find((p) => p.id === projectId);
@@ -57,6 +60,7 @@ export function ProjectPage({
             busy={busy}
             onChange={onChange}
             onDelete={onDelete}
+            onQuickFields={(fields) => onProjectFields(project, fields)}
           />
           <div className="project-metadata">
             <span>{projectNumberLabel(project.number)}</span>

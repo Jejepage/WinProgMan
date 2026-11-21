@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { readRoute, routeHash, sameRoute } from "../src/app/route";
 import { notePreview } from "../src/features/events/EventsPanel";
+import { projectPeriod, withQuickFields } from "../src/domain/projectFields";
+import type { Project } from "../src/domain/types";
 
 describe("Ansichten in der Adresse", () => {
   it("liest Hauptansichten und Projektseiten und ignoriert Editoren", () => {
@@ -34,5 +36,54 @@ describe("Notizvorschau", () => {
     ).toBe("Titel · Punkt mit Link · Zitat");
     expect(notePreview("<b>Fett</b> und `code`")).toBe("Fett und code");
     expect(notePreview("a".repeat(200), 10)).toBe(`${"a".repeat(10)} …`);
+  });
+});
+
+describe("Direkte Projektänderungen", () => {
+  const base: Project = {
+    id: "p1",
+    createdAt: "2026-11-01T00:00:00.000Z",
+    updatedAt: "2026-11-01T00:00:00.000Z",
+    number: 1,
+    status: "Aktiv",
+    name: "Alpha",
+    description: "",
+  };
+  const other: Project = { ...base, id: "p2", owner: "Anna Müller" };
+  const now = "2026-11-21T10:00:00.000Z";
+
+  it("übernimmt die bekannte Schreibweise des Owners und entfernt leere Owner", () => {
+    const named = withQuickFields(
+      base,
+      { owner: " anna müller " },
+      [base, other],
+      now,
+    );
+    expect(named?.owner).toBe("Anna Müller");
+    expect(named?.updatedAt).toBe(now);
+    const removed = withQuickFields(named!, { owner: "" }, [base, other], now);
+    expect(removed && "owner" in removed).toBe(false);
+  });
+
+  it("setzt und entfernt Start- und Enddatum und meldet unveränderte Werte", () => {
+    const dated = withQuickFields(
+      base,
+      { startDate: "2026-12-01", endDate: "2027-03-31" },
+      [base],
+      now,
+    )!;
+    expect(projectPeriod(dated)).toBe("Start 01.12.26 – End 31.03.27");
+    const cleared = withQuickFields(dated, { startDate: "" }, [dated], now)!;
+    expect("startDate" in cleared).toBe(false);
+    expect(projectPeriod(cleared)).toBe("End 31.03.27");
+    expect(
+      withQuickFields(
+        dated,
+        { status: "Aktiv", endDate: "2027-03-31" },
+        [dated],
+        now,
+      ),
+    ).toBeNull();
+    expect(projectPeriod(base)).toBe("");
   });
 });

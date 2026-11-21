@@ -2668,3 +2668,60 @@ button.project-resource {
     animation: none;
   }
 }
+
+/* Status, owner and due date changed directly in lists (stored at once). */
+select.quick-select {
+  appearance: auto;
+  cursor: pointer;
+  max-width: 100%;
+  font-size: inherit;
+}
+select.status-pill.quick-select {
+  padding: 2px 4px;
+}
+select.quick-owner {
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+select.quick-owner:hover,
+select.quick-owner:focus-visible {
+  border-color: var(--line);
+}
+.quick-owner-input,
+.quick-date {
+  font-size: inherit;
+  padding: 2px 4px;
+  max-width: 11rem;
+}
+.quick-date-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-align: left;
+  white-space: nowrap;
+}
+.quick-date-button:hover:not(:disabled),
+.quick-date-button:focus-visible {
+  border-color: var(--line);
+}
+.project-quick-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 6px 0;
+}
+.dates-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.project-date {
+  white-space: nowrap;
+}

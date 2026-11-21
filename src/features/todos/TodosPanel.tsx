@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Flag, Plus } from "lucide-react";
 import { useEditorShortcuts } from "../../ui/useEditorShortcuts";
+import { QuickDateField } from "../../ui/QuickDateField";
 import { openItem, openNewItem } from "../../ui/itemNavigation";
 import { SearchField } from "../../ui/components";
 import {
@@ -12,7 +13,6 @@ import {
 } from "../../domain/types";
 import {
   dueGroup,
-  formatDate,
   formatTimestampDate,
   matchesSearch,
   overdue,
@@ -268,6 +268,12 @@ export function TodosPanel({
       <span className="button-label">Task</span>
     </button>
   );
+  function setDue(todo: Todo, dueDate: string) {
+    const value: Todo = { ...todo, updatedAt: new Date().toISOString() };
+    if (dueDate) value.dueDate = dueDate;
+    else delete value.dueDate;
+    void onChange({ type: "todo.save", value });
+  }
   function toggle(todo: Todo) {
     const value = {
       ...todo,
@@ -601,17 +607,17 @@ export function TodosPanel({
                         </td>
                       )}
                       <td>
-                        {todo.dueDate ? (
-                          <span
-                            className={overdue(todo, today) ? "overdue" : ""}
-                            title={formatDate(todo.dueDate)}
-                          >
-                            {overdue(todo, today) ? "Overdue · " : ""}
-                            {relativeDate(todo.dueDate, today)}
-                          </span>
-                        ) : (
-                          <span className="muted">—</span>
-                        )}
+                        <QuickDateField
+                          value={todo.dueDate}
+                          label={`Due date of ${todo.title}`}
+                          emptyTitle="Set due date"
+                          className={overdue(todo, today) ? "overdue" : ""}
+                          disabled={busy}
+                          display={(date) =>
+                            `${overdue(todo, today) ? "Overdue · " : ""}${relativeDate(date, today)}`
+                          }
+                          onSelect={(dueDate) => setDue(todo, dueDate)}
+                        />
                       </td>
                       {showCreated && (
                         <td>{formatTimestampDate(todo.createdAt)}</td>

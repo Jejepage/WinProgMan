@@ -9,6 +9,7 @@ import {
   type ProjectStatus,
 } from "../../domain/types";
 import { ownerNames } from "../../domain/queries";
+import { canonicalOwner } from "../../domain/projectFields";
 import { statusLabel } from "../../ui/labels";
 import { useEditorShortcuts } from "../../ui/useEditorShortcuts";
 import { OwnerSelect } from "./OwnerSelect";
@@ -38,10 +39,18 @@ export function NewProjectEditor({
   const [categoryId, setCategoryId] = useState("");
   const [owner, setOwner] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   useEditorShortcuts(form, {
     isDirty: () =>
-      !!(name.trim() || description.trim() || owner.trim() || categoryId) ||
-      status !== "Aktiv",
+      !!(
+        name.trim() ||
+        description.trim() ||
+        owner.trim() ||
+        categoryId ||
+        startDate ||
+        endDate
+      ) || status !== "Aktiv",
     onCancel,
   });
   async function save(event: React.FormEvent) {
@@ -56,13 +65,10 @@ export function NewProjectEditor({
     if (categories.some((category) => category.id === categoryId))
       value.categoryId = categoryId;
     // Reuse the spelling of a known name so the owner list stays free of duplicates.
-    const ownerName =
-      ownerNames(projects).find(
-        (known) =>
-          known.toLocaleLowerCase("de") ===
-          owner.trim().toLocaleLowerCase("de"),
-      ) || owner.trim();
+    const ownerName = canonicalOwner(projects, owner);
     if (ownerName) value.owner = ownerName;
+    if (startDate) value.startDate = startDate;
+    if (endDate) value.endDate = endDate;
     if (await onChange({ type: "project.save", value })) onCreated(value.id);
   }
   return (
@@ -112,6 +118,22 @@ export function NewProjectEditor({
             onChange={setOwner}
           />
         </div>
+        <label className="field">
+          Start date
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          End date
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </label>
       </div>
       <label className="field">
         Description
