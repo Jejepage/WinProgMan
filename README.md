@@ -369,3 +369,7 @@ Nach Durchsicht der Oberfläche auf Branch `claude/usability` umgesetzt; **keine
 - Brainstorm/Editor zeigt beim Laden einen Platzhalter statt Text.
 
 Prüfung: Typprüfung, 175 Unit-Tests (neu Datumsgrenzen, Fälligkeitsgruppen, Event-Reihenfolge, Hash-Routen, Notizvorschau), Webbuild und Gesamtlauf 50 Edge-Abläufe erfolgreich. Angepasste Tests: Projektanlage über „+ Project“ bzw. Dashboard-Menü „New → Project“, Reload behält die aktuelle Ansicht, Outlook-Vorbelegung mit Punkt-Datum (Markdown-escaped). Browserablauf im Entwicklungsserver: Neu-Menü → Projekt mit Strg+S, Schnellerfassung, Esc mit/ohne Änderungen, Zurück/Vor, Gruppierung/Sortierung, Event-Reihenfolge, Notizvorschau, Tastenkürzel; Split Compact und schmales Layout gesichtet.
+
+### Installer 0.14.0 – geprüft
+
+Quellcommit `d72de6a` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44894203362` und Windows-CI `44894203351` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `6fb96e2152184bf352bec2b73503234a41cfc251cfb3a02d528434145aa452fc` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.14.0, SHA256 `36b12eb03aa2c6d2c50e494dd7bdddf885fdddf80217854be9d3f2fd7a8fa92e`. Datei `src-tauri/target/windows-ci/0.14.0/d72de6a/installer/Plan B_0.14.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Abnahme der Usability-Überarbeitung steht aus. Keine Datenformatänderung, Sync mit 0.13.0 kompatibel.
