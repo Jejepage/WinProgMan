@@ -1,0 +1,509 @@
+/*
+ * Design "Fluent": an Office/Teams-like look. A light blue-grey sidebar with a
+ * blue brand block and two-line menu entries, a white work area, pill toggles,
+ * pastel full-width badges and outlined icon buttons. Visual only: markup,
+ * layout and logic stay as in Classic. Menu subtitles are CSS content.
+ */
+:root[data-design="fluent"] {
+  --font-ui: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-markdown: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --surface: #fff;
+  --canvas: #f5f7fb;
+  --ink: #242424;
+  --muted: #5f6673;
+  --line: #dfe5ee;
+  --accent: #1b5fd6;
+  --green: #1b5fd6;
+  --accent-soft: #dbe6fb;
+  --danger: #c4314b;
+  --radius: 4px;
+  --fluent-sidebar: #eef2f9;
+  --fluent-nav-ink: #4a5670;
+  --fluent-nav-sub: #6b7487;
+  --fluent-active: #d3e1fa;
+  --fluent-row-line: #a8bde3;
+  --fluent-pill: #eef0f3;
+  --fluent-flag: #e39b00;
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: 14px;
+}
+:root[data-design="fluent"][data-theme="dark"] {
+  --surface: #24272e;
+  --canvas: #1b1d22;
+  --ink: #f1f1f1;
+  --muted: #b6bcc8;
+  --line: #3a404c;
+  --accent: #7aa7ff;
+  --green: #7aa7ff;
+  --accent-soft: #263a60;
+  --danger: #ff99a4;
+  --fluent-sidebar: #20232a;
+  --fluent-nav-ink: #d5dbe7;
+  --fluent-nav-sub: #9ea6b6;
+  --fluent-active: #2a3f66;
+  --fluent-row-line: #3f557d;
+  --fluent-pill: #31353e;
+  --fluent-flag: #ffbf47;
+}
+:root[data-design="fluent"] body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+/* Sidebar */
+:root[data-design="fluent"] .sidebar {
+  background: var(--fluent-sidebar);
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+  padding: 0 0 18px;
+}
+:root[data-design="fluent"] .brand {
+  padding: 22px 20px;
+  background: #1b5fd6;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+}
+:root[data-design="fluent"] .brand small {
+  color: #ffffffd9;
+  font-size: 11px;
+}
+:root[data-design="fluent"] .brand-mark {
+  border-radius: var(--radius);
+}
+:root[data-design="fluent"] .search-button {
+  margin: 14px 16px 6px;
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+:root[data-design="fluent"] .sidebar nav {
+  gap: 0;
+  margin-top: 8px;
+}
+:root[data-design="fluent"] .nav-button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  row-gap: 1px;
+  align-items: center;
+  padding: 13px 18px 13px 16px;
+  border-radius: 0;
+  border-left: 4px solid transparent;
+  color: var(--fluent-nav-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+:root[data-design="fluent"] .nav-button > svg {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.5;
+}
+:root[data-design="fluent"] .nav-button > .nav-text {
+  grid-column: 2;
+}
+:root[data-design="fluent"] .nav-button > small {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  margin: 0;
+  background: var(--surface);
+  color: var(--fluent-nav-ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-weight: 600;
+}
+:root[data-design="fluent"] .nav-button::after {
+  grid-column: 2;
+  color: var(--fluent-nav-sub);
+  font-size: 12px;
+  font-weight: 400;
+}
+:root[data-design="fluent"] .nav-button[data-kind="dashboard"]::after {
+  content: "Overview of your work";
+}
+:root[data-design="fluent"] .nav-button[data-kind="projects"]::after {
+  content: "All projects by topic";
+}
+:root[data-design="fluent"] .nav-button[data-kind="tasks"]::after {
+  content: "Open tasks and Do next";
+}
+:root[data-design="fluent"] .nav-button[data-kind="events"]::after {
+  content: "Meetings, calls, milestones";
+}
+:root[data-design="fluent"] .nav-button[data-kind="notes"]::after {
+  content: "Project notes";
+}
+:root[data-design="fluent"] .nav-button[data-kind="brainstorm"]::after {
+  content: "Free-form ideas";
+}
+:root[data-design="fluent"] .nav-button[data-kind="settings"]::after {
+  content: "Appearance, sync, backup";
+}
+:root[data-design="fluent"] .nav-button.active {
+  background: var(--fluent-active);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+:root[data-design="fluent"] .nav-button.active::after {
+  color: var(--accent);
+}
+:root[data-design="fluent"] .nav-button:hover:not(.active) {
+  background: #1b5fd612;
+}
+:root[data-design="fluent"] .sidebar-icons .nav-button {
+  display: flex;
+  justify-content: center;
+  padding: 13px 0;
+}
+:root[data-design="fluent"] .sidebar-icons .nav-button::after,
+:root[data-design="fluent"] .sidebar-icons .nav-button > small {
+  display: none;
+}
+:root[data-design="fluent"] .sidebar-bottom {
+  color: var(--ink);
+  border-top: 1px solid var(--line);
+  margin: auto 16px 0;
+  padding: 16px 4px 0;
+}
+:root[data-design="fluent"] .sidebar-bottom > small {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  :root[data-design="fluent"] .nav-button {
+    display: flex;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+  }
+  :root[data-design="fluent"] .nav-button.active {
+    border-bottom-color: var(--accent);
+  }
+  :root[data-design="fluent"] .nav-button::after {
+    display: none;
+  }
+}
+
+/* Work area */
+:root[data-design="fluent"] main {
+  padding: 0 28px;
+}
+:root[data-design="fluent"] h1 {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+:root[data-design="fluent"] h2 {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+}
+:root[data-design="fluent"] h3 {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+:root[data-design="fluent"] :is(.panel, .stats > div) {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+:root[data-design="fluent"] .stats strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+:root[data-design="fluent"] .stats span {
+  color: var(--ink);
+  font-size: 13px;
+}
+:root[data-design="fluent"] .stats > div:hover {
+  border-color: var(--accent);
+}
+:root[data-design="fluent"] .section-heading h2,
+:root[data-design="fluent"] .section-heading .muted {
+  font-style: normal;
+}
+:root[data-design="fluent"]
+  :is(.dashboard-project-row, .dashboard-next-row, .todo-item, .event-item) {
+  border-color: var(--fluent-row-line);
+}
+:root[data-design="fluent"] :is(.project-title, .task-title-button) {
+  color: var(--ink);
+  font-weight: 600;
+}
+:root[data-design="fluent"] :is(.project-title, .task-title-button):hover {
+  color: var(--accent);
+}
+:root[data-design="fluent"] .dashboard-project-head .project-title {
+  font-size: 17px;
+}
+:root[data-design="fluent"] :is(.muted, .description, .field, footer) {
+  color: var(--muted);
+}
+:root[data-design="fluent"]
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .list-search input,
+    .markdown-editor > textarea
+  ) {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid #b9c8e2;
+  border-radius: var(--radius);
+}
+:root[data-design="fluent"][data-theme="dark"]
+  :is(
+    .field input,
+    .field select,
+    .field textarea,
+    .list-search input,
+    .markdown-editor > textarea
+  ) {
+  border-color: var(--line);
+}
+:root[data-design="fluent"]
+  :is(.field input, .field select, .field textarea, .list-search input):focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+:root[data-design="fluent"]
+  :is(.editor, .event-editor, .event-details, .markdown-preview, .event-note) {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-design="fluent"] a,
+:root[data-design="fluent"] :is(.text-button, .project-link) {
+  color: var(--accent);
+}
+:root[data-design="fluent"] input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+:root[data-design="fluent"]
+  :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:root[data-design="fluent"] .overdue {
+  color: var(--danger);
+}
+
+/* Buttons: blue primary, outlined secondary, pill toggles */
+:root[data-design="fluent"] .button {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+:root[data-design="fluent"][data-theme="dark"] .button {
+  color: #10141c;
+}
+:root[data-design="fluent"] .button:hover {
+  filter: brightness(0.93);
+}
+:root[data-design="fluent"] .button.secondary {
+  background: var(--surface);
+  border-color: #c9d1dd;
+  color: var(--accent);
+}
+:root[data-design="fluent"] .button[aria-pressed] {
+  border-radius: 16px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+:root[data-design="fluent"] .button[aria-pressed="false"] {
+  background: var(--fluent-pill);
+  border-color: var(--fluent-pill);
+  color: var(--ink);
+}
+:root[data-design="fluent"] .button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+:root[data-design="fluent"][data-theme="dark"] .button.danger {
+  background: #b3384b;
+  border-color: #b3384b;
+  /* The global dark ".danger" rule forces pink text with !important. */
+  color: #fff !important;
+}
+:root[data-design="fluent"] .icon-button:has(> svg) {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--accent);
+  text-decoration: none;
+}
+:root[data-design="fluent"] .icon-button:has(> svg):hover:not(:disabled) {
+  border-color: var(--accent);
+}
+:root[data-design="fluent"] .icon-button.danger {
+  color: var(--danger);
+}
+:root[data-design="fluent"] .icon-button.task-next-toggle:has(> svg) {
+  color: var(--fluent-flag);
+}
+:root[data-design="fluent"] .dashboard-links-list .icon-button:has(> svg) {
+  min-width: 24px;
+  min-height: 24px;
+  border-color: transparent;
+}
+:root[data-design="fluent"] .dashboard-links-list > li {
+  border-radius: 16px;
+  background: var(--canvas);
+}
+:root[data-design="fluent"] .show-completed-toggle input:checked {
+  background: var(--accent);
+}
+
+/* Tables */
+:root[data-design="fluent"] .data-table th {
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 600;
+}
+:root[data-design="fluent"] .data-table :is(th, td) {
+  border-color: var(--line);
+}
+:root[data-design="fluent"] .data-table tr:hover td {
+  background: var(--accent-soft);
+}
+:root[data-design="fluent"] .tasks-table .is-do-next td {
+  background: #fff8e3;
+}
+:root[data-design="fluent"][data-theme="dark"] .tasks-table .is-do-next td {
+  background: #3a3426;
+}
+
+/* Badges: pastel blocks with dark, readable text */
+:root[data-design="fluent"] [data-status="Geplant"] {
+  --badge-bg: #edf1f7;
+  --badge-ink: #2f3b52;
+  --badge-border: #edf1f7;
+}
+:root[data-design="fluent"] [data-status="Aktiv"],
+:root[data-design="fluent"] [data-category="Telefonat"] {
+  --badge-bg: #fdf0c2;
+  --badge-ink: #6b4100;
+  --badge-border: #fdf0c2;
+}
+:root[data-design="fluent"] [data-status="Pausiert"],
+:root[data-design="fluent"] [data-category="Notiz"] {
+  --badge-bg: #fde7d6;
+  --badge-ink: #7a3510;
+  --badge-border: #fde7d6;
+}
+:root[data-design="fluent"] [data-status="Abgeschlossen"],
+:root[data-design="fluent"] [data-category="Beschluss"] {
+  --badge-bg: #dcf3e2;
+  --badge-ink: #1b5e30;
+  --badge-border: #dcf3e2;
+}
+:root[data-design="fluent"] [data-category="Meeting"] {
+  --badge-bg: #fbe3ef;
+  --badge-ink: #a3124b;
+  --badge-border: #fbe3ef;
+}
+:root[data-design="fluent"] [data-category="Milestone"] {
+  --badge-bg: #dde8fb;
+  --badge-ink: #17459c;
+  --badge-border: #dde8fb;
+}
+:root[data-design="fluent"] [data-category="Mail"] {
+  --badge-bg: #ece5fb;
+  --badge-ink: #4f2fa6;
+  --badge-border: #ece5fb;
+}
+:root[data-design="fluent"][data-theme="dark"] [data-status="Geplant"] {
+  --badge-bg: #333a47;
+  --badge-ink: #e2e8f3;
+  --badge-border: #333a47;
+}
+:root[data-design="fluent"][data-theme="dark"]
+  :is([data-status="Aktiv"], [data-category="Telefonat"]) {
+  --badge-bg: #4a3c12;
+  --badge-ink: #ffe7a3;
+  --badge-border: #4a3c12;
+}
+:root[data-design="fluent"][data-theme="dark"]
+  :is([data-status="Pausiert"], [data-category="Notiz"]) {
+  --badge-bg: #4d2e1a;
+  --badge-ink: #ffd5b8;
+  --badge-border: #4d2e1a;
+}
+:root[data-design="fluent"][data-theme="dark"]
+  :is([data-status="Abgeschlossen"], [data-category="Beschluss"]) {
+  --badge-bg: #1f4229;
+  --badge-ink: #c4f0cf;
+  --badge-border: #1f4229;
+}
+:root[data-design="fluent"][data-theme="dark"] [data-category="Meeting"] {
+  --badge-bg: #4e1f35;
+  --badge-ink: #ffcfe3;
+  --badge-border: #4e1f35;
+}
+:root[data-design="fluent"][data-theme="dark"] [data-category="Milestone"] {
+  --badge-bg: #22375e;
+  --badge-ink: #cfe0ff;
+  --badge-border: #22375e;
+}
+:root[data-design="fluent"][data-theme="dark"] [data-category="Mail"] {
+  --badge-bg: #382a5e;
+  --badge-ink: #e2d8ff;
+  --badge-border: #382a5e;
+}
+:root[data-design="fluent"]
+  :is(.status-pill, .status-label, .category)[data-status],
+:root[data-design="fluent"] .category[data-category] {
+  min-width: 96px;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:root[data-design="fluent"] .do-next-badge {
+  background: #fdf0c2;
+  color: #6b4100;
+  border: 0;
+  border-radius: 3px;
+  font-weight: 600;
+}
+:root[data-design="fluent"][data-theme="dark"] .do-next-badge {
+  background: #4a3c12;
+  color: #ffe7a3;
+}
+
+/* Messages */
+:root[data-design="fluent"] .message {
+  background: #e8f0fd;
+  color: #17375e;
+  border: 1px solid #b9cdf0;
+  border-radius: var(--radius);
+}
+:root[data-design="fluent"][data-theme="dark"] .message {
+  background: #22314d;
+  color: #dbe6fb;
+  border-color: #34507d;
+}
+:root[data-design="fluent"] .message .icon-button:has(> svg) {
+  background: transparent;
+}

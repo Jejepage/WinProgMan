@@ -313,3 +313,40 @@ Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 46 Edge-Abläufe (ne
 ### Installer 0.10.0 – geprüft am 20. Oktober 2026
 
 Quellcommit `1102ded`, PR #12 (Entwurf), allgemeine CI `39418677230` und Windows-CI `39418677316` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `29f3e3507bfbf220bb67f9b063ac2eb7142bdb3455fc1d88a31ae2ee96213bc0` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.10.0, SHA256 `102d41fdb6bef298d1a14a7c7e2b354664fa1f6d0b3c4919ebb550bd1faf1ad8`. Datei `src-tauri/target/windows-ci/0.10.0/1102ded/installer/Plan B_0.10.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Funktionsabnahme steht aus.
+
+## Dashboard, Aufgabenfilter und Design „Fluent“ – 20. November 2026
+
+- **Aufgabenlisten** (Tasks, Projektseite) zeigen standardmäßig nur offene Aufgaben. Der Schalter **Show completed** blendet erledigte ein; er gilt pro Liste und startet wieder ausgeschaltet. Ersetzt die bisherigen Knöpfe „All tasks“/„Open tasks“.
+- **Dashboard**: neuer erster Block **Important projects** mit allen per Stern (Projects) markierten Projekten im gleichen Zeilenformat wie „Projects with open work“, auch ohne offene Arbeit. Beide Blöcke lassen sich über ihre Überschrift auf- und zuklappen; der Zustand bleibt lokal (`winprogman-dashboard-collapsed`). Die Kennzahlen sind klickbar: Projects with work → Projects, **Open tasks → Tasks**, Upcoming events → Events.
+- **Design „Fluent“** (Settings → Appearance), angelehnt an Office/Teams: helle Seitenleiste mit blauem Kopfblock und zweizeiligen Menüeinträgen (Untertitel nur per CSS), weiße Arbeitsfläche, Pill-Umschalter, pastellfarbene Marken, umrandete Symbolknöpfe, orange Do-next-Flagge. Hell und dunkel; reine Optik in `src/ui/fluent.css`, Struktur unverändert.
+- Keine Datenmigration, Sicherungsformat 6 unverändert.
+
+Prüfung: Typprüfung, 167 Unit-Tests, Webbuild, Gesamtlauf 48 Edge-Abläufe (neu `tests/dashboard.e2e.spec.ts` mit wichtigen Projekten, Auf-/Zuklappen samt Reload, Open-tasks-Navigation und Fluent-Markenkontrast ≥ 4,5:1 hell/dunkel; bestehende Tests auf den Schalter umgestellt). Sichtprüfung Fluent hell/dunkel (Dashboard, Tasks, Events, Projektseite). Noch kein Installer.
+
+### Installer 0.11.0 – geprüft am 20. November 2026
+
+Quellcommit `62a071d`, PR #13 (Entwurf), allgemeine CI `44729283730` und Windows-CI `44729283954` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `d59a8cb2f9aae7a172d0b48aa406e9f141434bffca9c3688dd6157a0f6d64df5` stimmt mit dem GitHub-Digest überein. EXE-Produktname „Plan B“, Produkt-/Dateiversion 0.11.0, SHA256 `a1f02f2016817d1e6df3d6b73725cb380e86fcc155d87aad11257d8b51411192`. Datei `src-tauri/target/windows-ci/0.11.0/62a071d/installer/Plan B_0.11.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; aktualisiert eine bestehende Plan-B-Installation (gleicher Produktname).
+
+## Verantwortliche pro Projekt – 20. November 2026
+
+- Neues optionales Projektfeld **Owner** (`owner`, Freitext). Im Projekteditor eine Dropdownliste mit allen Namen, die schon bei anderen Projekten stehen, „Not assigned“ und „New person…“ (Textfeld). Ohne Eintrag gilt der Verantwortliche als nicht zugewiesen. Gleiche Namen mit anderer Groß-/Kleinschreibung werden auf die vorhandene Schreibweise zusammengeführt.
+- Anzeige: Projektseite („Owner: …“), eigene Spalte und Filter („All owners“, „Not assigned“, Namen) in der Projektliste, Dashboard-Projektzeilen und Markdown-Bericht.
+- Sicherungsformat bleibt 6; `owner` ist dort neu erlaubt (wie zuvor `important`). **Ältere Versionen (bis 0.11.0) lehnen Sicherungen und Sync-Dateien mit `owner` ab.** Bei Ordner-Sync beide Rechner zeitnah aktualisieren; ein älterer Rechner, der ein Projekt bearbeitet, würde den Owner beim Abgleich überschreiben.
+
+Prüfung: Typprüfung, 169 Unit-Tests (neu: Owner-Validierung, Namensliste/Filter), Webbuild, Gesamtlauf 49 Edge-Abläufe (neu `tests/owner.e2e.spec.ts`: neue Person, Wiederverwendung aus Liste, Zurücksetzen, Reload, Spalte, Filter, Dashboard).
+
+### Installer 0.12.0 – geprüft am 20. November 2026
+
+Quellcommit `d897be8`, PR #13 (Entwurf), allgemeine CI `44737663069` und Windows-CI `44737663104` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `fc1b4debb96bea89c0e5d97cfe0b2294c4c53e843fcff7c61f53b905dc6c97b9` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.12.0, SHA256 `54c5383510c529b0dd92ba5578baecf819cc5d4733cb49babfbcbb2ba47e9ae8`. Datei `src-tauri/target/windows-ci/0.12.0/d897be8/installer/Plan B_0.12.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld: beide Sync-Rechner aktualisieren.
+
+## Projektliste mit Aufgaben daneben – 20. November 2026
+
+- In der Projektliste steht rechts neben der Tabelle die Aufgabenliste des **ausgewählten Projekts** (gemeinsame `TodosPanel`-Komponente, ohne Projektspalte, mit „Show completed“ und Add task mit Projektvorwahl).
+- Auswahl per Klick auf die Zeile oder Enter/Leertaste auf der fokussierten Zeile; der Projektname öffnet weiter die Projektseite, ebenso der Name in der Überschrift rechts. Das zuletzt gewählte Projekt bleibt lokal gemerkt (`winprogman-selected-project`); ohne Auswahl oder wenn es ausgefiltert ist, gilt das erste angezeigte Projekt.
+- Ab 1200 px nebeneinander (7:5), darunter untereinander. Keine Datenänderung.
+
+Prüfung: Typprüfung, 169 Unit-Tests, Webbuild, Gesamtlauf 50 Edge-Abläufe (neu `tests/project-tasks-side.e2e.spec.ts`; drei Selektoren in `tests/e2e.spec.ts` auf die Projekttabelle eingegrenzt). Sichtprüfung bei 1440 px.
+
+### Installer 0.13.0 – geprüft
+
+Quellcommit `92f6118`, PR #13 (Entwurf), allgemeine CI `44825876370` und Windows-CI `44825876399` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `8b3853b67f3381537f10b087acb98c94a53809490a7d3ea7d49ab16853440c30` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.13.0, SHA256 `55e8eca711884d91003fbb190e96051f8b34ecbefc4f679edea9ce132811dfa3`. Datei `src-tauri/target/windows-ci/0.13.0/92f6118/installer/Plan B_0.13.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld und Aufgaben neben der Projektliste; beide Sync-Rechner aktualisieren.

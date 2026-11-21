@@ -32,6 +32,8 @@ export interface Project extends Base {
   categoryId?: string;
   /** Marked with a star in the project list. */
   important?: boolean;
+  /** Responsible person, free text; absent means not assigned. */
+  owner?: string;
   name: string;
   description: string;
 }

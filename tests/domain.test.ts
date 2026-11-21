@@ -4,6 +4,8 @@ import {
   formatDate,
   parseTime24,
   groupProjects,
+  matchesOwner,
+  ownerNames,
   localToday,
   overdue,
   sortEvents,
@@ -259,6 +261,35 @@ describe("Darstellung, Projektreihenfolge und Bericht", () => {
     expect(report).toContain("- [ ] open (due 01/10/26, overdue)");
     expect(report).not.toContain("done");
     expect(report).not.toContain("Beta");
+  });
+});
+
+describe("Verantwortliche", () => {
+  const project = (id: string, owner?: string) => ({
+    id,
+    createdAt: "2026-11-01T00:00:00.000Z",
+    updatedAt: "2026-11-01T00:00:00.000Z",
+    number: 1,
+    status: "Aktiv" as const,
+    name: id,
+    description: "",
+    ...(owner ? { owner } : {}),
+  });
+  it("listet Namen einmalig ohne Groß-/Kleinschreibung und filtert nach Name oder ohne Eintrag", () => {
+    const projects = [
+      project("a", "Zoe"),
+      project("b", "anna"),
+      project("c", "Anna"),
+      project("d"),
+    ];
+    expect(ownerNames(projects)).toEqual(["anna", "Zoe"]);
+    expect(
+      projects.filter((p) => matchesOwner("ANNA", p)).map((p) => p.id),
+    ).toEqual(["b", "c"]);
+    expect(
+      projects.filter((p) => matchesOwner("none", p)).map((p) => p.id),
+    ).toEqual(["d"]);
+    expect(projects.filter((p) => matchesOwner("", p))).toHaveLength(4);
   });
 });
 

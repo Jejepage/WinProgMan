@@ -12,6 +12,7 @@ import {
 import {
   activeProjects,
   localToday,
+  matchesOwner,
   matchesSearch,
   sortTodos,
   upcoming,
@@ -95,6 +96,7 @@ export function App() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [projectSearch, setProjectSearch] = useState("");
   const [importantOnly, setImportantOnly] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [noteSearch, setNoteSearch] = useState("");
@@ -388,10 +390,16 @@ export function App() {
     data.projectCategories.some((c) => c.id === categoryFilter)
       ? categoryFilter
       : "";
+  const effectiveOwnerFilter =
+    ownerFilter === "none" ||
+    data.projects.some((p) => matchesOwner(ownerFilter, p))
+      ? ownerFilter
+      : "";
   const filteredProjects = data.projects.filter(
     (p) =>
       selectedStatuses.has(p.status) &&
       (!importantOnly || !!p.important) &&
+      matchesOwner(effectiveOwnerFilter, p) &&
       (!effectiveCategoryFilter ||
         (effectiveCategoryFilter === "none"
           ? !p.categoryId
@@ -565,6 +573,7 @@ export function App() {
                   today={today}
                   busy={busy}
                   onProject={goProject}
+                  onNavigate={(target) => void navigate(target)}
                   onComplete={(todo) => void completeTodo(todo)}
                   onChange={change}
                   active={activeProjects(data, today)}
@@ -584,11 +593,14 @@ export function App() {
                   onSearch={setProjectSearch}
                   projects={filteredProjects}
                   onProject={goProject}
+                  ownerFilter={effectiveOwnerFilter}
+                  onOwnerFilter={setOwnerFilter}
                   importantOnly={importantOnly}
                   onImportantOnly={setImportantOnly}
                   onChange={change}
                   busy={busy}
                   onReport={() => void report()}
+                  panel={shared}
                 />
               )}
               {view === "Tasks" && (
