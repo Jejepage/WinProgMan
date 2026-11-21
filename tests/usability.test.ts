@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { readRoute, routeHash, sameRoute } from "../src/app/route";
+import {
+  originLabel,
+  projectOriginState,
+  readProjectOrigin,
+  readRoute,
+  routeHash,
+  sameRoute,
+} from "../src/app/route";
 import { notePreview } from "../src/features/events/EventsPanel";
 import { projectPeriod, withQuickFields } from "../src/domain/projectFields";
 import type { Project } from "../src/domain/types";
@@ -85,5 +92,17 @@ describe("Direkte Projektänderungen", () => {
       ),
     ).toBeNull();
     expect(projectPeriod(base)).toBe("");
+  });
+});
+
+describe("Herkunft der Projektseite", () => {
+  it("liest die Herkunft aus dem Verlaufseintrag und fällt sonst auf die Projektliste zurück", () => {
+    expect(readProjectOrigin(projectOriginState("Dashboard"))).toBe(
+      "Dashboard",
+    );
+    expect(readProjectOrigin(null)).toBe("Projects");
+    expect(readProjectOrigin({ from: "Settings" })).toBe("Projects");
+    expect(originLabel("Projects")).toBe("All projects");
+    expect(originLabel("Tasks")).toBe("Tasks");
   });
 });

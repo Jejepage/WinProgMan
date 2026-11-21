@@ -58,10 +58,14 @@ import {
 } from "./types";
 import {
   isDetailHistoryEntry,
+  originLabel,
+  projectOriginState,
   readLastRoute,
+  readProjectOrigin,
   readRoute,
   rememberRoute,
   routeHash,
+  type ProjectOrigin,
   type Route,
 } from "./route";
 import { useAppStore } from "./useAppStore";
@@ -93,6 +97,7 @@ export function App() {
             : (initialRoute?.view ?? "Dashboard");
   });
   const [projectId, setProjectId] = useState(initialRoute?.projectId ?? "");
+  const [projectOrigin, setProjectOrigin] = useState(() => readProjectOrigin());
   const {
     data,
     busy,
@@ -146,11 +151,11 @@ export function App() {
       ? { view: "Project", projectId }
       : { view: view === "Project" || view === "Settings" ? "Projects" : view };
   /** Shows a main view and records it in the URL (pushed unless `replace`). */
-  const goTo = (route: Route, replace = false) => {
+  const goTo = (route: Route, replace = false, state: unknown = null) => {
     const hash = routeHash(route);
-    if (window.location.hash !== hash) {
-      if (replace) window.history.replaceState(null, "", hash);
-      else window.history.pushState(null, "", hash);
+    if (window.location.hash !== hash || state) {
+      if (replace) window.history.replaceState(state, "", hash);
+      else window.history.pushState(state, "", hash);
     }
     openedOnLoad.current = false;
     setDetail(null);
@@ -190,7 +195,10 @@ export function App() {
       openedOnLoad.current = false;
       const route = readRoute();
       if (!route) return;
-      if (route.projectId) setProjectId(route.projectId);
+      if (route.projectId) {
+        setProjectId(route.projectId);
+        setProjectOrigin(readProjectOrigin());
+      }
       if (route.view === "Brainstorm") setBrainstormOpened(true);
       setView(route.view);
     };
@@ -400,8 +408,18 @@ export function App() {
       },
     });
   };
-  const goProject = (id: string) =>
-    goTo({ view: "Project", projectId: id }, Boolean(detail));
+  /** Opens a project page and remembers where it was opened from. */
+  const goProject = (id: string) => {
+    // From an editor the list behind it counts; project to project keeps the origin.
+    const here = currentRoute().view;
+    const from: ProjectOrigin = here === "Project" ? projectOrigin : here;
+    setProjectOrigin(from);
+    goTo(
+      { view: "Project", projectId: id },
+      Boolean(detail),
+      projectOriginState(from),
+    );
+  };
   const project = data.projects.find((p) => p.id === projectId);
   async function deleteProject() {
     if (!project) return;
@@ -799,7 +817,8 @@ export function App() {
                   onChange={change}
                   onDelete={deleteProject}
                   onProjectFields={editProjectFields}
-                  onBack={() => setView("Projects")}
+                  backLabel={originLabel(projectOrigin)}
+                  onBack={() => goTo({ view: projectOrigin })}
                 />
               )}
             </>

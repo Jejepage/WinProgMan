@@ -61,3 +61,25 @@ export function rememberRoute(route: Route) {
 export const detailHistoryState = { planB: "detail" } as const;
 export const isDetailHistoryEntry = () =>
   (window.history.state as { planB?: string } | null)?.planB === "detail";
+
+/** Main view a project page was opened from; kept in its history entry. */
+export type ProjectOrigin = Exclude<Route["view"], "Project">;
+const originViews: ProjectOrigin[] = [
+  "Dashboard",
+  "Projects",
+  "Tasks",
+  "Events",
+  "Notes",
+  "Brainstorm",
+];
+export const projectOriginState = (from: ProjectOrigin) =>
+  ({ planB: "project", from }) as const;
+/** Origin stored in the current history entry; the project list by default. */
+export function readProjectOrigin(
+  state: unknown = window.history.state,
+): ProjectOrigin {
+  const from = (state as { from?: unknown } | null)?.from;
+  return originViews.find((view) => view === from) ?? "Projects";
+}
+export const originLabel = (from: ProjectOrigin) =>
+  from === "Projects" ? "All projects" : from;

@@ -17,6 +17,7 @@ export function ProjectPage({
   onChange,
   onDelete,
   onProjectFields,
+  backLabel,
   onBack,
 }: {
   data: AppData;
@@ -27,6 +28,8 @@ export function ProjectPage({
   onChange: (change: DomainChange) => Promise<boolean>;
   onDelete: () => Promise<void>;
   onProjectFields: (project: Project, fields: QuickProjectFields) => void;
+  /** Name of the view the page was opened from, e.g. "Dashboard". */
+  backLabel: string;
   onBack: () => void;
 }) {
   const project = data.projects.find((p) => p.id === projectId);
@@ -35,14 +38,14 @@ export function ProjectPage({
       <section className="panel empty">
         This project no longer exists.
         <button className="text-button" onClick={onBack}>
-          Back to projects
+          Back to {backLabel}
         </button>
       </section>
     );
   return (
     <>
       <button className="text-button breadcrumb" onClick={onBack}>
-        ← All projects
+        ← {backLabel}
       </button>
       <OutlookDropZone
         projectId={project.id}
