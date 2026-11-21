@@ -385,3 +385,7 @@ Nach Benutzerauftrag auf Branch `claude/usability` (nach Installer 0.14.0):
 - Reine Logik in `src/domain/projectFields.ts` (`canonicalOwner`, `withQuickFields`, `projectPeriod`), UI in `src/features/projects/QuickFields.tsx`.
 
 Prüfung: Typprüfung, 178 Unit-Tests (neu: Owner-Schreibweise, Datumsfelder setzen/entfernen, Validierung Start/End inkl. ungültiger Daten und Format 5), Webbuild, vollständiger Edge-Lauf 52 Abläufe (neu `tests/quick-edit.e2e.spec.ts`; Owner- und Projektstatus-Test an Dropdowns angepasst). Browser: Liste mit Datumsspalten, Datumseingabe per Tastatur, Projektkopf gesichtet. Noch kein Installer für diesen Stand.
+
+### Installer 0.15.0 – geprüft
+
+Quellcommit `58a965b` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44898363280` und Windows-CI `44898363268` erfolgreich (inkl. Rust-Tests und NSIS-Build). Der erste Windows-Lauf zu `82e391c` scheiterte an einem Rust-Testkonflikt (parallele Tests mit gleichem Temp-Ordner); `58a965b` trennt die Testordner per Zähler, App-Code unverändert. Artefakt `PlanB-windows-x64`, ZIP-SHA256 `b4f508fd7188f02b248688fc6ad553db593711b5794e21bced7f0a9052337558` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.15.0, SHA256 `4131d1e65337fe5d89b02bb4a737438f9d0602ec95132d834086e9edd17c59d5`. Datei `src-tauri/target/windows-ci/0.15.0/58a965b/installer/Plan B_0.15.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Direktbearbeitung und Start-/Enddatum; beide Sync-Rechner aktualisieren, bevor Projektdaten gesetzt werden.
