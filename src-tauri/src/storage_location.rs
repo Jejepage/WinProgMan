@@ -355,9 +355,13 @@ pub fn restart_for_storage_location(app: tauri::AppHandle) {
 mod tests {
     use super::*;
     fn workspace() -> PathBuf {
+        // Tests run in parallel threads; the counter keeps their folders apart
+        // even when two of them read the same clock value.
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let path = std::env::temp_dir().join(format!(
-            "winprogman-storage-{}-{}",
+            "winprogman-storage-{}-{}-{}",
             std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()

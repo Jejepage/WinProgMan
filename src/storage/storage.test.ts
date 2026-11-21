@@ -179,6 +179,22 @@ describe("Sicherungsvalidierung", () => {
     (old as unknown as { schemaVersion: number }).schemaVersion = 5;
     expect(() => validateImport(old)).toThrow();
   });
+  it("erhält Start- und Enddatum und weist ungültige Daten oder alte Formate ab", () => {
+    const data = envelope();
+    data.projects[0].startDate = "2026-12-01";
+    data.projects[0].endDate = "2027-03-31";
+    expect(validateImport(JSON.parse(JSON.stringify(data)))).toEqual(data);
+    const invalid = envelope();
+    invalid.projects[0].endDate = "2026-02-30";
+    expect(() => validateImport(invalid)).toThrow("endDate");
+    const dotted = envelope();
+    dotted.projects[0].startDate = "01.12.2026";
+    expect(() => validateImport(dotted)).toThrow("startDate");
+    const old = envelope();
+    old.projects[0].startDate = "2026-12-01";
+    (old as unknown as { schemaVersion: number }).schemaVersion = 5;
+    expect(() => validateImport(old)).toThrow();
+  });
   it("weist doppelte Kategorienamen und übergreifend doppelte IDs ab", () => {
     const data = envelope();
     data.projectCategories = [

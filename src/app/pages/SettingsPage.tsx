@@ -37,6 +37,8 @@ export function SettingsPage({
     setDensity,
     markdownPaper,
     setMarkdownPaper,
+    taskCreated,
+    setTaskCreated,
     sidebar,
     setSidebar,
     theme,
@@ -176,6 +178,29 @@ export function SettingsPage({
               </button>
             ))}
           </div>
+          <h3>Task tables</h3>
+          <p className="description">
+            Show the date a task was created as its own column.
+          </p>
+          <div className="actions" role="group" aria-label="Created column">
+            {(["show", "hide"] as const).map((choice) => (
+              <button
+                key={choice}
+                type="button"
+                className={`button ${taskCreated === choice ? "" : "secondary"}`}
+                aria-pressed={taskCreated === choice}
+                onClick={() => setTaskCreated(choice)}
+              >
+                {choice === "show" ? "Show Created" : "Hide Created"}
+              </button>
+            ))}
+          </div>
+          <h3>Keyboard</h3>
+          <p className="description">
+            Press ? anywhere outside a text field to see all shortcuts: N
+            creates a new item, 1–6 switch views, Ctrl+S saves and Esc cancels
+            an editor.
+          </p>
         </section>
         <SyncSettings sync={sync} busy={busy} />
         <TrashSettings

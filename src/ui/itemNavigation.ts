@@ -1,11 +1,20 @@
+export type ItemKind = "task" | "event" | "note" | "project";
+
+/**
+ * Editors live in the URL hash. A history entry is pushed (and marked) so the
+ * browser's Back button and Cancel/Save return to the list the user came from.
+ */
+function pushDetail(params: URLSearchParams) {
+  window.history.pushState({ planB: "detail" }, "", `#${params}`);
+  window.dispatchEvent(new HashChangeEvent("hashchange"));
+}
+
 export function openItem(kind: "task" | "event" | "note", id: string) {
-  const url = new URL(window.location.href);
-  url.hash = new URLSearchParams({ detail: kind, id }).toString();
-  window.location.hash = url.hash;
+  pushDetail(new URLSearchParams({ detail: kind, id }));
 }
 
 export function openNewItem(
-  kind: "task" | "event" | "note",
+  kind: ItemKind,
   projectId?: string,
   notesOnly = false,
   prefill?: string,
@@ -15,5 +24,5 @@ export function openNewItem(
   if (notesOnly) params.set("note", "1");
   // Only a token: prefilled content stays in memory (see pendingPrefill).
   if (prefill) params.set("prefill", prefill);
-  window.location.hash = params.toString();
+  pushDetail(params);
 }

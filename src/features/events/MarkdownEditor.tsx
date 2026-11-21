@@ -220,7 +220,11 @@ export function MarkdownEditor({
           Paste as plain text
         </label>
       </div>
-      {!ready && <p role="status">Loading editor…</p>}
+      {!ready && mode === "formatted" && (
+        <div className="editor-loading" role="status">
+          <span className="sr-only">Loading editor…</span>
+        </div>
+      )}
       {notice && (
         <p className="editor-notice" role="status">
           {notice}

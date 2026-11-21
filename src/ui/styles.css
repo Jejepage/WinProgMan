@@ -1525,7 +1525,7 @@ button.event-title:hover {
   min-width: 0;
 }
 .dashboard-project-row,
-.dashboard-next-row {
+:is(.dashboard-next-row, .dashboard-overdue-row) {
   border-top: 1px solid var(--line);
   padding: 14px 0;
 }
@@ -1542,7 +1542,7 @@ button.event-title:hover {
   margin: 5px 0;
 }
 .dashboard-project-head small,
-.dashboard-next-row small {
+:is(.dashboard-next-row, .dashboard-overdue-row) small {
   color: var(--muted);
   font-size: 10px;
 }
@@ -1554,24 +1554,24 @@ button.event-title:hover {
 .dashboard-project-row .overview-columns > div + div {
   padding-left: 16px;
 }
-.dashboard-next-row {
+:is(.dashboard-next-row, .dashboard-overdue-row) {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 10px;
 }
-.dashboard-next-row > div {
+:is(.dashboard-next-row, .dashboard-overdue-row) > div {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
-.dashboard-next-row strong {
+:is(.dashboard-next-row, .dashboard-overdue-row) strong {
   font-size: 12px;
 }
-.dashboard-next-row .text-button {
+:is(.dashboard-next-row, .dashboard-overdue-row) .text-button {
   justify-self: start;
   text-align: left;
 }
-.dashboard-next-row small {
+:is(.dashboard-next-row, .dashboard-overdue-row) small {
   display: block;
 }
 .overview-todo .do-next-badge {
@@ -2470,4 +2470,258 @@ button.project-resource {
   .projects-split {
     grid-template-columns: 1fr;
   }
+}
+
+/* Usability pass: labelled add buttons, New menu, quick capture, sorting. */
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.new-menu {
+  position: relative;
+}
+.new-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  display: grid;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+.new-menu-list button {
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.new-menu-list button:hover:not(:disabled),
+.new-menu-list button:focus-visible {
+  background: var(--accent-soft, #eaf2ff);
+}
+.new-menu-list button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.quick-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.quick-add input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.quick-add:focus-within {
+  border-style: solid;
+  border-color: var(--accent);
+}
+.quick-add select {
+  max-width: 40%;
+  font-size: 11px;
+}
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sort-button:hover {
+  color: var(--accent);
+}
+.tasks-table .due-section th {
+  padding-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+}
+.tasks-table .due-overdue th {
+  color: var(--danger);
+}
+.task-project-filter select {
+  max-width: 220px;
+}
+.note-preview {
+  display: block;
+  flex-basis: 100%;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notes-panel .event-title-group {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.item-list:not(.timeline) .today-marker {
+  margin: 6px 0;
+  padding: 4px 12px;
+}
+.detail-page > .breadcrumb {
+  display: inline-block;
+  margin-bottom: 6px;
+}
+.detail-context {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.dashboard-focus {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.dashboard-focus > .panel {
+  margin: 0;
+  min-width: 0;
+}
+.dashboard-overdue .section-heading .overdue {
+  font-weight: 700;
+}
+@media (max-width: 760px) {
+  .dashboard-focus {
+    grid-template-columns: 1fr;
+  }
+}
+.shortcuts-dialog {
+  padding: 18px 20px;
+}
+.shortcuts-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.shortcuts-dialog dl {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.shortcuts-dialog dl > div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+.shortcuts-dialog dd {
+  margin: 0;
+  font-size: 12px;
+}
+.shortcuts-dialog kbd {
+  font-size: 11px;
+}
+.editor-loading {
+  min-height: 220px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(127 127 127 / 8%),
+      transparent
+    )
+    0 0 / 200% 100%;
+  animation: editor-shimmer 1.4s linear infinite;
+}
+@keyframes editor-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editor-loading {
+    animation: none;
+  }
+}
+
+/* Status, owner and due date changed directly in lists (stored at once). */
+select.quick-select {
+  appearance: auto;
+  cursor: pointer;
+  max-width: 100%;
+  font-size: inherit;
+}
+select.status-pill.quick-select {
+  padding: 2px 4px;
+}
+select.quick-owner {
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+select.quick-owner:hover,
+select.quick-owner:focus-visible {
+  border-color: var(--line);
+}
+.quick-owner-input,
+.quick-date {
+  font-size: inherit;
+  padding: 2px 4px;
+  max-width: 11rem;
+}
+.quick-date-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-align: left;
+  white-space: nowrap;
+}
+.quick-date-button:hover:not(:disabled),
+.quick-date-button:focus-visible {
+  border-color: var(--line);
+}
+.project-quick-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 6px 0;
+}
+.dates-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.project-date {
+  white-space: nowrap;
 }

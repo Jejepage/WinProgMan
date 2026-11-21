@@ -88,15 +88,60 @@ export const activeProjects = (data: AppData, today = localToday()) =>
       data.events.some((e) => e.projectId === p.id && upcoming(e, today)),
   );
 const pad2 = (value: number) => String(value).padStart(2, "0");
-/** Date as dd/mm/yy. */
+/** Date as dd.mm.yy (German order). */
 export const formatDate = (date: string) => {
   const [year = "", month = "", day = ""] = date.split("-");
-  return `${day}/${month}/${year.slice(-2)}`;
+  return `${day}.${month}.${year.slice(-2)}`;
 };
 export const formatTimestampDate = (timestamp: string) => {
   const date = new Date(timestamp);
-  return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${pad2(date.getFullYear() % 100)}`;
+  return `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}.${pad2(date.getFullYear() % 100)}`;
 };
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** Whole days from `today` to `date` (both YYYY-MM-DD, local calendar days). */
+export function dayDistance(date: string, today: string): number {
+  const toUtc = (value: string) => {
+    const [y, m, d] = value.split("-").map(Number);
+    return Date.UTC(y, (m || 1) - 1, d || 1);
+  };
+  return Math.round((toUtc(date) - toUtc(today)) / 86400000);
+}
+/**
+ * Short date for lists: "Today", "Tomorrow", "Yesterday", a weekday with
+ * date within the coming week ("Wed 25.11."), otherwise dd.mm.yy.
+ */
+export function relativeDate(date: string, today: string): string {
+  const distance = dayDistance(date, today);
+  if (distance === 0) return "Today";
+  if (distance === 1) return "Tomorrow";
+  if (distance === -1) return "Yesterday";
+  if (distance > 1 && distance < 7) {
+    const [y, m, d] = date.split("-").map(Number);
+    const weekday = weekdays[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    return `${weekday} ${pad2(d)}.${pad2(m)}.`;
+  }
+  return formatDate(date);
+}
+/** Due-date bucket for grouping open tasks. */
+export type DueGroup = "overdue" | "today" | "week" | "later" | "none";
+export function dueGroup(todo: Todo, today: string): DueGroup {
+  if (!todo.dueDate) return "none";
+  const distance = dayDistance(todo.dueDate, today);
+  if (distance < 0) return todo.completed ? "later" : "overdue";
+  if (distance === 0) return "today";
+  return distance < 7 ? "week" : "later";
+}
+/**
+ * List order for events: upcoming ones (from today) ascending so the next
+ * entry comes first, then past ones with the most recent first.
+ */
+export function orderEventsForList(events: ProjectEvent[], today: string) {
+  const sorted = sortEvents(events);
+  return {
+    upcoming: sorted.filter((event) => event.date >= today).reverse(),
+    past: sorted.filter((event) => event.date < today),
+  };
+}
 /** Time of day as 24-hour HH:mm. */
 export const formatTimestampTime = (timestamp: string) => {
   const date = new Date(timestamp);

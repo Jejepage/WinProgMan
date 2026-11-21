@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 export type ThemeChoice = "system" | "light" | "dark";
 
 function readPreference(
-  key: "design" | "sidebar" | "navigation" | "density" | "markdown-paper",
+  key:
+    | "design"
+    | "sidebar"
+    | "navigation"
+    | "density"
+    | "markdown-paper"
+    | "task-created",
   fallback: string,
 ) {
   try {
@@ -24,6 +30,8 @@ function readPreference(
     if (key === "density" && (saved === "comfortable" || saved === "compact"))
       return saved;
     if (key === "markdown-paper" && (saved === "theme" || saved === "white"))
+      return saved;
+    if (key === "task-created" && (saved === "show" || saved === "hide"))
       return saved;
   } catch {
     /* Session only. */
@@ -56,6 +64,10 @@ export function usePreferences() {
   // "white" keeps Markdown fields black on white in every design and theme.
   const [markdownPaper, setMarkdownPaper] = useState(() =>
     readPreference("markdown-paper", "theme"),
+  );
+  // Whether task tables show the "Created" column.
+  const [taskCreated, setTaskCreated] = useState(() =>
+    readPreference("task-created", "show"),
   );
   const [theme, setTheme] = useState<ThemeChoice>(() => {
     try {
@@ -90,6 +102,10 @@ export function usePreferences() {
     remember("winprogman-markdown-paper", markdownPaper);
   }, [markdownPaper]);
   useEffect(() => remember("winprogman-sidebar", sidebar), [sidebar]);
+  useEffect(
+    () => remember("winprogman-task-created", taskCreated),
+    [taskCreated],
+  );
   useEffect(() => remember("winprogman-navigation", navigation), [navigation]);
   return {
     design,
@@ -102,6 +118,8 @@ export function usePreferences() {
     setDensity,
     markdownPaper,
     setMarkdownPaper,
+    taskCreated,
+    setTaskCreated,
     theme,
     setTheme,
   };

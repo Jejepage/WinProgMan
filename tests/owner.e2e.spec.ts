@@ -25,9 +25,9 @@ test("projects get an owner from a dropdown, shown in list, filter and dashboard
   await owner.selectOption({ label: "New person…" });
   await page.getByRole("textbox", { name: "Owner" }).fill("  Anna Müller ");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.locator(".project-header")).toContainText(
-    "Owner: Anna Müller",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Owner of Website überarbeiten" }),
+  ).toHaveValue("Anna Müller");
 
   // The second project offers the name from the list; a differently cased
   // entry is stored with the known spelling.
@@ -40,17 +40,17 @@ test("projects get an owner from a dropdown, shown in list, filter and dashboard
     .selectOption({ label: "New person…" });
   await page.getByRole("textbox", { name: "Owner" }).fill("anna müller");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.locator(".project-header")).toContainText(
-    "Owner: Anna Müller",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Owner of Arbeitsplatz erneuern" }),
+  ).toHaveValue("Anna Müller");
   await page.getByRole("button", { name: "Edit project" }).click();
   await page
     .getByRole("combobox", { name: "Owner" })
     .selectOption({ label: "Not assigned" });
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.locator(".project-header")).toContainText(
-    "Owner: not assigned",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Owner of Arbeitsplatz erneuern" }),
+  ).toHaveValue("");
 
   await page.reload();
   await navigate(page, "Projects");
@@ -58,8 +58,8 @@ test("projects get an owner from a dropdown, shown in list, filter and dashboard
   await expect(
     rows
       .filter({ hasText: "Website überarbeiten" })
-      .locator(".project-owner-cell"),
-  ).toHaveText("Anna Müller");
+      .locator(".project-owner-cell select"),
+  ).toHaveValue("Anna Müller");
   const filter = page.getByLabel("Filter owner");
   await filter.selectOption("Anna Müller");
   await expect(rows).toHaveCount(1);

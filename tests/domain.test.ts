@@ -9,6 +9,10 @@ import {
   localToday,
   overdue,
   sortEvents,
+  relativeDate,
+  dayDistance,
+  dueGroup,
+  orderEventsForList,
   sortTodos,
   upcoming,
 } from "../src/domain/queries";
@@ -212,8 +216,46 @@ describe("fachliche Kalendergrenzen", () => {
 });
 
 describe("Darstellung, Projektreihenfolge und Bericht", () => {
-  it("formatiert Daten als dd/mm/yy", () => {
-    expect(formatDate("2026-10-05")).toBe("05/10/26");
+  it("formatiert Daten als dd.mm.yy", () => {
+    expect(formatDate("2026-10-05")).toBe("05.10.26");
+  });
+  it("zeigt relative Tage über Monats- und Jahresgrenzen", () => {
+    expect(relativeDate("2026-12-31", "2026-12-31")).toBe("Today");
+    expect(relativeDate("2027-01-01", "2026-12-31")).toBe("Tomorrow");
+    expect(relativeDate("2026-11-30", "2026-12-01")).toBe("Yesterday");
+    // 2026-12-07 is a Monday, six days after 2026-12-01.
+    expect(relativeDate("2026-12-07", "2026-12-01")).toBe("Mon 07.12.");
+    expect(relativeDate("2026-12-08", "2026-12-01")).toBe("08.12.26");
+    expect(relativeDate("2026-11-29", "2026-12-01")).toBe("29.11.26");
+    // Daylight saving change in late March does not shift the distance.
+    expect(dayDistance("2027-03-29", "2027-03-27")).toBe(2);
+  });
+  it("ordnet Aufgaben Fälligkeitsgruppen zu", () => {
+    const today = "2026-11-21";
+    expect(dueGroup(todo("a", "2026-11-20"), today)).toBe("overdue");
+    expect(dueGroup(todo("b", "2026-11-21"), today)).toBe("today");
+    expect(dueGroup(todo("c", "2026-11-27"), today)).toBe("week");
+    expect(dueGroup(todo("d", "2026-11-28"), today)).toBe("later");
+    expect(dueGroup(todo("e"), today)).toBe("none");
+    expect(dueGroup(todo("f", "2026-11-01", true), today)).toBe("later");
+  });
+  it("listet kommende Ereignisse aufsteigend und vergangene absteigend", () => {
+    const events = [
+      event("past-old", "2026-11-10"),
+      event("today-late", "2026-11-21", "15:00"),
+      event("future", "2026-11-24", "10:00"),
+      event("today-all-day", "2026-11-21"),
+      event("past-new", "2026-11-18"),
+      event("today-early", "2026-11-21", "09:00"),
+    ];
+    const ordered = orderEventsForList(events, "2026-11-21");
+    expect(ordered.upcoming.map((e) => e.id)).toEqual([
+      "today-all-day",
+      "today-early",
+      "today-late",
+      "future",
+    ]);
+    expect(ordered.past.map((e) => e.id)).toEqual(["past-new", "past-old"]);
   });
   it("sortiert Projekte je Thema aufsteigend nach Nummer", () => {
     const project = (id: string, number: number) => ({
@@ -258,7 +300,7 @@ describe("Darstellung, Projektreihenfolge und Bericht", () => {
     };
     const report = projectReport(data, [data.projects[0]], "2026-10-13");
     expect(report).toContain("P-004 Alpha ★");
-    expect(report).toContain("- [ ] open (due 01/10/26, overdue)");
+    expect(report).toContain("- [ ] open (due 01.10.26, overdue)");
     expect(report).not.toContain("done");
     expect(report).not.toContain("Beta");
   });

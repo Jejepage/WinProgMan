@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import {
-  AUTO_PROJECT_NUMBER,
-  metadata,
   projectStatuses,
   type DomainChange,
   type ExportEnvelope,
+  type Project,
   type ProjectStatus,
   type Todo,
 } from "../domain/types";
 import {
   activeProjects,
+  formatDate,
   localToday,
   matchesOwner,
   matchesSearch,
@@ -33,12 +33,17 @@ import {
 import type { SearchResult } from "../domain/search";
 import { ownConflicts } from "../sync/conflicts";
 import { deviceId } from "../sync/useSync";
-import { openItem, openNewItem } from "../ui/itemNavigation";
-import { errorLabel } from "../ui/labels";
+import { openItem, openNewItem, type ItemKind } from "../ui/itemNavigation";
+import { errorLabel, statusLabel } from "../ui/labels";
+import {
+  withQuickFields,
+  type QuickProjectFields,
+} from "../domain/projectFields";
 import { projectReport } from "../domain/report";
 import { confirmAction, saveBackup, saveTextFile } from "../platform/desktop";
 import { ImportPreview } from "./ImportPreview";
-import { NewProjectForm, type NewProjectDraft } from "./NewProjectForm";
+import { NewMenu } from "./NewMenu";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Sidebar } from "./Sidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DetailPage } from "./pages/DetailPage";
@@ -51,19 +56,32 @@ import {
   type PanelShared,
   type View,
 } from "./types";
+import {
+  isDetailHistoryEntry,
+  originLabel,
+  projectOriginState,
+  readLastRoute,
+  readProjectOrigin,
+  readRoute,
+  rememberRoute,
+  routeHash,
+  type ProjectOrigin,
+  type Route,
+} from "./route";
 import { useAppStore } from "./useAppStore";
 import { usePreferences } from "./usePreferences";
 
 const store = new IndexedDbProjectStore();
-const emptyDraft = (): NewProjectDraft => ({
-  name: "",
-  status: "Aktiv",
-  categoryId: "",
-});
+/** Views reachable with the number keys 1–6, in navigation order. */
+const shortcutViews = navigationViews.filter((v) => v !== "Settings");
 
 export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
+  // A hash wins; without one the app reopens the last main view.
+  const [initialRoute] = useState<Route | null>(() =>
+    readDetail() ? null : (readRoute() ?? readLastRoute()),
+  );
   const [view, setView] = useState<View>(() => {
     const kind = new URLSearchParams(window.location.hash.slice(1)).get(
       "detail",
@@ -74,9 +92,12 @@ export function App() {
         ? "Notes"
         : kind === "event"
           ? "Events"
-          : "Dashboard";
+          : kind === "project"
+            ? "Projects"
+            : (initialRoute?.view ?? "Dashboard");
   });
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(initialRoute?.projectId ?? "");
+  const [projectOrigin, setProjectOrigin] = useState(() => readProjectOrigin());
   const {
     data,
     busy,
@@ -88,8 +109,7 @@ export function App() {
     transact,
   } = useAppStore(store);
   const [today, setToday] = useState(localToday);
-  const [newProject, setNewProject] = useState(false);
-  const [draft, setDraft] = useState<NewProjectDraft>(emptyDraft);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<Set<ProjectStatus>>(
     () => new Set(projectStatuses),
   );
@@ -98,15 +118,21 @@ export function App() {
   const [importantOnly, setImportantOnly] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
+  const [taskProjectFilter, setTaskProjectFilter] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [noteSearch, setNoteSearch] = useState("");
   const [pending, setPending] = useState<ExportEnvelope | null>(null);
   const [notice, setNotice] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [undo, setUndo] = useState<{ id: string; label: string } | null>(null);
+  const [undo, setUndo] = useState<{
+    label: string;
+    revert: DomainChange;
+  } | null>(null);
   const prefs = usePreferences();
   const brainstormPanel = useRef<BrainstormPanelHandle>(null);
-  const [brainstormOpened, setBrainstormOpened] = useState(false);
+  const [brainstormOpened, setBrainstormOpened] = useState(
+    view === "Brainstorm",
+  );
   const file = useRef<HTMLInputElement>(null);
   const replaced = ownConflicts(data.tombstones, deviceId()).length;
   useEffect(() => {
@@ -120,30 +146,76 @@ export function App() {
   }, [undo]);
   const [detail, setDetail] = useState(readDetail);
   const openedOnLoad = useRef(Boolean(detail));
+  const currentRoute = (): Route =>
+    view === "Project" && projectId
+      ? { view: "Project", projectId }
+      : { view: view === "Project" || view === "Settings" ? "Projects" : view };
+  /** Shows a main view and records it in the URL (pushed unless `replace`). */
+  const goTo = (route: Route, replace = false, state: unknown = null) => {
+    const hash = routeHash(route);
+    if (window.location.hash !== hash || state) {
+      if (replace) window.history.replaceState(state, "", hash);
+      else window.history.pushState(state, "", hash);
+    }
+    openedOnLoad.current = false;
+    setDetail(null);
+    if (route.projectId) setProjectId(route.projectId);
+    if (route.view === "Brainstorm") setBrainstormOpened(true);
+    setView(route.view);
+  };
   const closeDetail = () => {
+    // Opened inside the app: going back restores the list and its URL.
+    if (detail && isDetailHistoryEntry()) {
+      window.history.back();
+      return;
+    }
+    let next = currentRoute();
     if (openedOnLoad.current && detail && detail.kind !== "task") {
       const note = detail.creating
         ? detail.kind === "note" || detail.notesOnly
         : data.events.find((event) => event.id === detail.id)?.category ===
           "Notiz";
-      setView(note ? "Notes" : "Events");
+      next = {
+        view:
+          detail.kind === "project" ? "Projects" : note ? "Notes" : "Events",
+      };
     }
-    openedOnLoad.current = false;
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search,
-    );
-    setDetail(null);
+    goTo(next, true);
   };
   useEffect(() => {
+    // The first entry gets the hash of the start view, so Back can return to it.
+    if (!window.location.hash) {
+      window.history.replaceState(null, "", routeHash(currentRoute()));
+    }
     const update = () => {
-      setDetail(readDetail());
+      const next = readDetail();
+      setDetail(next);
       setSettingsOpen(false);
+      if (next) return;
+      openedOnLoad.current = false;
+      const route = readRoute();
+      if (!route) return;
+      if (route.projectId) {
+        setProjectId(route.projectId);
+        setProjectOrigin(readProjectOrigin());
+      }
+      if (route.view === "Brainstorm") setBrainstormOpened(true);
+      setView(route.view);
     };
     window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
+    window.addEventListener("popstate", update);
+    return () => {
+      window.removeEventListener("hashchange", update);
+      window.removeEventListener("popstate", update);
+    };
+    // Registered once; it reads the URL, not React state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (view !== "Settings" && (view !== "Project" || projectId))
+      rememberRoute(currentRoute());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, projectId]);
   async function navigate(next: View) {
     try {
       await brainstormPanel.current?.flush();
@@ -152,14 +224,69 @@ export function App() {
         return;
       }
       setSettingsOpen(false);
-      closeDetail();
-      if (next === "Brainstorm") setBrainstormOpened(true);
-      setNewProject(false);
-      setView(next);
+      goTo(
+        next === "Project" && projectId
+          ? { view: "Project", projectId }
+          : { view: next === "Project" ? "Projects" : next },
+        Boolean(detail),
+      );
     } catch (e) {
       setError(errorLabel(e));
     }
   }
+  /** "New" in the current context: a task on a project page, a note in Notes … */
+  function newForView() {
+    const kind: ItemKind =
+      view === "Tasks" || view === "Project"
+        ? "task"
+        : view === "Events"
+          ? "event"
+          : view === "Notes"
+            ? "note"
+            : "project";
+    if (kind !== "project" && !data.projects.length) return;
+    openNewItem(
+      kind,
+      view === "Project" ? projectId : undefined,
+      kind === "note",
+    );
+  }
+  const shortcutState = useRef({ navigate, newForView, blocked: false });
+  shortcutState.current = {
+    navigate,
+    newForView,
+    blocked: paletteOpen || shortcutsOpen || loading,
+  };
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented || shortcutState.current.blocked) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable="true"], .rich-note-editor',
+        )
+      )
+        return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      // While an editor or Settings is open, only ? applies.
+      if (readDetail() || document.querySelector(".settings-page")) return;
+      const position = Number(event.key);
+      if (Number.isInteger(position) && position >= 1 && position <= 6) {
+        event.preventDefault();
+        void shortcutState.current.navigate(shortcutViews[position - 1]);
+      } else if (event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        shortcutState.current.newForView();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -192,8 +319,6 @@ export function App() {
       openItem(result.kind, result.id);
     } else if (result.kind === "project") {
       setSettingsOpen(false);
-      closeDetail();
-      setNewProject(false);
       goProject(result.id);
     } else {
       void navigate("Brainstorm");
@@ -215,9 +340,12 @@ export function App() {
     {
       id: "new-project",
       label: "New project",
-      run: () => {
-        void navigate("Projects").then(() => setNewProject(true));
-      },
+      run: () => openNewItem("project"),
+    },
+    {
+      id: "shortcuts",
+      label: "Show keyboard shortcuts",
+      run: () => setShortcutsOpen(true),
     },
   ];
   const change = async (value: DomainChange) => {
@@ -231,13 +359,43 @@ export function App() {
       value.type === "quicklink.delete" ||
       value.type === "category.delete"
     ) {
-      setUndo({ id: value.id, label: "Moved to trash." });
+      setUndo({
+        label: "Moved to trash.",
+        revert: { type: "trash.restore", id: value.id },
+      });
       setNotice("");
     } else if (value.type === "trash.restore") {
       setUndo(null);
       setNotice("Restored.");
     }
     return true;
+  };
+  /** Status/owner changed directly in a list; stored at once with Undo. */
+  const editProjectFields = async (
+    project: Project,
+    fields: QuickProjectFields,
+  ) => {
+    const next = withQuickFields(project, fields, data.projects);
+    if (!next || !(await change({ type: "project.save", value: next }))) return;
+    const dateLabel = (name: string, value?: string) =>
+      `${name} ${value ? `set to ${formatDate(value)}` : "removed"}`;
+    const label = `${next.name}: ${
+      fields.status !== undefined
+        ? `status set to ${statusLabel(next.status)}`
+        : fields.owner !== undefined
+          ? `owner ${next.owner ? `set to ${next.owner}` : "removed"}`
+          : fields.startDate !== undefined
+            ? dateLabel("start date", next.startDate)
+            : dateLabel("end date", next.endDate)
+    }.`;
+    setNotice("");
+    setUndo({
+      label,
+      revert: {
+        type: "project.save",
+        value: { ...project, updatedAt: new Date().toISOString() },
+      },
+    });
   };
   const completeTodo = (todo: Todo) => {
     const { doNext: _marker, ...rest } = todo;
@@ -250,30 +408,19 @@ export function App() {
       },
     });
   };
+  /** Opens a project page and remembers where it was opened from. */
   const goProject = (id: string) => {
-    setProjectId(id);
-    setView("Project");
+    // From an editor the list behind it counts; project to project keeps the origin.
+    const here = currentRoute().view;
+    const from: ProjectOrigin = here === "Project" ? projectOrigin : here;
+    setProjectOrigin(from);
+    goTo(
+      { view: "Project", projectId: id },
+      Boolean(detail),
+      projectOriginState(from),
+    );
   };
   const project = data.projects.find((p) => p.id === projectId);
-  async function addProject(e: React.FormEvent) {
-    e.preventDefault();
-    const value = {
-      ...metadata(),
-      number: AUTO_PROJECT_NUMBER,
-      name: draft.name.trim() || "New project",
-      description: "",
-      status: draft.status,
-      ...(draft.categoryId &&
-      data.projectCategories.some((c) => c.id === draft.categoryId)
-        ? { categoryId: draft.categoryId }
-        : {}),
-    };
-    if (await change({ type: "project.save", value })) {
-      setNewProject(false);
-      setDraft(emptyDraft());
-      goProject(value.id);
-    }
-  }
   async function deleteProject() {
     if (!project) return;
     const count =
@@ -287,7 +434,7 @@ export function App() {
       (await change({ type: "project.delete", id: project.id }))
     ) {
       setProjectId("");
-      setView("Projects");
+      goTo({ view: "Projects" }, true);
     }
   }
   function toggleStatus(value: ProjectStatus) {
@@ -350,17 +497,16 @@ export function App() {
       await store.importData(pending);
     });
     if (!ok) return;
-    closeDetail();
-    setNewProject(false);
     setSettingsOpen(false);
     setBrainstormOpened(false);
     setPending(null);
-    setView("Projects");
+    goTo({ view: "Projects" }, true);
     setSelectedStatuses(new Set(projectStatuses));
     setCategoryFilter("");
     setNoteSearch("");
     setProjectSearch("");
     setTaskSearch("");
+    setTaskProjectFilter("");
     setEventSearch("");
     setUndo(null);
     setNotice("Backup imported.");
@@ -378,6 +524,7 @@ export function App() {
   }
   const shared: PanelShared = {
     compactSections: prefs.design === "split-compact",
+    showCreated: prefs.taskCreated === "show",
     projects: data.projects,
     today,
     busy,
@@ -452,7 +599,7 @@ export function App() {
               className="button secondary"
               disabled={busy}
               onClick={() =>
-                void change({ type: "trash.restore", id: undo.id })
+                void change(undo.revert).then((ok) => ok && setUndo(null))
               }
             >
               Undo
@@ -500,8 +647,21 @@ export function App() {
             error={error}
             loading={loading}
             shared={shared}
+            backLabel={
+              view === "Project"
+                ? project?.name || "Project"
+                : view === "Settings"
+                  ? "Projects"
+                  : view
+            }
             onClose={closeDetail}
+            onProjectCreated={(id) =>
+              goTo({ view: "Project", projectId: id }, true)
+            }
           />
+        )}
+        {shortcutsOpen && (
+          <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />
         )}
         <div hidden={Boolean(detail) || settingsOpen}>
           {loading ? (
@@ -516,35 +676,26 @@ export function App() {
                     <h1>{view === "Dashboard" ? "Dashboard" : view}</h1>
                   </div>
                   <div className="page-actions" ref={setHeaderTarget}>
-                    {![
-                      "Settings",
-                      "Tasks",
-                      "Events",
-                      "Notes",
-                      "Brainstorm",
-                    ].includes(view) && (
+                    {view === "Dashboard" && (
+                      <NewMenu
+                        disabled={busy}
+                        hasProjects={data.projects.length > 0}
+                      />
+                    )}
+                    {view === "Projects" && (
                       <button
-                        className="button"
+                        className="button add-button"
                         disabled={busy}
                         aria-label="New project"
-                        title="New project"
-                        onClick={() => setNewProject(!newProject)}
+                        title="New project (N)"
+                        onClick={() => openNewItem("project")}
                       >
                         <Plus size={16} aria-hidden="true" />
+                        <span className="button-label">Project</span>
                       </button>
                     )}
                   </div>
                 </div>
-              )}
-              {newProject && (
-                <NewProjectForm
-                  draft={draft}
-                  onDraft={setDraft}
-                  categories={data.projectCategories}
-                  busy={busy}
-                  onSubmit={addProject}
-                  onCancel={() => setNewProject(false)}
-                />
               )}
               {!data.projects.length &&
                 view !== "Settings" &&
@@ -553,6 +704,13 @@ export function App() {
                     <p className="eyebrow">GET STARTED</p>
                     <h2>Your next project starts here.</h2>
                     <p>Create a project or explore the app with sample data.</p>
+                    <button
+                      className="button"
+                      disabled={busy}
+                      onClick={() => openNewItem("project")}
+                    >
+                      Create project
+                    </button>{" "}
                     <button
                       className="button secondary"
                       disabled={busy}
@@ -593,6 +751,7 @@ export function App() {
                   onSearch={setProjectSearch}
                   projects={filteredProjects}
                   onProject={goProject}
+                  onProjectFields={editProjectFields}
                   ownerFilter={effectiveOwnerFilter}
                   onOwnerFilter={setOwnerFilter}
                   importantOnly={importantOnly}
@@ -611,6 +770,8 @@ export function App() {
                   headerTarget={headerTarget}
                   search={taskSearch}
                   onSearchChange={setTaskSearch}
+                  projectFilter={taskProjectFilter}
+                  onProjectFilterChange={setTaskProjectFilter}
                 />
               )}
               {view === "Events" && (
@@ -655,7 +816,9 @@ export function App() {
                   shared={shared}
                   onChange={change}
                   onDelete={deleteProject}
-                  onBack={() => setView("Projects")}
+                  onProjectFields={editProjectFields}
+                  backLabel={originLabel(projectOrigin)}
+                  onBack={() => goTo({ view: projectOrigin })}
                 />
               )}
             </>

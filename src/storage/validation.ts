@@ -127,7 +127,7 @@ export function validateImport(value: unknown): ExportEnvelope {
                   ...(current ? ["number"] : []),
                   ...(legacy ? [] : ["status", "categoryId"]),
                   ...(Number(root.schemaVersion) >= 6
-                    ? ["important", "owner"]
+                    ? ["important", "owner", "startDate", "endDate"]
                     : []),
                 ]
               : collection === "links"
@@ -216,6 +216,9 @@ export function validateImport(value: unknown): ExportEnvelope {
               "Name ohne führende oder folgende Leerzeichen erwartet.",
             );
         }
+        if (entry.startDate !== undefined)
+          date(entry.startDate, `${path}.startDate`);
+        if (entry.endDate !== undefined) date(entry.endDate, `${path}.endDate`);
         projects.add(entry.id);
         string(entry.name, `${path}.name`, true);
         string(entry.description, `${path}.description`);

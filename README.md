@@ -350,3 +350,48 @@ Prüfung: Typprüfung, 169 Unit-Tests, Webbuild, Gesamtlauf 50 Edge-Abläufe (ne
 ### Installer 0.13.0 – geprüft
 
 Quellcommit `92f6118`, PR #13 (Entwurf), allgemeine CI `44825876370` und Windows-CI `44825876399` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `8b3853b67f3381537f10b087acb98c94a53809490a7d3ea7d49ab16853440c30` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.13.0, SHA256 `55e8eca711884d91003fbb190e96051f8b34ecbefc4f679edea9ce132811dfa3`. Datei `src-tauri/target/windows-ci/0.13.0/92f6118/installer/Plan B_0.13.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Owner-Feld und Aufgaben neben der Projektliste; beide Sync-Rechner aktualisieren.
+
+## Usability-Überarbeitung – 21. November 2026
+
+Nach Durchsicht der Oberfläche auf Branch `claude/usability` umgesetzt; **keine Änderung an Datenmodell, Sicherungsformat oder Sync**. Benutzerentscheidungen: Oberfläche bleibt Englisch, Schnellerfassung von Tasks zusätzlich zur Detailseite, neue Projekte über eigene Seite, kommende Events aufsteigend oben.
+
+- **Navigation in der Adresse:** Jede Hauptansicht hat einen Hash (`#view=tasks`, `#project=<id>`, Modul `src/app/route.ts`). Zurück/Vor (Alt+←/→, Maustasten) wechseln zwischen Ansichten; Editoren legen einen markierten Verlaufseintrag an, Save/Cancel gehen per `history.back()` zur Liste samt Filtern zurück. Ohne Hash öffnet die App die zuletzt genutzte Ansicht (lokal `winprogman-last-view`).
+- **Editoren:** Strg+S speichert, Esc bricht ab und fragt nur bei Änderungen (`src/ui/useEditorShortcuts.ts`; Tasks, Events, Notes, Projektbearbeitung, neues Projekt). Detailseiten zeigen oben „← Liste/Projekt“ und den Projektnamen.
+- **Neues Projekt** über eigene Seite `#detail=project&mode=new` (`NewProjectEditor`: Name, Status, Topic, Owner, Beschreibung); erst „Create project“ speichert und öffnet die Projektseite. Links folgen auf der Projektseite (`project.saveWithLinks` setzt ein bestehendes Projekt voraus, daher bewusst nicht in einem Schritt). Das bisherige Inline-Formular ist entfernt.
+- **Beschriftete Buttons:** „+ Task/Event/Note/Project“; Dashboard „+ New ▾“ mit Project/Task/Event/Note. Flaggen-Tooltip erklärt Do next.
+- **Datum:** Listen zeigen `dd.mm.yy` sowie „Today/Tomorrow/Yesterday“ bzw. Wochentag innerhalb der nächsten Woche (Tooltip mit vollem Datum). Das native Datumsfeld folgt weiter der Browser-/Windows-Sprache. Outlook-Vorbelegung und Bericht nutzen ebenfalls Punkte.
+- **Events:** Liste mit kommenden Einträgen aufsteigend (nächster zuerst, ohne Uhrzeit vor Uhrzeit), Trenner „Past“, danach Vergangenes absteigend. Timeline unverändert. Dashboard und Projektvorschau zeigen die nächsten Termine aufsteigend.
+- **Tasks:** Projektfilter (globale Liste), sortierbare Spalten (Task, Project, Due date, Created; dritter Klick setzt zurück), Schalter „Group by due date“ (Overdue/Today/Next 7 days/Later/No due date, lokal `winprogman-task-grouping`), Schnellerfassung „Add task … (Enter)“ oben in jeder Aufgabenliste; Settings → Appearance blendet die Spalte „Created“ aus (`winprogman-task-created`).
+- **Notes:** Liste zeigt die ersten Zeilen als Klartextvorschau.
+- **Suche:** Ergebnisse zeigen Event-Datum bzw. Fälligkeit; Befehl „Show keyboard shortcuts“.
+- **Dashboard:** „Do next“ und neu „Overdue“ als erste Blöcke unter den Kennzahlen, darunter Important projects und Projects with open work in voller Breite.
+- **Tastenkürzel:** `N` neues Element der aktuellen Ansicht (auf Projektseite ein Task), `1`–`6` Ansichten, `?` Übersicht. In Textfeldern, Editoren und Settings wirken Einzeltasten nicht.
+- Brainstorm/Editor zeigt beim Laden einen Platzhalter statt Text.
+
+Prüfung: Typprüfung, 175 Unit-Tests (neu Datumsgrenzen, Fälligkeitsgruppen, Event-Reihenfolge, Hash-Routen, Notizvorschau), Webbuild und Gesamtlauf 50 Edge-Abläufe erfolgreich. Angepasste Tests: Projektanlage über „+ Project“ bzw. Dashboard-Menü „New → Project“, Reload behält die aktuelle Ansicht, Outlook-Vorbelegung mit Punkt-Datum (Markdown-escaped). Browserablauf im Entwicklungsserver: Neu-Menü → Projekt mit Strg+S, Schnellerfassung, Esc mit/ohne Änderungen, Zurück/Vor, Gruppierung/Sortierung, Event-Reihenfolge, Notizvorschau, Tastenkürzel; Split Compact und schmales Layout gesichtet.
+
+### Installer 0.14.0 – geprüft
+
+Quellcommit `d72de6a` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44894203362` und Windows-CI `44894203351` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `6fb96e2152184bf352bec2b73503234a41cfc251cfb3a02d528434145aa452fc` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.14.0, SHA256 `36b12eb03aa2c6d2c50e494dd7bdddf885fdddf80217854be9d3f2fd7a8fa92e`. Datei `src-tauri/target/windows-ci/0.14.0/d72de6a/installer/Plan B_0.14.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert; native Abnahme der Usability-Überarbeitung steht aus. Keine Datenformatänderung, Sync mit 0.13.0 kompatibel.
+
+## Direkte Bearbeitung und Projektzeitraum – 21. November 2026
+
+Nach Benutzerauftrag auf Branch `claude/usability` (nach Installer 0.14.0):
+
+- **Status und Owner direkt ändern** in der Projektliste und im Projektkopf (Dropdowns, sofort gespeichert, Meldung mit „Undo“; Owner „New person…“ als Textfeld, Enter/Verlassen speichert, Esc verwirft). Topic bleibt bewusst nur über „Edit project“ änderbar. Ein Klick in die Felder wählt die Listenzeile nicht aus. Während „Edit project“ zeigt der Kopf wieder reinen Text.
+- **Fälligkeitsdatum direkt ändern** in allen Aufgabenlisten: Klick auf das Datum öffnet ein Datumsfeld, Enter/Verlassen speichert, Esc verwirft, leeres Feld entfernt das Datum. Gemeinsames Bauteil `src/ui/QuickDateField.tsx`.
+- **Neue optionale Projektfelder `startDate` und `endDate`** (`YYYY-MM-DD`). Bearbeitbar in „Edit project“, auf der Seite „New project“, direkt im Projektkopf und in der Projektliste. Spalten Start/End in der Liste per Schalter „Dates“ ein-/ausblendbar (lokal `winprogman-project-dates`, standardmäßig aus). Bericht nennt den Zeitraum. Keine Reihenfolgeprüfung Start ≤ End.
+- **Datenformat:** Sicherungsformat bleibt 6 und erlaubt die beiden Felder zusätzlich; Format 5 lehnt sie ab. **Ältere App-Versionen (bis 0.14.0) lehnen Daten mit Start-/Enddatum beim Import und Sync ab → beide Sync-Rechner aktualisieren**, bevor Daten gesetzt werden. Undo für direkte Projektänderungen speichert den vorherigen Datensatz erneut.
+- Reine Logik in `src/domain/projectFields.ts` (`canonicalOwner`, `withQuickFields`, `projectPeriod`), UI in `src/features/projects/QuickFields.tsx`.
+
+Prüfung: Typprüfung, 178 Unit-Tests (neu: Owner-Schreibweise, Datumsfelder setzen/entfernen, Validierung Start/End inkl. ungültiger Daten und Format 5), Webbuild, vollständiger Edge-Lauf 52 Abläufe (neu `tests/quick-edit.e2e.spec.ts`; Owner- und Projektstatus-Test an Dropdowns angepasst). Browser: Liste mit Datumsspalten, Datumseingabe per Tastatur, Projektkopf gesichtet. Noch kein Installer für diesen Stand.
+
+### Installer 0.15.0 – geprüft
+
+Quellcommit `58a965b` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44898363280` und Windows-CI `44898363268` erfolgreich (inkl. Rust-Tests und NSIS-Build). Der erste Windows-Lauf zu `82e391c` scheiterte an einem Rust-Testkonflikt (parallele Tests mit gleichem Temp-Ordner); `58a965b` trennt die Testordner per Zähler, App-Code unverändert. Artefakt `PlanB-windows-x64`, ZIP-SHA256 `b4f508fd7188f02b248688fc6ad553db593711b5794e21bced7f0a9052337558` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.15.0, SHA256 `4131d1e65337fe5d89b02bb4a737438f9d0602ec95132d834086e9edd17c59d5`. Datei `src-tauri/target/windows-ci/0.15.0/58a965b/installer/Plan B_0.15.0_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Enthält Direktbearbeitung und Start-/Enddatum; beide Sync-Rechner aktualisieren, bevor Projektdaten gesetzt werden.
+
+- **Rückweg von der Projektseite** (Fix nach 0.15.0): Die Projektseite merkt sich im Verlaufseintrag, aus welcher Ansicht sie geöffnet wurde (`projectOriginState`/`readProjectOrigin` in `src/app/route.ts`). Der Link oben heißt entsprechend „← Dashboard“, „← Tasks“ usw. bzw. „← All projects“ und führt dorthin; Reload und Zurück/Vor erhalten die Herkunft. Projekt-zu-Projekt-Sprünge behalten die ursprüngliche Herkunft. Test `tests/project-back.e2e.spec.ts`; 179 Unit-Tests und 53 Edge-Abläufe grün. Im Installer 0.15.1 enthalten.
+
+### Installer 0.15.1 – geprüft
+
+Quellcommit `e7bd39f` (Branch `claude/usability`), PR #14 (Entwurf), allgemeine CI `44900267588` und Windows-CI `44900267524` erfolgreich (inkl. Rust-Tests und NSIS-Build). Artefakt `PlanB-windows-x64`, ZIP-SHA256 `e2b1bd0edd9491d003345b05ded74842aef0ca22744f24bc6a0590528b65888f` stimmt mit dem GitHub-Digest überein. EXE „Plan B“, Produkt-/Dateiversion 0.15.1, SHA256 `c9b8ce5a1e0f28eb6ea0a0b1e6c58b80e9364d1247a5b7350e4856509c54e655`. Datei `src-tauri/target/windows-ci/0.15.1/e7bd39f/installer/Plan B_0.15.1_x64-setup.exe`. Unsigniert, nicht ausgeführt oder installiert. Gegenüber 0.15.0 nur der Rückweg von der Projektseite zur Herkunftsansicht; Datenformat wie 0.15.0.

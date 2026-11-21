@@ -34,6 +34,9 @@ export interface Project extends Base {
   important?: boolean;
   /** Responsible person, free text; absent means not assigned. */
   owner?: string;
+  /** Planned start and end, YYYY-MM-DD; absent means open. */
+  startDate?: string;
+  endDate?: string;
   name: string;
   description: string;
 }

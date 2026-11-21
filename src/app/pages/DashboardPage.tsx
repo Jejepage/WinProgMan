@@ -4,17 +4,14 @@ import { QuickLinks } from "../../features/dashboard/QuickLinks";
 import { StatusLabel } from "../../ui/components";
 import {
   formatDate,
+  orderEventsForList,
   overdue,
-  sortEvents,
+  relativeDate,
   sortTodos,
 } from "../../domain/queries";
 import type { AppData, DomainChange, Todo } from "../../domain/types";
 import { openItem } from "../../ui/itemNavigation";
 import { categoryLabel, statusLabel } from "../../ui/labels";
-
-/** The five nearest upcoming events, still shown newest first. */
-const nearest = (events: AppData["events"]) =>
-  [...events].reverse().slice(0, 5).reverse();
 
 type BlockId = "important" | "open-work";
 const collapsedKey = "winprogman-dashboard-collapsed";
@@ -136,9 +133,11 @@ export function DashboardPage({
     const projectTodos = sortTodos(
       open.filter((todo) => todo.projectId === p.id),
     );
-    const projectEvents = sortEvents(
+    // Upcoming events with the next one first.
+    const projectEvents = orderEventsForList(
       coming.filter((event) => event.projectId === p.id),
-    );
+      today,
+    ).upcoming;
     return (
       <div className="dashboard-project-row" key={p.id}>
         <div className="dashboard-project-head">
@@ -183,9 +182,12 @@ export function DashboardPage({
                     {todo.title}
                   </button>
                   {todo.dueDate && (
-                    <small className={overdue(todo, today) ? "overdue" : ""}>
+                    <small
+                      className={overdue(todo, today) ? "overdue" : ""}
+                      title={formatDate(todo.dueDate)}
+                    >
                       {overdue(todo, today) ? "Overdue · " : ""}
-                      {formatDate(todo.dueDate)}
+                      {relativeDate(todo.dueDate, today)}
                     </small>
                   )}
                 </span>
@@ -197,7 +199,7 @@ export function DashboardPage({
             {!projectEvents.length && (
               <p className="muted">No upcoming events.</p>
             )}
-            {nearest(projectEvents).map((event) => (
+            {projectEvents.slice(0, 5).map((event) => (
               <div className="overview-event" key={event.id}>
                 <span className="category" data-category={event.category}>
                   {categoryLabel(event.category)}
@@ -209,8 +211,8 @@ export function DashboardPage({
                 >
                   {event.title}
                 </button>
-                <small>
-                  {formatDate(event.date)}
+                <small title={formatDate(event.date)}>
+                  {relativeDate(event.date, today)}
                   {event.time && ` · ${event.time}`}
                 </small>
               </div>
@@ -225,6 +227,43 @@ export function DashboardPage({
       </div>
     );
   };
+  const overdueTodos = sortTodos(open.filter((todo) => overdue(todo, today)));
+  const focusRow = (rowClass: string) => (todo: Todo) => (
+    <div className={rowClass} key={todo.id}>
+      <input
+        type="checkbox"
+        aria-label={`${todo.title} completed`}
+        checked={false}
+        disabled={busy}
+        onChange={() => void onComplete(todo)}
+      />
+      <div>
+        <button
+          className="task-title-button"
+          disabled={busy}
+          onClick={() => openItem("task", todo.id)}
+        >
+          {todo.title}
+        </button>
+        <button
+          className="text-button"
+          onClick={() => onProject(todo.projectId)}
+        >
+          {data.projects.find((p) => p.id === todo.projectId)?.name ||
+            "Project"}
+        </button>
+        {todo.dueDate && (
+          <small
+            className={overdue(todo, today) ? "overdue" : ""}
+            title={formatDate(todo.dueDate)}
+          >
+            {overdue(todo, today) ? "Overdue · " : ""}
+            {relativeDate(todo.dueDate, today)}
+          </small>
+        )}
+      </div>
+    </div>
+  );
   return (
     <>
       <QuickLinks links={data.quickLinks} busy={busy} onChange={onChange} />
@@ -260,38 +299,8 @@ export function DashboardPage({
           </button>
         </div>
       </div>
-      <div className="dashboard-columns">
-        <div className="dashboard-stack">
-          <CollapsibleBlock
-            id="important"
-            title="Important projects"
-            count={important.length}
-            icon={<Star size={15} aria-hidden="true" className="block-star" />}
-            collapsed={collapsed.includes("important")}
-            onToggle={toggle}
-            className="dashboard-important"
-          >
-            {!important.length && (
-              <p className="muted">
-                Mark projects with the star in Projects to keep them here.
-              </p>
-            )}
-            {important.map(projectRow)}
-          </CollapsibleBlock>
-          <CollapsibleBlock
-            id="open-work"
-            title="Projects with open work"
-            count={active.length}
-            collapsed={collapsed.includes("open-work")}
-            onToggle={toggle}
-            className="dashboard-projects"
-          >
-            {!active.length && (
-              <p className="muted">No open tasks or upcoming events.</p>
-            )}
-            {active.map(projectRow)}
-          </CollapsibleBlock>
-        </div>
+      {/* What needs attention first: Do next and overdue tasks. */}
+      <div className="dashboard-focus">
         <section className="panel dashboard-next">
           <div className="section-heading">
             <h2>Do next</h2>
@@ -299,43 +308,54 @@ export function DashboardPage({
           </div>
           {!doNext.length && (
             <p className="muted">
-              Mark an open task as Do next to see it here.
+              Mark an open task with the flag to see it here.
             </p>
           )}
-          {doNext.map((todo) => (
-            <div className="dashboard-next-row" key={todo.id}>
-              <input
-                type="checkbox"
-                aria-label={`${todo.title} completed`}
-                checked={false}
-                disabled={busy}
-                onChange={() => void onComplete(todo)}
-              />
-              <div>
-                <button
-                  className="task-title-button"
-                  disabled={busy}
-                  onClick={() => openItem("task", todo.id)}
-                >
-                  {todo.title}
-                </button>
-                <button
-                  className="text-button"
-                  onClick={() => onProject(todo.projectId)}
-                >
-                  {data.projects.find((p) => p.id === todo.projectId)?.name ||
-                    "Project"}
-                </button>
-                {todo.dueDate && (
-                  <small className={overdue(todo, today) ? "overdue" : ""}>
-                    {overdue(todo, today) ? "Overdue · " : ""}
-                    {formatDate(todo.dueDate)}
-                  </small>
-                )}
-              </div>
-            </div>
-          ))}
+          {doNext.map(focusRow("dashboard-next-row"))}
         </section>
+        <section className="panel dashboard-overdue">
+          <div className="section-heading">
+            <h2>Overdue</h2>
+            <span className={overdueTodos.length ? "overdue" : "muted"}>
+              {overdueTodos.length}
+            </span>
+          </div>
+          {!overdueTodos.length && (
+            <p className="muted">Nothing overdue. Well done.</p>
+          )}
+          {overdueTodos.map(focusRow("dashboard-overdue-row"))}
+        </section>
+      </div>
+      <div className="dashboard-stack">
+        <CollapsibleBlock
+          id="important"
+          title="Important projects"
+          count={important.length}
+          icon={<Star size={15} aria-hidden="true" className="block-star" />}
+          collapsed={collapsed.includes("important")}
+          onToggle={toggle}
+          className="dashboard-important"
+        >
+          {!important.length && (
+            <p className="muted">
+              Mark projects with the star in Projects to keep them here.
+            </p>
+          )}
+          {important.map(projectRow)}
+        </CollapsibleBlock>
+        <CollapsibleBlock
+          id="open-work"
+          title="Projects with open work"
+          count={active.length}
+          collapsed={collapsed.includes("open-work")}
+          onToggle={toggle}
+          className="dashboard-projects"
+        >
+          {!active.length && (
+            <p className="muted">No open tasks or upcoming events.</p>
+          )}
+          {active.map(projectRow)}
+        </CollapsibleBlock>
       </div>
     </>
   );
